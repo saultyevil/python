@@ -13,7 +13,7 @@
 //OLD                                        Space Telescope Science Institute
 //OLD 
 //OLD  Synopsis:
-//OLD    radiation(p,ds) updates the radiation field parameters in the wind and reduces 
+//OLD    radiation(p,ds) updates the radiation field parameters in the wind and reduces
 //OLD    the weight of the photon as a result of the effect free free and photoabsorption.
 //OLD    radiation also keeps track of the number of photoionizations of h and he in the
 //OLD    cell. 
@@ -82,7 +82,7 @@
 //OLD                         balance and probably should not be there either.
 //OLD   02jun   ksl     Improved/fixed treatment of calculation of number of ionizations.
 //OLD   04apr   ksl     SS had modified this routine to allow for macro-atoms in python_47, but his modifications
-//OLD                   left very little for radiation to accomplish.  I have returned to the old version of 
+//OLD                   left very little for radiation to accomplish.  I have returned to the old version of
 //OLD                   routine, and moved the little bit that needed to be done in this routine for
 //OLD                   the macro approach to the calling routine.  Once we abandon the old approach this
 //OLD                   routine can be deleted.
@@ -148,10 +148,8 @@ int iicount = 0;
  *
  **********************************************************/
 
-int
-radiation (p, ds)
-     PhotPtr p;
-     double ds;
+double
+radiation (PhotPtr p, double ds)
 {
   TopPhotPtr x_top_ptr;
 
@@ -205,7 +203,7 @@ radiation (p, ds)
 
   /* Create phot, a photon at the position we are moving to 
    *  note that the actual movement of the photon gets done after 
-   *  the call to radiation 
+   *  the call to radiation
    */
 
   stuff_phot (p, &phot);        // copy photon ptr
@@ -474,7 +472,7 @@ radiation (p, ds)
   }
 
   if (geo.ioniz_or_extract == 0)
-    return (0);                 // 57h -- ksl -- 060715
+    return kappa_tot;           // 57h -- ksl -- 060715
 
 /* Everything after this is only needed for ionization calculations */
 /* Update the radiation parameters used ultimately in calculating t_r */
@@ -1072,7 +1070,7 @@ pop_kappa_ff_array ()
 //OLD  
 //OLD Description:      
 //OLD   This routine does not contain new code on initial writing, but instead 
-//OLD   moves duplicated code from increment_bf_estimators and radiation() 
+//OLD   moves duplicated code from increment_bf_estimators and radiation()
 //OLD   to here, as duplicating code is bad practice.
 //OLD 
 //OLD Notes:
