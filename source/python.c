@@ -866,6 +866,12 @@ main (argc, argv)
     wind_paths_evaluate (w, my_rank);
   }
 
+  /*
+   * Perform the optical depth diagnostics routines
+   */
+
+  tau_diag (w);
+
 /* XXXX - THE CALCULATION OF A DETAILED SPECTRUM IN A SPECIFIC REGION OF WAVELENGTH SPACE */
 
   freqmax = C / (geo.swavemin * 1.e-8);

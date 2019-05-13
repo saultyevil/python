@@ -44,7 +44,7 @@ dB_nu_dT (double nu)
 
   x = H_OVER_K * nu / ross_int_temp;
   bnu = 2 * H * pow (nu, 3) / pow (C, 2) * 1 / (exp (x) - 1);
-  dB_dT = bnu * x / (ross_int_temp  * (1 - exp (-x)));
+  dB_dT = bnu * x / (ross_int_temp * (1 - exp (-x)));
 
   return dB_dT;
 }
@@ -91,7 +91,7 @@ rosseland_integrand (double nu)
 void
 set_ross_integ_temp (double temperature)
 {
-   ross_int_temp = temperature;
+  ross_int_temp = temperature;
 }
 
 /* ************************************************************************* */
@@ -115,7 +115,7 @@ calculate_rosseland_opacity (void)
   double kappa_ross = 0.0;
   double temperature = 1.5e4;
 
-  double (*f)(double) = &rosseland_integrand;
+  double (*f) (double) = &rosseland_integrand;
 
   Log ("calculating rosseland mean opacity for %e K\n", temperature);
 

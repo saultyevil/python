@@ -126,7 +126,7 @@ double sobolev (WindPtr one, double x[], double den_ion, struct lines *lptr, dou
 int doppler (PhotPtr pin, PhotPtr pout, double v[], int nres);
 int scatter (PhotPtr p, int *nres, int *nnscat);
 /* radiation.c */
-int radiation (PhotPtr p, double ds);
+double radiation (PhotPtr p, double ds);
 double kappa_ff (PlasmaPtr xplasma, double freq);
 double sigma_phot (struct topbase_phot *x_ptr, double freq);
 double sigma_phot_verner (struct innershell *x_ptr, double freq);
@@ -643,7 +643,8 @@ int create_ion_table (int ndom, char rootname[], int iz);
 double *get_ion (int ndom, int element, int istate, int iswitch);
 double *get_one (int ndom, char variable_name[]);
 /* tau_diag.c */
-void tau_diag (void);
+void tau_diag (WindPtr w);
 /* mean_opacities.c */
 void calculate_rosseland_opacity (void);
 void calculate_planck_opacity (void);
+double find_smax (PhotPtr p);
