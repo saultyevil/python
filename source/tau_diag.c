@@ -71,17 +71,15 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
   double smax;
   double kappa_tot;
 
-  if ((pextract->grid = where_in_grid (wmain[pextract->grid].ndom, pextract->x)) < 0)
+  if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
   {
-    Error ("find_tau (%s:%i): ", __FILE__, __LINE__);
+    Error ("find_tau (%s:%i): pextract is not in grid\n", __FILE__, __LINE__);
     return pextract->grid;
   }
 
   smax = find_smax (pextract);
   if (smax < 0)
-    return (int) smax;
-
-  kappa_tot = 0;
+    return -1;
 
   if (opac_type == ROSSELAND)
   {
@@ -99,8 +97,6 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
   }
 
   *tau += smax * kappa_tot;
-
-  //Log ("kappa tot %e tau %e\n", kappa_tot, *tau);
 
   move_phot (pextract, smax);
   istat = pextract->istat;
@@ -150,23 +146,45 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
 
   n_trans_space = 0;
 
+  Log ("first: p->x %e %e %e\n", pextract.x[0], pextract.x[1], pextract.x[2]);
+
   while (istat == P_INWIND)
   {
+    /*
+     * The first part of this while loop is concerned with translating the
+     * photon either in space, i.e. in the non-wind grid cells, or translates
+     * the photon one grid cell at a time using find_tau.
+     */
+
     if (where_in_wind (pextract.x, &ndom) < 0)
     {
-      istat = translate_in_space (&pextract);
+      translate_in_space (&pextract);
       if (++n_trans_space > MAX_TRANS_SPACE)
+      {
+        Error ("extract_tau (%s:%i): photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__);
         return;
+      }
     }
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)
     {
       istat = find_tau (w, &pextract, opac_type, tau);
+      if (istat == -1)
+        Error ("extract_tau (%s:%i): abnormal value of smax found in find_tau\n", __FILE__, __LINE__);
     }
     else
     {
+      pextract.istat = -1;
       Error ("extract_tau (%s:%i): photon in unknown location,  grid stat %i\n", __FILE__, __LINE__, pextract.grid);
       return;
     }
+
+    /*
+     * Now that the photon has been translated, we updated istat using the walls
+     * function which should return an istat which is not P_INWIND when the
+     * photon has exited in the wind -- hopefully when it has escaped
+     */
+
+    istat = walls (&pextract, porig, norm);
   }
 
   if (walls (&pextract, porig, norm) == -1)
@@ -205,8 +223,8 @@ tau_diag_phot (PhotPtr pout, double nu)
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
   pout->x[0] = geo.rstar;
-  pout->x[1] = EPSILON;
-  pout->x[2] = EPSILON;
+  pout->x[1] = 0.0;
+  pout->x[2] = 0.0;
   pout->tau = 0;
 }
 
@@ -258,7 +276,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
       Log ("%s", tmp_str);
     }
 
-    Log ("\n");
+    Log ("\n\n");
   }
 }
 
@@ -285,8 +303,6 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
  * optical thickness of the current model.
  *
  * ************************************************************************** */
-
-
 
 void
 tau_diag (WindPtr w)
