@@ -3,6 +3,23 @@
 Stellar_wind
 ============
 
+Stellar_wind.radmax
+===================
+Multi-line description, must keep indentation.
+
+**Type:** Double
+
+**Unit:** cm
+
+**Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+**Parent(s):**
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+
+**File:** stellar_wind.c
+
+
 Stellar_wind.radmin
 ===================
 Inner edge in cm for a stellar wind, normally the

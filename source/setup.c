@@ -140,12 +140,14 @@ init_geo ()
   geo.wcycles = geo.pcycles = 1;
   geo.wcycle = geo.pcycle = 0;
 
+  geo.model_count = 0;          //The number of models read in
+
   return (0);
 }
 
 /// This is to assure that we read model lists in the same order everytime
 char get_spectype_oldname[LINELENGTH] = "data/kurucz91.ls";
-int get_spectype_count = 0;
+//int model_count = 0;
 
 
 /**********************************************************/
@@ -221,18 +223,29 @@ get_spectype (yesno, question, spectype)
     {
       if (geo.run_type == RUN_TYPE_PREVIOUS)
       {                         // Continuing an old model
-        strcpy (model_list, geo.model_list[get_spectype_count]);
+        strcpy (model_list, geo.model_list[geo.model_count]);
       }
       else
       {                         // Starting a new model
         strcpy (model_list, get_spectype_oldname);
       }
-      rdstr ("Input_spectra.model_file", model_list);
-      get_models (model_list, 2, spectype);
 
-      strcpy (geo.model_list[get_spectype_count], model_list);  // Copy it to geo
+      rdstr ("Input_spectra.model_file", model_list);
+
+      for (i = 0; i < geo.model_count; i++)     //See if we have already read in this model
+      {
+        if (strcmp (model_list, geo.model_list[i]) == 0)
+        {
+          *spectype = i;
+          return (*spectype);
+        }
+      }
+
+      get_models (model_list, 2, spectype);
+      strcpy (geo.model_list[geo.model_count], model_list);     // Copy it to geo
       strcpy (get_spectype_oldname, model_list);        // Also copy it back to the old name
-      get_spectype_count++;
+
+      geo.model_count++;
     }
   }
   else
@@ -359,8 +372,8 @@ init_observers ()
   /* convert wavelengths to frequencies and store for use
      in computing macro atom and k-packet emissivities. */
 
-  em_rnge.fmin = C / (geo.swavemax * 1.e-8);
-  em_rnge.fmax = C / (geo.swavemin * 1.e-8);
+  geo.sfmin = C / (geo.swavemax * 1.e-8);
+  geo.sfmax = C / (geo.swavemin * 1.e-8);
 
   geo.matom_radiation = 0;      //initialise for ionization cycles - don't use pre-computed emissivities for macro-atom levels/ k-packets.
 
@@ -524,12 +537,22 @@ init_photons ()
 #endif
 
   rdint ("Ionization_cycles", &geo.wcycles);
+
+  /* On restarts, the spectra that are read in have to be renormalized if
+   * the number of spectral cycles has been increased before a restart, and
+   * so we need to record this number. If this is not a restart, then 
+   * geo.pcycles_renorm will not be used.
+   */
+
+  geo.pcycles_renorm = geo.pcycles;
+
   rdint ("Spectrum_cycles", &geo.pcycles);
+
 
   if (geo.wcycles == 0 && geo.pcycles == 0)
   {
     Log ("Both ionization and spectral cycles are set to 0; There is nothing to do so exiting\n");
-    Exit (1);                   //There is really nothing to do!
+    exit (1);                   //There is really nothing to do!
   }
 
   /* Allocate the memory for the photon structure now that NPHOT is established */

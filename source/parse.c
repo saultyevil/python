@@ -24,7 +24,8 @@
  *
  * @param [in]  int  argc   the number of command line arguments
  * @param [in]  char *  argv[]   The command line arguments
- * @return      restart_stat   1 if restarting a previous model
+ * @return      restart_stat   1 if restarting a previous model,
+ * 0 in all other cases.
  *
  * Python has a fairly rich set of command line options, which
  * are parsed by this routine

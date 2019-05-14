@@ -139,7 +139,8 @@ one_continuum (spectype, t, g, freqmin, freqmax)
     lambdamax = C * 1e8 / freqmin;
     nwave = 0;
 
-    /* if the first wavelength in the model is below the wavelength range in the simulation,
+    /* Create the first element of the array, precisely at lambdamin if that is possible
+       Specifically, if the first wavelength in the model is below the wavelength range in the simulation,
        interpolate on the model flux to get the flux at lambdamin. copy relevant wavelengths and
        fluxes to w_local and f_local  */
     if (comp[spectype].xmod.w[0] < lambdamin && lambdamin < comp[spectype].xmod.w[comp[spectype].nwaves - 1])
@@ -150,10 +151,14 @@ one_continuum (spectype, t, g, freqmin, freqmax)
       nwave++;
     }
 
-    /* loop over rest of model wavelengths and fluxes and copy to w_local and f_local */
+    /* loop over rest of model wavelengths and fluxes and copy to w_local and f_local.
+       This does not include the end points
+     */
+
     for (n = 0; n < comp[spectype].nwaves; n++)
     {
-      if (comp[spectype].xmod.w[n] > lambdamin && comp[spectype].xmod.w[n] <= lambdamax)
+//OLD      if (comp[spectype].xmod.w[n] > lambdamin && comp[spectype].xmod.w[n] <= lambdamax)
+      if (comp[spectype].xmod.w[n] > lambdamin && comp[spectype].xmod.w[n] < lambdamax)
       {
         w_local[nwave] = comp[spectype].xmod.w[n];
         f_local[nwave] = comp[spectype].xmod.f[n];
@@ -161,8 +166,10 @@ one_continuum (spectype, t, g, freqmin, freqmax)
       }
     }
 
-    /* now check if upper bound is beyond lambdamax, and if so, interpolate to get appropriate flux
+    /* No add a point at lambdamax.  Specicxally  check if upper bound is beyond lambdamax, and if so, 
+       interpolate to get appropriate flux
        at lambda max. copy to w_local and f_local */
+
     if (comp[spectype].xmod.w[0] < lambdamax && lambdamax < comp[spectype].xmod.w[comp[spectype].nwaves - 1])
     {
       w_local[nwave] = lambdamax;
@@ -191,7 +198,7 @@ one_continuum (spectype, t, g, freqmin, freqmax)
 
     if (cdf_gen_from_array (&comp[spectype].xcdf, w_local, f_local, nwave, lambdamin, lambdamax) != 0)
     {
-      Error ("In one_continuum after return from cdf_gen_from_array\n");
+      Error ("One_continuum: after return from cdf_gen_from_array\n");
     }
     old_freqmin = freqmin;
     old_freqmax = freqmax;
@@ -287,8 +294,8 @@ emittance_continuum (spectype, freqmin, freqmax, t, g)
 
   if (lambdamax > comp[spectype].xmod.w[nwav - 1] || lambdamin < comp[spectype].xmod.w[0])
   {
-    printf ("freqmin %e freqmax %e\n", freqmin, freqmax);
-    printf ("emin %e emax %e\n", HEV * freqmin, HEV * freqmax);
+    Error ("emittance_contiuum: freqmin %e freqmax %e\n", freqmin, freqmax);
+    Error ("emittance_contiuum: emin %e emax %e\n", HEV * freqmin, HEV * freqmax);
 
     Error ("emittance_continum: Requested wavelengths extend beyond models wavelengths for list %s\n", comp[spectype].name);
     Error ("lambda %f %f  model %f %f\n", lambdamin, lambdamax, comp[spectype].xmod.w[0], comp[spectype].xmod.w[nwav - 1]);

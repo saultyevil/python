@@ -167,11 +167,11 @@ matom (p, nres, escape)
   }
   else
   {
-    Error ("matom: upper level not identified. nres = %d\n", *nres);
+    Error ("matom: upper level not identified. nres = %d in photon %d of cycle %d/%d in thread %d\n",
+           *nres, p->np, geo.wcycle, geo.pcycle, rank_global);
     *escape = 1;
     p->istat = P_ERROR_MATOM;
     return (0);
-    //OLD Exit (0);
   }
 
   /* Now follows the main loop to govern the macro atom jumps. Keeps jumping until
@@ -375,7 +375,10 @@ matom (p, nres, escape)
 
     if ((pjnorm_known[uplvl] + penorm_known[uplvl]) <= 0.0)
     {
-      Error ("matom: macro atom level has no way out %d %g %g\n", uplvl, pjnorm_known[uplvl], penorm_known[uplvl]);
+      Error ("matom: macro atom level has no way out: uplvl %d pj %g pe %g t_e %.3g  ne %.3g\n", uplvl, pjnorm_known[uplvl],
+             penorm_known[uplvl], t_e, ne);
+      Error ("matom: macro atom level has no way out: z %d istate %d nion %d ilv %d nbfu %d nbfd %d nbbu %d nbbd %d\n", config[uplvl].z,
+             config[uplvl].istate, config[uplvl].nion, config[uplvl].ilv, nbfu, nbfd, nbbu, nbbd);
       *escape = 1;
       p->istat = P_ERROR_MATOM;
       return (0);
@@ -739,7 +742,7 @@ alpha_sp_integrand (freq)
  *	
  *	* 180616  Updated so that one could force kpkt to deactivate via radiation
 ************************************************************/
-#define ALPHA_FF 100.           // maximum h nu / kT to create the free free CDF
+//OLD moved to python.h #define ALPHA_FF 100.           // maximum h nu / kT to create the free free CDF
 
 int
 kpkt (p, nres, escape, mode)
@@ -794,17 +797,24 @@ kpkt (p, nres, escape, mode)
      generation (see call to one_ff below) */
   if (geo.ioniz_or_extract)
   {
-    /* in spectral cycles, so use the boundaries of the photon generation bands */
+    /* in ionization cycles, so use the boundaries of the photon generation bands */
     freqmin = xband.f1[0];
+
     /* JM 1709 -- introduce a maximum frequency based on exp(-h nu / (kT)), 
        see issue #300 */
     freqmax = ALPHA_FF * xplasma->t_e / H_OVER_K;
+
+    /* ksl This is a Bandaid for when the temperatures are very low */
+    if (freqmax < 1.1 * freqmin)
+    {
+      freqmax = 1.1 * freqmin;
+    }
   }
   else
   {
     /* in spectral cycles, use the frequency range of the final spectrum */
-    freqmin = em_rnge.fmin;
-    freqmax = em_rnge.fmax;
+    freqmin = geo.sfmin;
+    freqmax = geo.sfmax;
   }
 
 
@@ -1016,6 +1026,9 @@ kpkt (p, nres, escape, mode)
 
   }
 
+/* This is the end of the cooling rate calculations, which is done only once for each cell
+   and once for each cycle
+   */
 
   /* only include adiabatic cooling if we're in the right mode. First set a default 
      where adiabatic cooling is zero. This will be true if the mode isn't KPKT_MODE_ALL,
@@ -1054,6 +1067,14 @@ kpkt (p, nres, escape, mode)
      Choose which process destroys the k-packet with a random number. */
 
   destruction_choice = random_number (0.0, 1.0) * cooling_normalisation;
+
+  /* ksl - This logic of what follows may not be obvious.  For choosing the basic
+   * process, we just look to see if the destruction choice is less than bf, bf+bb, bf+bb+ff
+   * etc, but inside the bhe "basic_choices", we iteratively reduce! the destruction
+   * choice until we get to one that is less than the cooling associated with a specific
+   * tranistion. If we do not find such a transition, within for example the bf if statement
+   * we drop all the way down to the Error at the end.
+   */
 
 
   if (destruction_choice < mplasma->cooling_bftot)
@@ -1510,7 +1531,7 @@ emit_matom (w, p, nres, upper)
     line_ptr = &line[config[uplvl].bbd_jump[n]];
     /* Since we are only interested in making an r-packet here we can (a) ignore collisional
        deactivation and (b) ignore lines outside the frequency range of interest. */
-    if ((line_ptr->freq > em_rnge.fmin) && (line_ptr->freq < em_rnge.fmax))     // correct range
+    if ((line_ptr->freq > geo.sfmin) && (line_ptr->freq < geo.sfmax))   // correct range
     {
       bb_cont = (a21 (line_ptr) * p_escape (line_ptr, xplasma));
 
@@ -1534,7 +1555,7 @@ emit_matom (w, p, nres, upper)
 
     /* If the edge is above the frequency range we are interested in then we need not consider this
        bf process. */
-    if (cont_ptr->freq[0] < em_rnge.fmax)       //means that it may contribute
+    if (cont_ptr->freq[0] < geo.sfmax)  //means that it may contribute
     {
       sp_rec_rate = alpha_sp (cont_ptr, xplasma, 0);
       eprbs[m] = sp_rec_rate * ne * (config[uplvl].ex - config[phot_top[config[uplvl].bfd_jump[n]].nlev].ex);   //energy difference
@@ -1676,7 +1697,7 @@ matom_emit_in_line_prob (WindPtr one, struct lines *line_ptr_emit)
 
   if (eprbs_line == 0.0)
   {
-    Error ("matom_emit_in_line_prob: Line frequency %g lies outside spectral range %g-%g!\n", line_ptr->freq, em_rnge.fmin, em_rnge.fmax);
+    Error ("matom_emit_in_line_prob: Line frequency %g lies outside spectral range %g-%g!\n", line_ptr->freq, geo.sfmin, geo.sfmax);
     return (-1.0);
   }
 

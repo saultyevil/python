@@ -648,7 +648,7 @@ p_escape (line_ptr, xplasma)
  * probility
  *
  * @param [in] double  tau   An optical depth
- * @return     The escape proability
+ * @return     The escape probability
  *
  * @details
  * p_escape_from_tau calculates the probability of escape

@@ -250,6 +250,7 @@ get_atomic_data (masterfile)
     ele[n].abun = (-1);
     ele[n].firstion = (-1);
     ele[n].nions = (-1);
+    ele[n].istate_max = (-1);
   }
 
   for (n = 0; n < NIONS; n++)
@@ -257,6 +258,7 @@ get_atomic_data (masterfile)
     simple_line_ignore[n] = 0;  // diagnostic counter for how many lines ignored
     ion[n].z = (-1);
     ion[n].istate = (-1);
+    ion[n].nelem = (-1);
     ion[n].ip = (-1);
     ion[n].g = (-1);
     ion[n].nmax = (-1);
@@ -1427,7 +1429,7 @@ described as macro-levels. */
 
             for (nion = 0; nion < nions; nion++)
             {
-              if (ion[nion].z == z && ion[nion].istate == istate)
+              if (ion[nion].z == z && ion[nion].istate == istate && ion[nion].macro_info != 1)
               {
                 if (ion[nion].phot_info == -1)
                 {
@@ -1527,7 +1529,7 @@ described as macro-levels. */
           }
           for (nion = 0; nion < nions; nion++)
           {
-            if (ion[nion].z == z && ion[nion].istate == istate)
+            if (ion[nion].z == z && ion[nion].istate == istate && ion[nion].macro_info != 1)
             {
               /* Then there is a match */
               inner_cross[n_inner_tot].nlev = ion[nion].firstlevel;     //All these are for the ground state
@@ -2300,7 +2302,7 @@ would like to have simple lines for macro-ions */
  * from the data on the website, just with the top few lines commented out,
  * and a label prepended to each line
  * The data is a spline fit to the gaunt factor as a function of g - the reduced
- * temperature.
+ * temperature.  The file format is shown below; there are 45 lines
  * @verbatim
  * # log(g^2) <gff(g^2)>       s1           s2            s3
  * # ------------------------------------------------------------
@@ -2443,6 +2445,7 @@ would like to have simple lines for macro-ions */
           break;
 /**
  * @section Fluorescent photon yield from inner shell ionization - not currently used but read in.
+		  now not read in - see #499
  * #This is fluorescent yield data from Kaastra & Mewe (1993) -1993A&AS...97..443K
  * #It is processed from data downloaded from http://vizier.cfa.harvard.edu/viz-bin/VizieR?-source=J/A+AS/97/443
  * #Via the python script kaastra_2_py.py.
@@ -2696,9 +2699,20 @@ exit if there is an element with no ions */
     n = 0;
     while (ion[n].z != ele[nelem].z && n < nions)
       n++;                      /* Find the first ion of that element for which there is data */
+
     ele[nelem].firstion = n;
+    ion[n].nelem = nelem;
+
+    /* find the highest ion stage and the number of ions */
+    ele[nelem].istate_max = ion[n].istate;
+
     while (ion[n].z == ele[nelem].z && n < nions)
+    {
+      if (ele[nelem].istate_max < ion[n].istate)
+        ele[nelem].istate_max = ion[n].istate;
+      ion[n].nelem = nelem;
       n++;
+    }
     ele[nelem].nions = n - ele[nelem].firstion;
     if (ele[nelem].firstion == nions)
     {

@@ -121,6 +121,19 @@ for the logarithmic grid. Advanced command.
 **File:** setup_domains.c
 
 
+Diag.save_photons
+=================
+Multi-line description, must keep indentation.
+
+**Type:** Boolean (yes/no)
+
+**Parent(s):**
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+
+**File:** diag.c
+
+
 Diag.extra
 ==========
 Decide whether or not to use extra diagnostics in advanced mode.

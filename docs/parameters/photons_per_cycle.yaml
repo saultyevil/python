@@ -1,11 +1,9 @@
 name: Photons_per_cycle
 description: |
-  The number of photons (really energy packets) that are
-  generated in each ionization or spectral cycle
+  Multi-line description, must keep indentation.
 type: Double
 unit: None
-values: Greater than zero
-default: 100000
+values: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 parent:
-  parameter: None
-file: setup2.c
+  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+file: setup.c

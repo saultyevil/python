@@ -77,6 +77,26 @@ See equation (2) Shlosman & Vitello 1993, ApJ 409, 372.
 **File:** sv.c
 
 
+SV.v_zero_mode
+==============
+Multi-line description, must keep indentation.
+
+**Type:** Enumerator
+
+**Values:**
+
+fixed. Multi-line description, must keep indentation.
+
+sound_speed. Multi-line description, must keep indentation.
+
+
+**Parent(s):**
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+
+**File:** sv.c
+
+
 SV.acceleration_length
 ======================
 The size of the acceleration length scale for a disk wind described by the
@@ -90,6 +110,23 @@ Shlosman Vitelo model. See equation (2) Shlosman & Vitelo ApJ (1993),409,372
 
 **Parent(s):**
   wind_type_: 0
+
+
+**File:** sv.c
+
+
+SV.v_zero
+=========
+multiple_of_sound_speed
+
+**Type:** Double
+
+**Unit:** None
+
+**Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+**Parent(s):**
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 
 **File:** sv.c

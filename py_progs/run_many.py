@@ -12,7 +12,7 @@ single processor mode, so the parallelism here is job parallel.
 
 Command line usage (if any):
 
-    usage: run_many.py -njobs x -np y filename
+    usage: run_many.py -jobs x -np y filename
 
     where -njobs is the number of jobs to run simultaneously
           -np is the number of processors per job
@@ -128,9 +128,9 @@ def doit(filename='all.ls',nj=2,np=1,outputfile='out.txt'):
     print('List =',filename)
 
 
-    command='nice  py '
+    command='nice 5 py -p '
     if np>1:
-        command='nice mpirun -np %d py ' % np
+        command='nice 5 mpirun -np %d py -p ' % np
 
 
     try:
@@ -166,7 +166,7 @@ def doit(filename='all.ls',nj=2,np=1,outputfile='out.txt'):
 
     njobs=get_no_jobs(jobs)
     while i<len(jobs):
-        time.sleep(2)
+        time.sleep(10)
         njobs=get_no_jobs(jobs)
         print('Running %d jobs,including job %d (%s) of %d total' % (njobs,i,master['File'][i-1],len(master)))
         if njobs<nj:
@@ -201,7 +201,7 @@ def steer(argv):
         elif argv[i]=='-np':
             i=i+1
             np=int(argv[i])
-        elif argv[i]=='jobs':
+        elif argv[i]=='-jobs':
             i+=1
             njobs=int(argv[i])
         elif argv[i][0]=='-':

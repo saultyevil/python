@@ -658,7 +658,7 @@ use that instead if possible --  57h */
 
     if (cdf_gen_from_array (&cdf_fb, fb_x, fb_y, nnn, f1, f2) != 0)
     {
-      Error ("one_fb after error: f1 %g f2 %g te %g ne %g nh %g vol %g\n",
+      Error ("one_fb after cdf_gen_from_array error: f1 %g f2 %g te %g ne %g nh %g vol %g\n",
              f1, f2, xplasma->t_e, xplasma->ne, xplasma->density[1], one->vol);
       Error ("Giving up\n");
       Exit (0);
@@ -1827,7 +1827,7 @@ matom_select_bf_freq (WindPtr one, int nconf)
 
   if (cdf_gen_from_array (&cdf_fb, fb_x, fb_y, ARRAY_PDF / 100, f1, f2) != 0)
   {
-    Error ("matom_select_bf_freq: f1 %g f2 %g te %g \n", f1, f2, xplasma->t_e);
+    Error ("matom_select_bf_freq after cdf_gen_from_array: f1 %g f2 %g te %g \n", f1, f2, xplasma->t_e);
     Error ("Giving up\n");
     Exit (0);
   }

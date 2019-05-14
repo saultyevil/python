@@ -1,11 +1,9 @@
 name: Wind.radmax
 description: |
-  The maximum radial distance to follow photons in a wind.  Beyond
-  this point photons do not interact with the wind at all. Note that
-  this is a global parameter and refers to al of the wind domains
+  Multi-line description, must keep indentation.
 type: Double
 unit: cm
-values: Greater than 0
+values: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 parent:
-  parameter: Whenver there is a wind one will be asked to provide this parameter.
+  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 file: setup_domains.c

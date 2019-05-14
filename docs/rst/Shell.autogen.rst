@@ -23,6 +23,23 @@ to be enforced.
 **File:** shell_wind.c
 
 
+Shell.wind.radmax
+=================
+Multi-line description, must keep indentation.
+
+**Type:** Double
+
+**Unit:** cm
+
+**Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+**Parent(s):**
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+
+**File:** shell_wind.c
+
+
 Shell.wind.radmin
 =================
 The innermost edge of a diagnostic type of wind made up of a single

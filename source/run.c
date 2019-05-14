@@ -130,7 +130,7 @@ calculate_ionization (restart_stat)
   while (geo.wcycle < geo.wcycles)
   {                             /* This allows you to build up photons in bunches */
 
-    xsignal (files.root, "%-20s Starting %d of %d ionization cycle \n", "NOK", geo.wcycle + 1, geo.wcycles);
+    xsignal (files.root, "%-20s Starting %3d of %3d ionization cycle \n", "NOK", geo.wcycle + 1, geo.wcycles);
 
     Log ("!!Python: Beginning cycle %d of %d for defining wind\n", geo.wcycle + 1, geo.wcycles);
     Log_flush ();               /* Flush the log file (so that we know where are if there are problems */
@@ -359,7 +359,7 @@ calculate_ionization (restart_stat)
     /* NSH1306 - moved geo.wcycle++ back, but moved the log and xsignal statements */
 
 
-    xsignal (files.root, "%-20s Finished %d of %d ionization cycle \n", "OK", geo.wcycle + 1, geo.wcycles);
+    xsignal (files.root, "%-20s Finished %3d of %3d ionization cycle \n", "OK", geo.wcycle + 1, geo.wcycles);
     geo.wcycle++;               //Increment ionisation cycles
 
 
@@ -524,7 +524,7 @@ make_spectra (restart_stat)
        have already completed some. The memory for the spectral arrays
        should already have been allocated, and the spectrum was initialised
        on the original run, so we just need to renormalise the saved spectrum */
-    /* See issue #134 (JM) */
+    /* See issue #134 and #503  */
 
     if (restart_stat == 0)
       Error ("Not restarting, but geo.pcycle = %i and trying to renormalise!\n", geo.pcycle);
@@ -536,12 +536,13 @@ make_spectra (restart_stat)
   while (geo.pcycle < geo.pcycles)
   {                             /* This allows you to build up photons in bunches */
 
-    xsignal (files.root, "%-20s Starting %d of %d spectral cycle \n", "NOK", geo.pcycle + 1, geo.pcycles);
+    xsignal (files.root, "%-20s Starting %3d of %3d spectral cycle \n", "NOK", geo.pcycle + 1, geo.pcycles);
 
 
 
     Log ("!!Cycle %d of %d to calculate a detailed spectrum\n", geo.pcycle + 1, geo.pcycles);
-    Log_flush ();               /*NSH June 13 Added call to flush logfile */
+    Log_flush ();
+
     if (!geo.wind_radiation)
       iwind = -1;               /* Do not generate photons from wind */
     else if (geo.pcycle == 0)

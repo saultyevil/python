@@ -150,9 +150,9 @@ def get_data(filename='fiducial_agn_master.txt', var='t_r',grid='ij',inwind='',s
         print('Error: file %s does not appear to exist' % filename)
         return
 
-    data.info()
+    # data.info()
 
-    print('options: xyscale %s varscale %s min %g max %g' % (grid,scale,zmin,zmax))
+    # print('options: xyscale %s varscale %s min %g max %g' % (grid,scale,zmin,zmax))
 
 
     title=var
@@ -298,7 +298,7 @@ def doit(filename='fiducial_agn.master.txt', var='t_r',grid='ij',inwind='',scale
     x,y,xvar,title,xlabel,ylabel=get_data(filename,var,grid,inwind,scale,zmin,zmax)
     if plot_dir!='':
         root='%s/%s' % (plot_dir,root)
-    print(len(x),len(y),len(xvar))
+    # print(len(x),len(y),len(xvar))
     plotfile=just_plot(x,y,xvar,root,title,xlabel,ylabel)
 
     return plotfile

@@ -57,14 +57,14 @@ def read_diag(root):
     else:
         print(stdout.decode())
         x=stdout.decode()
-        print(len(x))
+        # print(len(x))
         lines=x.split('\n')
-        print(len(lines))
+        # print(len(lines))
         converging=[]
         converged=[]
         for line in lines:
             words=line.split()
-            print(words)
+            # print(words)
             if len(words)>5:
                 converged.append(eval(words[3]))
                 converging.append(eval(words[5]))
@@ -170,7 +170,8 @@ def make_html(root,converge_plot,te_plot,tr_plot,spec_tot_plot,spec_plot):
 
 def doit(root='ixvel',outputfile='out.txt'):
     '''
-    Do something magnificent
+    Create a summary of a Python run, which will enough information that one can assess
+    whether the run was successful
 
     Description:
 
@@ -197,7 +198,7 @@ def doit(root='ixvel',outputfile='out.txt'):
     plot_tot.doit(root)
     spec_tot_plot=root+'.spec_tot.png'
 
-    plot_spec.do_all_angles(root)
+    plot_spec.do_all_angles(root,wmin=0,wmax=0)
     spec_plot=root+'.png'
 
     make_html(root,converge_plot,te_plot,tr_plot,spec_tot_plot,spec_plot)
@@ -209,9 +210,6 @@ def doit(root='ixvel',outputfile='out.txt'):
 
 
     return
-
-
-    
 
 
 
