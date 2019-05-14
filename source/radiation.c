@@ -131,11 +131,14 @@ int iicount = 0;
  *
  * @param [in,out] PhotPtr  p   the photon
  * @param [in] double  ds   the distance the photon has travelled in the cell
- * @return     Always returns 0.  The pieces of the wind structure which are updated are
- * 	j,ave_freq,ntot, heat_photo, heat_ff, heat_h, heat_he1, heat_he2, heat_z,
- * 	nioniz, and ioniz[].
+ * @return     double kappa_tot  the total opacity in the cell  the photon has travelled in.
  *
  * @details
+ *
+ * The pieces of the wind structure which are updated in each call to radiation
+ * are:
+ *   j,ave_freq,ntot, heat_photo, heat_ff, heat_h, heat_he1, heat_he2, heat_z,
+ *   nioniz, and ioniz[].
  *
  * ### Notes ###
  * The # of ionizations of a specific ion = (w(0)-w(s))*n_i sigma_i/ (h nu * kappa_tot).  (The # of ionizations
