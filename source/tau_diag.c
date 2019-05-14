@@ -20,7 +20,7 @@
 #define MAX_TRANS_SPACE 10
 #define N_ANGLES nspectra - MSPEC
 
-enum OPACITIES  // TODO: likely redundant, could use sizeof to automatically find N_TAU
+enum OPACITIES                  // TODO: likely redundant, could use sizeof to automatically find N_TAU
 {
   ROSSELAND,
   PLANCK,
@@ -47,8 +47,8 @@ char *OPACITY_NAMES[] = {
  */
 
 double PHOTON_FREQS[] = {
-  -1       // TODO: not sure what to set mean opacity frequencies to...
-  -2,
+  -1                            // TODO: not sure what to set mean opacity frequencies to...
+    - 2,
   3.28719e15,
   8.22503e14,
 };
@@ -98,12 +98,12 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
   if (smax < 0)
     return -1;
 
-  if (opac_type == ROSSELAND)    // Not implemented
+  if (opac_type == ROSSELAND)   // Not implemented
   {
     move_phot (pextract, geo.rmax);
     return P_ESCAPE;
   }
-  else if (opac_type == PLANCK)  // Not implemented
+  else if (opac_type == PLANCK) // Not implemented
   {
     move_phot (pextract, geo.rmax);
     return P_ESCAPE;
