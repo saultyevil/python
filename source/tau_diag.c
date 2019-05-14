@@ -18,9 +18,9 @@
 
 #define MAX_COL 120
 #define MAX_TRANS_SPACE 10
-#define N_ANGLES nspectra - MSPEC
+#define N_ANGLES (nspectra - MSPEC)
 
-enum OPACITIES                  // TODO: likely redundant, could use sizeof to automatically find N_TAU
+enum OPACITIES
 {
   ROSSELAND,
   PLANCK,
@@ -29,11 +29,6 @@ enum OPACITIES                  // TODO: likely redundant, could use sizeof to a
   N_TAU                         // Used as a counter for the number of taus available
 };
 
-/*
- * This array is for book keeping purposes when printing information to the
- * screen.
- */
-
 char *OPACITY_NAMES[] = {
   "Rosseland",
   "Planck",
@@ -41,14 +36,9 @@ char *OPACITY_NAMES[] = {
   "Balmer"
 };
 
-/*
- * This array is used to set the frequency a tau diag photon should be so the
- * opacity in each cell will be calculated for a photon of this frequency.
- */
-
 double PHOTON_FREQS[] = {
-  -1                            // TODO: not sure what to set mean opacity frequencies to...
-    - 2,
+  -1,                           // TODO: not sure what to set these frequencies to just yet
+  -2,
   3.28719e15,
   8.22503e14,
 };
@@ -69,9 +59,7 @@ double PHOTON_FREQS[] = {
  *
  * @details
  *
- * TODO: modularise in future so w could also be a single cell
- * TODO: implement Rosseland mean
- * TODO: implement Planck mean
+ * TODO: modularise so w can also be a single cell
  *
  * ************************************************************************** */
 
@@ -89,23 +77,18 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
     return pextract->grid;
   }
 
-  /*
-   * smax is the distance a photon can move in the cell in its current direction
-   * until it hits the boundary of the cell
-   */
-
   smax = find_smax (pextract);
   if (smax < 0)
     return -1;
 
-  if (opac_type == ROSSELAND)   // Not implemented
+  if (opac_type == ROSSELAND)
   {
-    move_phot (pextract, geo.rmax);
+    // TODO: implement Rosseland mean
     return P_ESCAPE;
   }
-  else if (opac_type == PLANCK) // Not implemented
+  else if (opac_type == PLANCK)
   {
-    move_phot (pextract, geo.rmax);
+    // TODO: implement Planck mean
     return P_ESCAPE;
   }
   else
@@ -126,23 +109,19 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
  * @brief           Extract the optical depth the photon packet porig must
  *                  travel through to reach the observer.
  *
- * @param[in]       WindPtr   w          A pointer to the wind
- * @param[in]       PhotPtr   porig      The photon packet to extract
- * @param[in]       int       opac_type  An indicator of whether to use a mean
- *                                       opacity or not.
- * @param[out]      double    *tau       The optical depth from photon origin to
- *                                       the observer
+ * @param[in]       WindPtr   w        A pointer to the entire wind
+ * @param[in]       PhotPtr   porig    The photon packet to extract
+ * @param[out]      double    *tau     The optical depth from photon origin to
+ *                                     the observer
  *
  * @return          void
  *
  * @details
  *
  * The direction of the observer is set in porig.lmn and should be set prior
- * to passing a photon to this function. If any values of lmn are negative, the
- * photon will translate in the negative direction. However, have no fear as this
- * is normal and is fine due to assumed symmetries.
+ * to passing a photon to this function.
  *
- * TODO: modularise in future so w could also be a single cell
+ * TODO: modularise so w can also be a single cell
  *
  * ************************************************************************** */
 
@@ -152,12 +131,10 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
   int ndom;
   int istat;
   int n_trans_space;
-
   double norm[3];
-
   struct photon pextract;
 
-  istat = P_INWIND;
+  istat = P_INWIND;             // assume photon is in wind for initialisation reasons
   stuff_phot (porig, &pextract);
 
   /*
@@ -188,12 +165,11 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     }
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)
     {
-      pextract.istat = istat = find_tau (w, &pextract, opac_type, tau);
+      istat = find_tau (w, &pextract, opac_type, tau);
       if (istat == -1)
-      {
         Error ("extract_tau (%s:%i): abnormal value of smax found in find_tau\n", __FILE__, __LINE__);
-        return;
-      }
+      else if (istat != P_INWIND)  // TODO: this is temporary until mean opacity implemented
+        break;
     }
     else
     {
@@ -235,12 +211,12 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
  * photons are required to have weight, but since the diagnostic functions do
  * not care about the weight of the photon, it is set to something large.
  *
- * TODO: add more flexible photon placement
+ * TODO: implement photon central source generation
  *
  * ************************************************************************** */
 
 void
-create_tau_diag_phot (PhotPtr pout, double nu)
+tau_diag_phot (PhotPtr pout, double nu)
 {
   pout->freq = pout->freq_orig = nu;
   pout->origin = pout->origin_orig = PTYPE_DISK;
@@ -290,11 +266,13 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
     {
       tau = tau_store[ispec - MSPEC][itau];
       line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", OPACITY_NAMES[itau], tau);
+
       if (line_len > MAX_COL)
       {
         line_len = 0;
         Log ("\n\t");
       }
+
       Log ("%s", tmp_str);
     }
 
@@ -304,12 +282,9 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
 
 /* ************************************************************************* */
 /**
- * @brief           The main steering function for the optical depth
- *                  diagnostics.
+ * @brief     The main controlling function for the optical depth diagnostics.
  *
- * @param[in]       WindPtr     A pointer to the wind
- *
- * @return          void
+ * @return    void
  *
  * @details
  *
@@ -327,9 +302,6 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
  * The aim of these diagnostic numbers it to provide some sort of metric on the
  * optical thickness of the current model.
  *
- * TODO: fixed angles rather than the angles in xxspec would be better
- * TODO: method for calling this for individual cells instead of the entire wind
- *
  * ************************************************************************** */
 
 void
@@ -346,11 +318,7 @@ tau_diag (WindPtr w)
   struct photon ptau;
 
   /*
-   * EP:
-   * 2d array for storing the optical depths for each observer angle and tau..
-   * I wanted to change this to dynamic allocation or to a 1d array to make it
-   * less "ugly", but I came across issues with calloc memory corruptions and
-   * weird segfaults elsewhere in the code (related to OOE?).
+   * 2d array for storing the optical depths for each observer angle and tau
    */
 
   double tau_store[N_ANGLES][N_TAU];
@@ -372,7 +340,6 @@ tau_diag (WindPtr w)
       tau = 0;
       nu = PHOTON_FREQS[itau];
 
-      // If the frequency is negative, a mean opacity will be used instead :-)
       if (nu == -1)
       {
         opac_type = ROSSELAND;
@@ -386,10 +353,8 @@ tau_diag (WindPtr w)
       else
         opac_type = N_TAU;
 
-      // Create the tau diag photon and point it towards the extract angle
-      create_tau_diag_phot (&ptau, nu);
+      tau_diag_phot (&ptau, nu);
       stuff_v (observer, ptau.lmn);
-
       extract_tau (w, &ptau, opac_type, &tau);
       tau_store[ispec - MSPEC][itau] = tau;
     }
@@ -398,8 +363,7 @@ tau_diag (WindPtr w)
   print_tau_table (tau_store);
 
   /*
-   * Switch back to ionization mode - may be redundant but if this is called
-   * during each ionisation cycle then this will be required...
+   * Switch back to ionization mode
    */
 
   geo.ioniz_or_extract = 1;
