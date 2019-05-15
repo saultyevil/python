@@ -455,8 +455,8 @@ find_smax (PhotPtr p)
   else if (one->inwind == W_NOT_INWIND)
   {                             /* The cell is not in the wind at all */
 
-    Error ("translate_in_wind: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
-    Error ("translate_in_wind: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
+    Error ("find_smax: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
+    Log ("find_smax: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
     move_phot (p, smax);
     return (p->istat);
 
@@ -531,11 +531,10 @@ translate_in_wind (w, p, tau_scat, tau, nres)
 {
 
   int n;
-  double smax, s, ds_current;
+  double smax;
+  double ds_current;
   int istat;
   int nplasma;
-  int ndom, ndom_current;
-  int inwind;
 
   WindPtr one;
   PlasmaPtr xplasma;
@@ -561,9 +560,10 @@ return and record an error */
   one = &wmain[n];              /* one is the grid cell where the photon is */
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
-  ndom = one->ndom;
-  inwind = one->inwind;
 
+  /*
+   * Calculate the maximum distance a photon can move in the current cell
+   */
 
   smax = find_smax (p);
 
