@@ -90,11 +90,17 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
     return pextract->grid;
   }
 
+  Log ("find_tau before smax: p->x %e %e %e\n", pextract->x[0], pextract->x[1], pextract->x[2]);
+
   if ((smax = find_smax (pextract)) < 0)
   {
     Error ("(%s:%i) find_tau: abnormal value of smax for photon\n", __FILE__, __LINE__);
     return -1;
   }
+
+  Log ("dfudge %e\n", w[pextract->grid].dfudge);
+  Log ("find_tau after smax: p->x %e %e %e\n", pextract->x[0], pextract->x[1], pextract->x[2]);
+  Log ("find_tau: smax %e\n", smax);
 
   if (opac_type == ROSSELAND)
   {
@@ -112,6 +118,10 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
   *tau += smax * kappa_tot;
 
   move_phot (pextract, smax);
+
+  Log ("find_tau move_phot: p->x %e %e %e\n", pextract->x[0], pextract->x[1], pextract->x[2]);
+
+
   istat = pextract->istat;
 
   return istat;
@@ -151,6 +161,10 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
   double norm[3];
   struct photon pextract;
 
+  // TODO: remove debug code
+  if (opac_type != 4)
+    return;
+
   istat = P_INWIND;             // assume photon is in wind for initialisation reasons
   stuff_phot (porig, &pextract);
 
@@ -163,8 +177,13 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
 
   n_trans_space = 0;
 
+  Log ("opac type %i\n", opac_type);
+  Log ("before transport: p->x %e %e %e\n", pextract.x[0], pextract.x[1], pextract.x[2]);
+
   while (istat == P_INWIND)
   {
+    Log ("P_INWIND start: %i p->x %e %e %e\n", istat, pextract.x[0], pextract.x[1], pextract.x[2]);
+
     /*
      * The first part of this while loop is concerned with translating the
      * photon either in space, i.e. in the non-wind grid cells, or translates
@@ -174,6 +193,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     if (where_in_wind (pextract.x, &ndom) < 0)
     {
       translate_in_space (&pextract);
+      Log ("translate_in_space: p->x %e %e %e\n", pextract.x[0], pextract.x[1], pextract.x[2]);
       if (++n_trans_space > MAX_TRANS_SPACE)
       {
         Error ("(%s:%i) extract_tau: photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__);
@@ -183,6 +203,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)
     {
       istat = find_tau (w, &pextract, opac_type, tau);
+      Log ("P_INWIND after find_tau: %i p->x %e %e %e\n", istat, pextract.x[0], pextract.x[1], pextract.x[2]);
       if (istat != P_INWIND)
         break;
     }
@@ -200,7 +221,11 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
      */
 
     istat = walls (&pextract, porig, norm);
+
+    Log ("P_INWIND end: %i p->x %e %e %e\n", istat, pextract.x[0], pextract.x[1], pextract.x[2]);
   }
+
+  Log ("after transport: p->x %e %e %e\n\n", pextract.x[0], pextract.x[1], pextract.x[2]);
 
   if (walls (&pextract, porig, norm) == -1)
     Error ("(%s: %i) extract_tau: abnormal return from walls for photon\n", __FILE__, __LINE__);
@@ -237,9 +262,9 @@ tau_diag_phot (PhotPtr pout, double nu)
   pout->origin = pout->origin_orig = PTYPE_DISK;
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
-  pout->x[0] = geo.rstar;
-  pout->x[1] = 0.0;
-  pout->x[2] = 0.0;
+  pout->x[0] = geo.rstar;  // geo.rstar;
+  pout->x[1] = 0;
+  pout->x[2] = geo.rstar;  // 0;
   pout->tau = 0;
 }
 
@@ -381,6 +406,8 @@ tau_diag (WindPtr w)
       // Create the tau diag photon and point it towards the extract angle
       tau_diag_phot (&ptau, nu);
       stuff_v (observer, ptau.lmn);
+
+      Log ("pextra.lmn %f %f %f\n", ptau.lmn[0], ptau.lmn[1], ptau.lmn[2]);
 
       // Extract tau and add it to the tau store
       extract_tau (w, &ptau, opac_type, &tau);

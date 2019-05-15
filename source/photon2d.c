@@ -450,16 +450,13 @@ find_smax (PhotPtr p)
     smax += one->dfudge;
     move_phot (p, smax);
     return (p->istat);
-
   }
   else if (one->inwind == W_NOT_INWIND)
   {                             /* The cell is not in the wind at all */
-
     Error ("find_smax: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
     Log ("find_smax: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
     move_phot (p, smax);
     return (p->istat);
-
   }
 
   /* At this point we now know how far the photon can travel in it's current grid cell */
@@ -792,6 +789,7 @@ walls (p, pold, normal)
     stuff_phot (pold, p);
     move_phot (p, s);
     stuff_v (p->x, normal);
+
     return (p->istat = P_HIT_STAR);
   }
 
