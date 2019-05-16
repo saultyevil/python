@@ -7,6 +7,39 @@
  * @brief    The main resting place for all functions related to providing
  *           optical depth diagnostic.
  *
+ * @details
+ *
+ * HOW TO ADD MORE OPTICAL DEPTHS
+ * ------------------------------
+ *
+ * In theory it should be relatively straight forwards to add more optical
+ * depths if desired. One should only need to update the the two arrays named
+ * TAU_NAME and PHOT_FREQ.
+ *
+ * All one should be required to do is to add a name for the optical depth in
+ * TAU_NAME and to append the relevant photon frequency in PHOT_FREQ. This is
+ * done as the function radiation is called to calculate the opacity for a
+ * photon of a given frequency in the current cell. TAU_NAME is merely just a
+ * way to give a name to the optical depth for display purposes.
+ *
+ * If one wishes to add a "special" opacity, which is an opacity which will
+ * require it's own function to calculate, such as the Rosseland mean opacity,
+ * then one should update the enumerator SPEC_OPAC with a new label for that
+ * opacity, as well as the PHOT_FREQ and TAU_NAME arrays as described above.
+ * However, PHOT_FREQ should be given a distinctive value as in the function
+ * tau_diag (), the value of opac_type will need to be set as this will be
+ * required in the function find_tau () to calculate the correct opacity. Thus,
+ * one  should also add another else if branch for the variable opac_type in
+ * find_tau ().
+ *
+ * If none of this makes sense, just try to follow how everything else is done!
+ *
+ * ### Programming Notes ###
+ *
+ * The macro __func__ is used in here for error reporting usage, but it is only
+ * defined since the C99 standard... but what if people use C90? oh no! Not
+ * sure if I should really care?
+ *
  * ************************************************************************** */
 
 #include <stdio.h>
@@ -15,45 +48,107 @@
 #include "atomic.h"
 #include "python.h"
 
+/*
+ * SPEC_OPAC:
+ * Enumerator to label any special opacities which are used. This is mainly for
+ * the use of the Rosseland and Planck mean opacities.
+ */
 
-#define MAX_COL 120
-#define MAX_TRANS_SPACE 10
-#define N_ANGLES (nspectra - MSPEC)
-
-enum OPACITIES                  // TODO: likely redundant, replace with something smarter
+enum SPEC_OPAC
 {
-  ROSSELAND,
-  PLANCK,
-  LYMAN_EDGE,                   // 850 A
-  BALMER_EDGE,                  // 3600 A
-  N_TAU                         // Used as a counter for the number of taus available
+  ROSSEL_MEAN = 1,
+  PLANCK_MEAN = 2,
 };
 
 /*
+ * TAU_NAME:
  * This array is used for book keeping purposes when printing information to
- * the screen. TODO: likely does not need global scope
+ * the screen.
+ * NOTE: this array is global for convenience purposes if more optical depths
+ *       wish to be added
  */
 
-char *OPACITY_NAMES[] = {
+char *TAU_NAME[] = {
   "Rosseland",
   "Planck",
-  "Lyman850",
-  "Balmer3600"
+  "Lyma_850A",
+  "Bal_3600A",
 };
 
 /*
+ * PHOT_FREQ:
  * This array is used to set the frequency for a tau diag photon. By setting the
- * photon's frequency, Python should be able to calculate the frequency depedent
- * opacity for that photon. TODO: likely does not need global scope
+ * photon's frequency, Python should be able to calculate the frequency
+ * dependent opacity for that photon.
+ * NOTE: this array is global for convenience purposes if more optical depths
+ *       wish to be added
  */
 
-double PHOTON_FREQS[] = {
-  -1,                           // TODO: not sure what to set these frequencies to just yet
-  -2,
+double PHOT_FREQ[] = {
+  -ROSSEL_MEAN,
+  -PLANCK_MEAN,
   3.526970e+15,
   8.327568e+14,
 };
 
+#define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
+#define N_ANGLES (nspectra - MSPEC)
+#define MAX_TRANS_SPACE 10
+
+/* ************************************************************************* */
+/**
+ * @brief           Print the various optical depths calculated using this
+ *                  routine
+ *
+ * @param[in]       double   tau_store    The 2d array containing the optical
+ *                                        depth for each observer and tau
+ *
+ * @return          void
+ *
+ * @details
+ *
+ * Simply prints the different optical depths for each angle and optical depth.
+ *
+ * ************************************************************************** */
+
+void
+print_tau_table (double tau_store[N_ANGLES][N_TAU])
+{
+  int itau;
+  int ispec;
+  int line_len;
+  int const MAX_COL = 120;
+
+  double tau;
+
+  char tmp_str[50];
+  char observer_name[40];
+
+  Log ("\nOptical depths along the defined line of sights:\n\n");
+
+  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  {
+    strcpy (observer_name, xxspec[ispec].name);
+    Log ("%s\n--------\n", observer_name);
+
+    line_len = 0;
+    for (itau = 0; itau < N_TAU; itau++)
+    {
+      tau = tau_store[ispec - MSPEC][itau];
+      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_NAME[itau], tau);
+
+      if (line_len > MAX_COL)
+      {
+        line_len = 0;
+        Log ("\n\t");
+      }
+
+      Log ("%s", tmp_str);
+    }
+
+    Log ("\n\n");
+  }
+}
 
 /* ************************************************************************* */
 /**
@@ -70,7 +165,17 @@ double PHOTON_FREQS[] = {
  *
  * @details
  *
- * TODO: modularise in future so w could also be a single cell
+ * This function is concerned with finding the opacity of the photon's current
+ * cell, the distance the photon can move in the cell and hence it increments
+ * the optical depth tau a photon has experienced as it moves through the wind.
+ *
+ * The opacity is usually calculated using the function radiation which the
+ * extract photon is passed to, as well as the distance it can move, smax. In
+ * special cases, such as when a mean opacity is being used, radiation is not
+ * used to find the opacity but specialised functions are called instead.
+ *
+ * The photon status istat is updated and returned for some reason.
+ *
  * TODO: implement Rosseland mean opacity
  * TODO: implement Planck mean opacity
  *
@@ -86,21 +191,21 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
 
   if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
   {
-    Error ("(%s:%i) find_tau: pextract is not in grid\n", __FILE__, __LINE__);
+    Error ("%s:%i:%s: pextract is not in grid\n", __FILE__, __LINE__, __func__);
     return pextract->grid;
   }
 
   if ((smax = find_smax (pextract)) < 0)
   {
-    Error ("(%s:%i) find_tau: abnormal value of smax for photon\n", __FILE__, __LINE__);
+    Error ("%s:%i:%s: abnormal value of smax for photon\n", __FILE__, __LINE__, __func__);
     return -1;
   }
 
-  if (opac_type == ROSSELAND)
+  if (opac_type == ROSSEL_MEAN)
   {
     return P_ESCAPE;
   }
-  else if (opac_type == PLANCK)
+  else if (opac_type == PLANCK_MEAN)
   {
     return P_ESCAPE;
   }
@@ -139,8 +244,6 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
  * phton will translate in the negative direction. However, have no fear as this
  * is normal and is fine due to the assumed symmetry of models in Python.
  *
- * TODO: modularise in future so w could also be a single cell
- *
  * ************************************************************************** */
 
 void
@@ -149,11 +252,13 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
   int ndom;
   int istat;
   int n_trans_space;
+
   double norm[3];
+
   struct photon pextract;
 
   // TODO: remove when Planck and Rosseland mean have been implemeneted properly
-  if (opac_type == ROSSELAND || opac_type == PLANCK)
+  if (opac_type == ROSSEL_MEAN || opac_type == PLANCK_MEAN)
     return;
 
   istat = P_INWIND;             // assume photon is in wind for initialisation reasons
@@ -181,7 +286,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
       translate_in_space (&pextract);
       if (++n_trans_space > MAX_TRANS_SPACE)
       {
-        Error ("(%s:%i) extract_tau: photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__);
+        Error ("%s:%i:%s: photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__, __func__);
         break;
       }
     }
@@ -194,7 +299,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     else
     {
       pextract.istat = -1;
-      Error ("(%s:%i) extract_tau: photon in unknown location,  grid stat %i\n", __FILE__, __LINE__, pextract.grid);
+      Error ("%s:%i:%s: photon in unknown location,  grid stat %i\n", __FILE__, __LINE__, __func__, pextract.grid);
       return;
     }
 
@@ -207,8 +312,11 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     istat = walls (&pextract, porig, norm);
   }
 
+  if (istat == P_HIT_STAR || istat == P_HIT_DISK)
+    Error ("%s:%i:%s: photon hit star or disk, istat = %i\n", __FILE__, __LINE__, __func__, istat);
+
   if (walls (&pextract, porig, norm) == -1)
-    Error ("(%s: %i) extract_tau: abnormal return from walls for photon\n", __FILE__, __LINE__);
+    Error ("%s:%i:%s: abnormal return from walls for photon\n", __FILE__, __LINE__, __func__);
 }
 
 
@@ -231,7 +339,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
  * photons are required to have weight, but since the diagnostic functions do
  * not care about the weight of the photon, it is set to something large.
  *
- * TODO: add more flexible photon placement
+ * TODO: add more flexible photon placement: placement of the photon is v v important
  *
  * ************************************************************************** */
 
@@ -242,64 +350,10 @@ tau_diag_phot (PhotPtr pout, double nu)
   pout->origin = pout->origin_orig = PTYPE_DISK;
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
-  pout->x[0] = geo.rstar;       // geo.rstar;
+  pout->x[0] = geo.rstar;
   pout->x[1] = 0;
-  pout->x[2] = geo.rstar;       // 0;
+  pout->x[2] = geo.rstar;
   pout->tau = 0;
-}
-
-/* ************************************************************************* */
-/**
- * @brief           Print the various optical depths calculated using this
- *                  routine
- *
- * @param[in]       double   tau_store    The 2d array containing the optical
- *                                        depth for each observer and tau
- *
- * @return          void
- *
- * @details
- *
- * TODO: tau_store should be calloc'd but it seems Python is a bit delicate...
- *
- * ************************************************************************** */
-
-void
-print_tau_table (double tau_store[N_ANGLES][N_TAU])
-{
-  int itau;
-  int ispec;
-  int line_len;
-
-  double tau;
-
-  char tmp_str[50];
-  char observer_name[40];
-
-  Log ("\nOptical depths along the observer's line of sight:\n\n");
-
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
-  {
-    strcpy (observer_name, xxspec[ispec].name);
-    Log ("%s\n\t", observer_name);
-
-    line_len = 0;
-    for (itau = 0; itau < N_TAU; itau++)
-    {
-      tau = tau_store[ispec - MSPEC][itau];
-      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", OPACITY_NAMES[itau], tau);
-
-      if (line_len > MAX_COL)
-      {
-        line_len = 0;
-        Log ("\n\t");
-      }
-
-      Log ("%s", tmp_str);
-    }
-
-    Log ("\n\n");
-  }
 }
 
 /* ************************************************************************* */
@@ -324,7 +378,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
  * The aim of these diagnostic numbers it to provide some sort of metric on the
  * optical thickness of the current model.
  *
- * TODO: fixed angles rather than angles in xxspec would be better
+ * TODO: fixed angles rather than angles in xxspec could be better - but this is complicated for binary systems
  * TODO: method for calling this for individual cells instead of the entire wind
  *
  * ************************************************************************** */
@@ -345,9 +399,9 @@ tau_diag (WindPtr w)
   /*
    * EP:
    * 2d array for storing the optical depths for each observer angle and tau..
-   * I wanted to change this to dynamic allocation or to a 1d array to make it
-   * less "ugly", but I came across issues with calloc memory corruptions and
-   * weird segfaults elsewhere in the code (related to OOE?).
+   * I tried assigning this dynamically, in case this gets allocated on stack
+   * and causes a segfault, but this for some reason caused segfaults in other
+   * parts of the code.
    */
 
   double tau_store[N_ANGLES][N_TAU];
@@ -360,34 +414,58 @@ tau_diag (WindPtr w)
 
   geo.ioniz_or_extract = 0;
 
-  // MSPEC here is used as this is where the actual observer angles start
+  /*
+   * MSPEC here is used as this is where the actual observer angles start
+   */
+
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
     observer = xxspec[ispec].lmn;
     for (itau = 0; itau < N_TAU; itau++)
     {
       tau = 0;
-      nu = PHOTON_FREQS[itau];
+      nu = PHOT_FREQ[itau];
 
-      // If the frequency is negative, a mean opacity will be used instead
-      if (nu == -1)
+      /*
+       * If the frequency is negative, a mean opacity will be used instead
+       */
+
+      if (nu == -ROSSEL_MEAN)
       {
-        opac_type = ROSSELAND;
+        opac_type = ROSSEL_MEAN;
         nu = 1e15;
       }
-      else if (nu == -2)
+      else if (nu == -PLANCK_MEAN)
       {
-        opac_type = PLANCK;
+        opac_type = PLANCK_MEAN;
         nu = 1e15;
       }
       else
         opac_type = N_TAU;
 
-      // Create the tau diag photon and point it towards the extract angle
+      /*
+       * Create the tau diag photon and point it towards the extract angle
+       */
+
       tau_diag_phot (&ptau, nu);
       stuff_v (observer, ptau.lmn);
 
-      // Extract tau and add it to the tau store
+    /* **********************************************************************
+
+          It is a great issue with me on where to place the extracted photon.
+          This bit of code was an experiment to see if I should place the
+          photon at -Rstar if lmn[0] was zero.. but the results were very
+          sensitive to the placement. Still unsure which is better right now.
+
+          if (ptau.lmn[0] < 0)
+            ptau.x[0] *= -1;
+
+       ********************************************************************** */
+
+      /*
+       * Extract tau and add it to the tau storage array
+       */
+
       extract_tau (w, &ptau, opac_type, &tau);
       tau_store[ispec - MSPEC][itau] = tau;
     }
