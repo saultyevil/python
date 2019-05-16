@@ -242,9 +242,9 @@ tau_diag_phot (PhotPtr pout, double nu)
   pout->origin = pout->origin_orig = PTYPE_DISK;
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
-  pout->x[0] = geo.rstar;  // geo.rstar;
+  pout->x[0] = geo.rstar;       // geo.rstar;
   pout->x[1] = 0;
-  pout->x[2] = geo.rstar;  // 0;
+  pout->x[2] = geo.rstar;       // 0;
   pout->tau = 0;
 }
 

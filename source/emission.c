@@ -805,12 +805,13 @@ gaunt_ff (gsquared)
 //OLD    }
 //OLD  }
 
-  i=0;
-  while (gaunt_total[i].log_gsqrd < log_g2) {
-      i++;
+  i = 0;
+  while (gaunt_total[i].log_gsqrd < log_g2)
+  {
+    i++;
   }
 
-  index=i-1;
+  index = i - 1;
   delta = log_g2 - gaunt_total[index].log_gsqrd;
 
   /* The outherland interpolation data is a spline fit to the gaunt function. */
