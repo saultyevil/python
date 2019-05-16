@@ -24,8 +24,8 @@ enum OPACITIES                  // TODO: likely redundant, replace with somethin
 {
   ROSSELAND,
   PLANCK,
-  LYMAN_EDGE,                   // 912 A
-  BALMER_EDGE,                  // 3646 A
+  LYMAN_EDGE,                   // 850 A
+  BALMER_EDGE,                  // 3600 A
   N_TAU                         // Used as a counter for the number of taus available
 };
 
@@ -37,8 +37,8 @@ enum OPACITIES                  // TODO: likely redundant, replace with somethin
 char *OPACITY_NAMES[] = {
   "Rosseland",
   "Planck",
-  "Lyman",
-  "Balmer"
+  "Lyman850",
+  "Balmer3600"
 };
 
 /*
@@ -50,8 +50,8 @@ char *OPACITY_NAMES[] = {
 double PHOTON_FREQS[] = {
   -1,                           // TODO: not sure what to set these frequencies to just yet
   -2,
-  3.28719e15,
-  8.22503e14,
+  3.526970e+15,
+  8.327568e+14,
 };
 
 
@@ -90,17 +90,11 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
     return pextract->grid;
   }
 
-  Log ("find_tau before smax: p->x %e %e %e\n", pextract->x[0], pextract->x[1], pextract->x[2]);
-
   if ((smax = find_smax (pextract)) < 0)
   {
     Error ("(%s:%i) find_tau: abnormal value of smax for photon\n", __FILE__, __LINE__);
     return -1;
   }
-
-  Log ("dfudge %e\n", w[pextract->grid].dfudge);
-  Log ("find_tau after smax: p->x %e %e %e\n", pextract->x[0], pextract->x[1], pextract->x[2]);
-  Log ("find_tau: smax %e\n", smax);
 
   if (opac_type == ROSSELAND)
   {
@@ -118,9 +112,6 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
   *tau += smax * kappa_tot;
 
   move_phot (pextract, smax);
-
-  Log ("find_tau move_phot: p->x %e %e %e\n", pextract->x[0], pextract->x[1], pextract->x[2]);
-
 
   istat = pextract->istat;
 
@@ -161,8 +152,8 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
   double norm[3];
   struct photon pextract;
 
-  // TODO: remove debug code
-  if (opac_type != 4)
+  // TODO: remove when Planck and Rosseland mean have been implemeneted properly
+  if (opac_type == ROSSELAND || opac_type == PLANCK)
     return;
 
   istat = P_INWIND;             // assume photon is in wind for initialisation reasons
@@ -177,13 +168,8 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
 
   n_trans_space = 0;
 
-  Log ("opac type %i\n", opac_type);
-  Log ("before transport: p->x %e %e %e\n", pextract.x[0], pextract.x[1], pextract.x[2]);
-
   while (istat == P_INWIND)
   {
-    Log ("P_INWIND start: %i p->x %e %e %e\n", istat, pextract.x[0], pextract.x[1], pextract.x[2]);
-
     /*
      * The first part of this while loop is concerned with translating the
      * photon either in space, i.e. in the non-wind grid cells, or translates
@@ -193,7 +179,6 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     if (where_in_wind (pextract.x, &ndom) < 0)
     {
       translate_in_space (&pextract);
-      Log ("translate_in_space: p->x %e %e %e\n", pextract.x[0], pextract.x[1], pextract.x[2]);
       if (++n_trans_space > MAX_TRANS_SPACE)
       {
         Error ("(%s:%i) extract_tau: photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__);
@@ -203,7 +188,6 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)
     {
       istat = find_tau (w, &pextract, opac_type, tau);
-      Log ("P_INWIND after find_tau: %i p->x %e %e %e\n", istat, pextract.x[0], pextract.x[1], pextract.x[2]);
       if (istat != P_INWIND)
         break;
     }
@@ -221,11 +205,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
      */
 
     istat = walls (&pextract, porig, norm);
-
-    Log ("P_INWIND end: %i p->x %e %e %e\n", istat, pextract.x[0], pextract.x[1], pextract.x[2]);
   }
-
-  Log ("after transport: p->x %e %e %e\n\n", pextract.x[0], pextract.x[1], pextract.x[2]);
 
   if (walls (&pextract, porig, norm) == -1)
     Error ("(%s: %i) extract_tau: abnormal return from walls for photon\n", __FILE__, __LINE__);
@@ -406,8 +386,6 @@ tau_diag (WindPtr w)
       // Create the tau diag photon and point it towards the extract angle
       tau_diag_phot (&ptau, nu);
       stuff_v (observer, ptau.lmn);
-
-      Log ("pextra.lmn %f %f %f\n", ptau.lmn[0], ptau.lmn[1], ptau.lmn[2]);
 
       // Extract tau and add it to the tau store
       extract_tau (w, &ptau, opac_type, &tau);
