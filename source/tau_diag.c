@@ -71,10 +71,11 @@ enum SPEC_OPAC
  */
 
 char *TAU_NAME[] = {
-  "Rosseland",
-  "Planck"   ,
-  "Lyma_850A",
-  "Bal_3600A",
+  "Rosseland",   // Rosseland mean opacity
+  "Planck"   ,   // Planck mean opacity
+  "Lyma_885A",   // Hydrogen Lyman edge
+  "Bal_3615A",   // Hydrogen Balmer edge
+  "HeII_215A",   // He II edge at 54 eV
 };
 
 /*
@@ -89,8 +90,9 @@ char *TAU_NAME[] = {
 double PHOT_FREQ[] = {
   -ROSSEL_MEAN,
   -PLANCK_MEAN,
-  3.526970e+15,
-  8.327568e+14,
+  3.387485e+15,
+  8.293014e+14,
+  1.394384e+16,
 };
 
 #define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
@@ -129,7 +131,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
   char tmp_str[50];
   char observer_name[40];
 
-  Log ("\nOptical depths along the defined line of sights:\n\n");
+  Log ("\nOptical depths along the defined line of sights:\n(-1 indicates an error)\n\n");
 
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
@@ -137,7 +139,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
     Log ("%s\n--------\n", observer_name);
 
     col_den = col_den_store[ispec - MSPEC];
-    Log ("Column density: %3.2e cm^-2\n", col_den);
+    Log ("Column density: %3.2e g/cm^-2\n", col_den);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
@@ -148,7 +150,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
       if (line_len > MAX_COL)
       {
         line_len = 0;
-        Log ("\n\t");
+        Log ("\n");
       }
 
       Log ("%s", tmp_str);
