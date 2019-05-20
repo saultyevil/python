@@ -44,6 +44,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "atomic.h"
 #include "python.h"
@@ -56,8 +57,9 @@
 
 enum SPEC_OPAC
 {
-  ROSSEL_MEAN = 1,
-  PLANCK_MEAN = 2,
+  NORMAL_TAU  = 1,
+  ROSSEL_MEAN = 2,
+  PLANCK_MEAN = 3,
 };
 
 /*
@@ -70,7 +72,7 @@ enum SPEC_OPAC
 
 char *TAU_NAME[] = {
   "Rosseland",
-  "Planck",
+  "Planck"   ,
   "Lyma_850A",
   "Bal_3600A",
 };
@@ -100,8 +102,10 @@ double PHOT_FREQ[] = {
  * @brief           Print the various optical depths calculated using this
  *                  routine
  *
- * @param[in]       double   tau_store    The 2d array containing the optical
- *                                        depth for each observer and tau
+ * @param[in]       double   tau_store      The 2d array containing the optical
+ *                                          depth for each observer and tau
+ * @param[in]       double   col_den_store  The 2d array containing the column
+ *                                          densities for each observer
  *
  * @return          void
  *
@@ -112,7 +116,7 @@ double PHOT_FREQ[] = {
  * ************************************************************************** */
 
 void
-print_tau_table (double tau_store[N_ANGLES][N_TAU])
+print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLES])
 {
   int itau;
   int ispec;
@@ -120,6 +124,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
   int const MAX_COL = 120;
 
   double tau;
+  double col_den;
 
   char tmp_str[50];
   char observer_name[40];
@@ -130,6 +135,9 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
   {
     strcpy (observer_name, xxspec[ispec].name);
     Log ("%s\n--------\n", observer_name);
+
+    col_den = col_den_store[ispec - MSPEC];
+    Log ("Column density: %3.2e cm^-2\n", col_den);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
@@ -159,9 +167,13 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
  * @param[in]       PhotPtr   pextract    The photon packet to extract
  * @param[in]       int       opac_type   The opacity to use to calculate the
  *                                        optical depth
- * @param[in,out]   double    *tau        The optical depth across the cell
+ * @param[in,out]   double    *col_den    The column density the photon has
+ *                                        translated through
+ * @param[in,out]   double    *tau        The optical depth experienced by the
+ *                                        photon
  *
- * @return          int       istat       The current photon status
+ * @return          int       istat       The current photon status or
+ *                                        EXIT_FAILURE on failure.
  *
  * @details
  *
@@ -178,28 +190,52 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU])
  *
  * TODO: implement Rosseland mean opacity
  * TODO: implement Planck mean opacity
+ * TODO: figure out how to get H density in Python :^)
  *
  * ************************************************************************** */
 
 int
-find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
+find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *tau)
 {
   int istat;
+  int nplasma;
 
+  double density;
   double smax;
   double kappa_tot;
+
+  PlasmaPtr plasma_cell;
+
+  /*
+   * Determine where in the plasma grid the cell is. This is required so a
+   * column density can be calculated
+   */
+
+  nplasma = w[pextract->grid].nplasma;
+  plasma_cell = &plasmamain[nplasma];
+  density = plasma_cell->rho;
 
   if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
   {
     Error ("%s:%i:%s: pextract is not in grid\n", __FILE__, __LINE__, __func__);
-    return pextract->grid;
+    return EXIT_FAILURE;
   }
+
+  /*
+   * smax should be the transverse distance of the cell the photon is in
+   */
 
   if ((smax = find_smax (pextract)) < 0)
   {
     Error ("%s:%i:%s: abnormal value of smax for photon\n", __FILE__, __LINE__, __func__);
-    return -1;
+    return EXIT_FAILURE;
   }
+
+  /*
+   * Depending on the type of opacity in use, kappa_tot is updated with the
+   * opacity of the cell which is the total opacity of that cell. Note that
+   * radiation is the opacity of the cell in non-macro atom mode.
+   */
 
   if (opac_type == ROSSEL_MEAN)
   {
@@ -214,8 +250,13 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
     kappa_tot = radiation (pextract, smax);
   }
 
-  *tau += smax * kappa_tot;
+  /*
+   * Increment the optical depth and column density variables and move the
+   * photon to the edge of the cell
+   */
 
+  *col_den += smax * density;
+  *tau += smax * kappa_tot;
   move_phot (pextract, smax);
 
   istat = pextract->istat;
@@ -232,10 +273,12 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
  * @param[in]       PhotPtr   porig      The photon packet to extract
  * @param[in]       int       opac_type  An indicator of wheter to use a mean
  *                                       opacity or not
+ * @param[out]      double    *col_den   The column depth of the extracted
+ *                                       photon angle
  * @param[out]      double    *tau       The optical depth from photon origin to
  *                                       the observer
  *
- * @return          void
+ * @return          int                  EXIT_SUCCESS or EXIT_FAILURE
  *
  * @details
  *
@@ -246,9 +289,10 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *tau)
  *
  * ************************************************************************** */
 
-void
-extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
+int
+extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *tau)
 {
+  int rc;
   int ndom;
   int istat;
   int n_trans_space;
@@ -259,7 +303,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
 
   // TODO: remove when Planck and Rosseland mean have been implemeneted properly
   if (opac_type == ROSSEL_MEAN || opac_type == PLANCK_MEAN)
-    return;
+    return EXIT_FAILURE;
 
   istat = P_INWIND;             // assume photon is in wind for initialisation reasons
   stuff_phot (porig, &pextract);
@@ -287,24 +331,27 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
       if (++n_trans_space > MAX_TRANS_SPACE)
       {
         Error ("%s:%i:%s: photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__, __func__);
-        break;
+        return EXIT_FAILURE;
       }
     }
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)
     {
-      istat = find_tau (w, &pextract, opac_type, tau);
-      if (istat != P_INWIND)
-        break;
+      rc = find_tau (w, &pextract, opac_type, col_den, tau);
+      if (rc)
+      {
+        pextract.istat = -1;
+        return EXIT_FAILURE;
+      }
     }
     else
     {
+      Error ("%s:%i:%s: photon in unknown location, grid stat %i\n", __FILE__, __LINE__, __func__, pextract.grid);
       pextract.istat = -1;
-      Error ("%s:%i:%s: photon in unknown location,  grid stat %i\n", __FILE__, __LINE__, __func__, pextract.grid);
-      return;
+      return EXIT_FAILURE;
     }
 
     /*
-     * Now that the photon has been translated, we updated istat using the walls
+     * Now that the photon has been translated, we update istat using the walls
      * function which should return an istat which is not P_INWIND when the
      * photon has exited in the wind -- hopefully when it has escaped
      */
@@ -313,12 +360,19 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
   }
 
   if (istat == P_HIT_STAR || istat == P_HIT_DISK)
+  {
     Error ("%s:%i:%s: photon hit star or disk, istat = %i\n", __FILE__, __LINE__, __func__, istat);
+    return EXIT_FAILURE;
+  }
 
   if (walls (&pextract, porig, norm) == -1)
+  {
     Error ("%s:%i:%s: abnormal return from walls for photon\n", __FILE__, __LINE__, __func__);
-}
+    return EXIT_FAILURE;
+  }
 
+  return EXIT_SUCCESS;
+}
 
 /* ************************************************************************* */
 /**
@@ -329,7 +383,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
  *
  * @param[in]       double   nu       The frequency of the photon packet
  *
- * @return          void
+ * @return          int               EXIT_SUCCESS or EXIT_FAILURE
  *
  * @details
  *
@@ -339,21 +393,29 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *tau)
  * photons are required to have weight, but since the diagnostic functions do
  * not care about the weight of the photon, it is set to something large.
  *
- * TODO: add more flexible photon placement: placement of the photon is v v important
+ * TODO: allow more flexible photon placement
  *
  * ************************************************************************** */
 
-void
+int
 tau_diag_phot (PhotPtr pout, double nu)
 {
+  if (nu < 0)
+  {
+    Error ("%s:%i:%s: photon can't be created with negative nu\n", __FILE__, __LINE__, __func__);
+    return EXIT_FAILURE;
+  }
+
   pout->freq = pout->freq_orig = nu;
   pout->origin = pout->origin_orig = PTYPE_DISK;
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
-  pout->x[0] = geo.rstar;
+  pout->x[0] = 1.1 * geo.rstar;
   pout->x[1] = 0;
-  pout->x[2] = geo.rstar;
+  pout->x[2] = 0;
   pout->tau = 0;
+
+  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */
@@ -392,6 +454,7 @@ tau_diag (WindPtr w)
 
   double nu;
   double tau;
+  double col_den;
   double *observer;
 
   struct photon ptau;
@@ -402,9 +465,12 @@ tau_diag (WindPtr w)
    * I tried assigning this dynamically, in case this gets allocated on stack
    * and causes a segfault, but this for some reason caused segfaults in other
    * parts of the code.
+   * EP:
+   * I have also added an array for storing the column densities.
    */
 
   double tau_store[N_ANGLES][N_TAU];
+  double col_den_store[N_ANGLES];
 
   /*
    * Switch to extract mode - this is bad generally not great practise but it
@@ -421,9 +487,11 @@ tau_diag (WindPtr w)
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
     observer = xxspec[ispec].lmn;
+
     for (itau = 0; itau < N_TAU; itau++)
     {
       tau = 0;
+      col_den = 0;
       nu = PHOT_FREQ[itau];
 
       /*
@@ -441,37 +509,55 @@ tau_diag (WindPtr w)
         nu = 1e15;
       }
       else
-        opac_type = N_TAU;
+        opac_type = NORMAL_TAU;
 
       /*
-       * Create the tau diag photon and point it towards the extract angle
+       * Create the tau diag photon and point it towards the extract angle. If
+       * something goes wrong with photon generation, warn the user, set tau to
+       * -1 and skip this iteration.
+       *
+       * NOTE: nu HAS to be positive otherwise Python will fall over when later
+       *       in the tau_diag algorithm when it makes a call to radiation..
+       *       or I think it'll fall over at least.
        */
 
-      tau_diag_phot (&ptau, nu);
+      if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
+      {
+        Log ("%s:%i:%s: skipping photon of frequency %e\n", __FILE__, __LINE__, __func__, nu);
+        tau_store[ispec - MSPEC][itau] = -1;
+        col_den_store[ispec - MSPEC] = -1;
+        continue;
+      }
+
       stuff_v (observer, ptau.lmn);
 
-    /* **********************************************************************
+      /* *************************************************************************
 
-          It is a great issue with me on where to place the extracted photon.
-          This bit of code was an experiment to see if I should place the
-          photon at -Rstar if lmn[0] was zero.. but the results were very
-          sensitive to the placement. Still unsure which is better right now.
+            It is a great issue with me on where to place the extracted photon.
+            This bit of code was an experiment to see if I should place the
+            photon at -Rstar if lmn[0] was zero.. but the results were very
+            sensitive to the placement. Still unsure which is better right now.
 
-          if (ptau.lmn[0] < 0)
-            ptau.x[0] *= -1;
+         ************************************************************************ */
 
-       ********************************************************************** */
+      if (ptau.lmn[0] < 0)
+        ptau.x[0] *= -1;
+
+      /* ************************************************************************ */
 
       /*
        * Extract tau and add it to the tau storage array
        */
 
-      extract_tau (w, &ptau, opac_type, &tau);
+      if (extract_tau (w, &ptau, opac_type, &col_den, &tau) == EXIT_FAILURE)
+        tau = -1;
+
       tau_store[ispec - MSPEC][itau] = tau;
+      col_den_store[ispec - MSPEC] = col_den;
     }
   }
 
-  print_tau_table (tau_store);
+  print_tau_table (tau_store, col_den_store);
 
   /*
    * Switch back to ionization mode - may be redundant but if this is called
