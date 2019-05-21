@@ -117,7 +117,13 @@ double PHOT_FREQ[] = {
  * The same information will also be printed to an individual diag file named
  * optical_depth.diag which is located in the diag folder of the simulation.
  *
+ * TODO: Log followed by fprintf is ugly
+ *
  * ************************************************************************** */
+
+// TODO: stop being lazy and think of a smarter way to set this
+
+double print_xloc;
 
 void
 print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLES])
@@ -143,8 +149,8 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
     Exit (1);
   }
 
-  Log ("\nOptical depths along the defined line of sights:\n(-1 indicates an error)\n\n");
-  fprintf (tau_diag, "Optical depths along the defined line of sights:\n(-1 indicates an error)\n\n");
+  Log ("\nOptical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
+  fprintf (tau_diag, "Optical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
 
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
@@ -155,6 +161,14 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
     col_den = col_den_store[ispec - MSPEC];
     Log ("Column density: %3.2e g/cm^-2\n", col_den);
     fprintf (tau_diag, "Column density: %3.2e g/cm^-2\n", col_den);
+
+    /*
+     * For the photons which are pointing upwards and are not launched from the
+     * origin
+     */
+
+    if (strcmp (observer_name, "A00P0.50") == 0)
+      Log ("Photon launched from x location: %e cm\n", print_xloc);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
@@ -474,14 +488,20 @@ tau_diag_phot (PhotPtr pout, double nu)
 void
 tau_diag (WindPtr w)
 {
+  int i;
   int itau;
   int ispec;
   int opac_type;
+  int wind_index;
+  int plasma_index;
 
   double nu;
   double tau;
+  double x_loc;
   double col_den;
   double *observer;
+  double plasma_density;
+  double max_plasma_density;
 
   struct photon ptau;
 
@@ -557,19 +577,50 @@ tau_diag (WindPtr w)
 
       stuff_v (observer, ptau.lmn);
 
-      /* *************************************************************************
+/* ************************************************************************** */
 
-         It is a great issue with me on where to place the extracted photon.
-         This bit of code was an experiment to see if I should place the
-         photon at -Rstar if lmn[0] was zero.. but the results were very
-         sensitive to the placement. Still unsure which is better right now.
+      /*
+       * Hacky code for when photon is pointing upwards - this photon will not
+       * be launched from the origin, but will be launched from the most dense
+       * cell at the bottom of the disk
+       * TODO: we should only need to do this once for the upwards angle
+       */
 
-         ************************************************************************ */
+      if (ptau.lmn[0] == 0 && ptau.lmn[1] == 0 && ptau.lmn[2] == 1)
+      {
+        max_plasma_density = 0;
+        for (i = 0; i < zdom[0].ndim - 1; i++)
+        {
+          wind_index = zdom[0].mdim * i + zdom[0].mdim;
+          x_loc = wmain[wind_index].x[0];
+          plasma_index = wmain[wind_index].nplasma;
+          plasma_density = plasmamain[plasma_index].rho;
+
+          if (plasma_density > max_plasma_density)
+          {
+            print_xloc = ptau.x[0] = x_loc;
+            max_plasma_density = plasma_density;
+          }
+        }
+      }
+
+/* ************************************************************************** */
+
+/* ************************************************************************** */
+
+      /*
+       * When the photon is pointing in the negative x-direction, i.e. when
+       * ptau.lmn[0] < 0, then it's very likely that the photon will hit the
+       * central object and also not travel through the base of this wind. In
+       * this case, the photon is simply placed on the negative side of the
+       * x-axis which is absolutely fine due to the rotational symmetry in
+       * Python
+       */
 
       if (ptau.lmn[0] < 0)
         ptau.x[0] *= -1;
 
-      /* ************************************************************************ */
+/* ************************************************************************** */
 
       /*
        * Extract tau and add it to the tau storage array
