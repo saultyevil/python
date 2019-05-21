@@ -57,7 +57,7 @@
 
 enum SPEC_OPAC
 {
-  NORMAL_TAU  = 1,
+  NORMAL_TAU = 1,
   ROSSEL_MEAN = 2,
   PLANCK_MEAN = 3,
 };
@@ -71,11 +71,11 @@ enum SPEC_OPAC
  */
 
 char *TAU_NAME[] = {
-  "Rosseland",   // Rosseland mean opacity
-  "Planck"   ,   // Planck mean opacity
-  "Lyma_885A",   // Hydrogen Lyman edge
-  "Bal_3615A",   // Hydrogen Balmer edge
-  "HeII_215A",   // He II edge at 54 eV
+  "Rosseland",                  // Rosseland mean opacity
+  "Planck",                     // Planck mean opacity
+  "Lyma_885A",                  // Hydrogen Lyman edge
+  "Bal_3615A",                  // Hydrogen Balmer edge
+  "HeII_215A",                  // He II edge at 54 eV
 };
 
 /*
@@ -559,10 +559,10 @@ tau_diag (WindPtr w)
 
       /* *************************************************************************
 
-            It is a great issue with me on where to place the extracted photon.
-            This bit of code was an experiment to see if I should place the
-            photon at -Rstar if lmn[0] was zero.. but the results were very
-            sensitive to the placement. Still unsure which is better right now.
+         It is a great issue with me on where to place the extracted photon.
+         This bit of code was an experiment to see if I should place the
+         photon at -Rstar if lmn[0] was zero.. but the results were very
+         sensitive to the placement. Still unsure which is better right now.
 
          ************************************************************************ */
 
@@ -583,11 +583,11 @@ tau_diag (WindPtr w)
     }
   }
 
-  #ifdef MPI_ON
-    if (rank_global == 0)
-  #endif
+#ifdef MPI_ON
+  if (rank_global == 0)
+#endif
 
-  print_tau_table (tau_store, col_den_store);
+    print_tau_table (tau_store, col_den_store);
 
   /*
    * Switch back to ionization mode - may be redundant but if this is called
