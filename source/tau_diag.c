@@ -117,7 +117,7 @@ double PHOT_FREQ[] = {
  * The same information will also be printed to an individual diag file named
  * optical_depth.diag which is located in the diag folder of the simulation.
  *
- * TODO: Log followed by fprintf is ugly
+ * TODO: Log followed by fprintf is ugly and revolting
  *
  * ************************************************************************** */
 
@@ -168,7 +168,10 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
      */
 
     if (strcmp (observer_name, "A00P0.50") == 0)
+    {
       Log ("Photon launched from x location: %e cm\n", print_xloc);
+      fprintf (tau_diag, "Photon launched from x location: %e cm\n", print_xloc);
+    }
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
