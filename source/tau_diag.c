@@ -114,6 +114,8 @@ double PHOT_FREQ[] = {
  * @details
  *
  * Simply prints the different optical depths for each angle and optical depth.
+ * The same information will also be printed to an individual diag file named
+ * optical_depth.diag which is located in the diag folder of the simulation.
  *
  * ************************************************************************** */
 
@@ -130,16 +132,29 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
 
   char tmp_str[50];
   char observer_name[40];
+  char diag_filename[LINELENGTH];
+
+  FILE *tau_diag;
+
+  sprintf (diag_filename, "diag_%s/%s.optical_depth.diag", files.root, files.root);
+  if (!(tau_diag = fopen (diag_filename, "w")))
+  {
+    Error ("%s:%i:%s: Unable to open optical depth diag file\n", __FILE__, __LINE__, __func__);
+    Exit (1);
+  }
 
   Log ("\nOptical depths along the defined line of sights:\n(-1 indicates an error)\n\n");
+  fprintf (tau_diag, "Optical depths along the defined line of sights:\n(-1 indicates an error)\n\n");
 
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
     strcpy (observer_name, xxspec[ispec].name);
     Log ("%s\n--------\n", observer_name);
+    fprintf (tau_diag, "%s\n--------\n", observer_name);
 
     col_den = col_den_store[ispec - MSPEC];
     Log ("Column density: %3.2e g/cm^-2\n", col_den);
+    fprintf (tau_diag, "Column density: %3.2e g/cm^-2\n", col_den);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
@@ -151,12 +166,21 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
       {
         line_len = 0;
         Log ("\n");
+        fprintf (tau_diag, "\n");
       }
 
       Log ("%s", tmp_str);
+      fprintf (tau_diag, "%s", tmp_str);
     }
 
     Log ("\n\n");
+    fprintf (tau_diag, "\n\n");
+  }
+
+  if (fclose (tau_diag))
+  {
+    Error ("%s:%i:%s: could not close optical depth diag file\n");
+    Exit (1);
   }
 }
 
@@ -558,6 +582,10 @@ tau_diag (WindPtr w)
       col_den_store[ispec - MSPEC] = col_den;
     }
   }
+
+  #ifdef MPI_ON
+    if (rank_global == 0)
+  #endif
 
   print_tau_table (tau_store, col_den_store);
 
