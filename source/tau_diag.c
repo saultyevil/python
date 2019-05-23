@@ -121,8 +121,7 @@ double PHOT_FREQ[] = {
  *
  * ************************************************************************** */
 
-// TODO: stop being lazy and think of a smarter way to set this
-
+// TODO: stop being lazy and pass this to the function without it being global
 double print_xloc;
 
 void
@@ -585,7 +584,10 @@ tau_diag (WindPtr w)
       /*
        * Hacky code for when photon is pointing upwards - this photon will not
        * be launched from the origin, but will be launched from the most dense
-       * cell at the bottom of the disk
+       * cell at the bottom of the disk.
+       *
+       * NOTE: this assumes that we only care about domain 0
+       *
        * TODO: we should only need to do this once for the upwards angle
        */
 
@@ -606,10 +608,6 @@ tau_diag (WindPtr w)
           }
         }
       }
-
-/* ************************************************************************** */
-
-/* ************************************************************************** */
 
       /*
        * When the photon is pointing in the negative x-direction, i.e. when
