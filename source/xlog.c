@@ -853,13 +853,13 @@ Debug (char *format, ...)
 void
 Exit (int error_code)
 {
-#ifdef MPI_ON
   if (error_code == 0)
   {
-    Log_parallel ("!!Exit: error codes should be non-zero!\n");
+    Log_parallel ("!!Exit: error codes should be non-zero!\n", my_rank);
     error_code = EXIT_FAILURE;
   }
 
+#ifdef MPI_ON
   Log_parallel ("--------------------------------------------------------------------------\n"
                 "Aborting rank %04i: exiting all processes with error %i\n", my_rank, error_code);
   error_summary_parallel ("summary prior to abort");
@@ -869,15 +869,9 @@ Exit (int error_code)
   else
     exit (error_code);
 #else
-  if (error_code == 0)
-  {
-    Log ("!!Exit: error codes should be non-zero!\n");
-    error_code = EXIT_FAILURE;
-  }
-
-  Log ("--------------------------------------------------------------------------\nAborting: exiting with error %i\n", error_code);
+  Log ("--------------------------------------------------------------------------\n"
+       "Aborting: exiting with error %i\n", error_code);
   error_summary ("summary prior to abort");
-
   exit (error_code);
 #endif
 }

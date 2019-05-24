@@ -1,0 +1,13 @@
+name: SV.v_zero_mode
+description: |
+  Multi-line description, must keep indentation.
+type: Enumerator
+values:
+  fixed: |
+    Multi-line description, must keep indentation.
+  sound_speed: |
+    Multi-line description, must keep indentation.
+parent:
+  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+file: sv.c
+advanced: true

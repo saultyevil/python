@@ -5,19 +5,18 @@ Photons_per_cycle
 
 Photons_per_cycle
 =================
-The number of photons (really energy packets) that are
-generated in each ionization or spectral cycle
+Multi-line description, must keep indentation.
 
 **Type:** Double
 
 **Unit:** None
 
-**Value:** Greater than zero
+**Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 **Parent(s):**
-  parameter_: None
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 
-**File:** setup2.c
+**File:** setup.c
 
 

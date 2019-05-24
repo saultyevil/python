@@ -17,6 +17,6 @@ Multi-line description, must keep indentation.
   parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 
-**File:** setup2.c
+**File:** setup.c
 
 

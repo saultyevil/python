@@ -5,23 +5,25 @@ Thermal_balance_options
 
 Thermal_balance_options
 =======================
-This is a paramerter designed to turn off some heating/cooling 
-mechanisms. At the moment, all it does is turn off adiabatic 
-effects - typically used in hydrodynamic simulations.
+Multi-line description, must keep indentation.
 
-**Type:** Enum (Int)
+**Type:** Enumerator
 
 **Values:**
 
-0. everything.on
+adiabatic_only. Multi-line description, must keep indentation.
 
-1. no.adiabatic
+all_on. Multi-line description, must keep indentation.
+
+nonthermal_only. Multi-line description, must keep indentation.
+
+off. Multi-line description, must keep indentation.
 
 
 **Parent(s):**
-  parameter_: None
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 
-**File:** setup2.c
+**File:** setup.c
 
 

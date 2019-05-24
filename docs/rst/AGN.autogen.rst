@@ -3,19 +3,20 @@
 AGN
 ===
 
-AGN.bremsstrahlung_alpha
-========================
-The frequency exponent alpha in bremstrahlung SED of the form
-L_nu=nu**alpha exp(-hnu/kT)
+AGN.power_law_cutoff
+====================
+An advanced option - this is a low frequency cutoff for an 
+AGN power law spectrum. It prevents the powerlaw being 
+applied to low frequencies and giving an odd SED.
 
 **Type:** Double
 
-**Unit:** None
+**Unit:** Hz
 
-**Value:** Any - sign is not asssumed so use negative if you want negative
+**Value:** Greater than 0
 
 **Parent(s):**
-  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+  parameter_: None
 
 
 **File:** setup_star_bh.c
@@ -39,15 +40,16 @@ central source of the form L_nu=K nu**alpha
 **File:** setup_star_bh.c
 
 
-AGN.lamp_post_height
-====================
-Multi-line description, must keep indentation.
+AGN.bremsstrahlung_alpha
+========================
+The frequency exponent alpha in bremstrahlung SED of the form
+L_nu=nu**alpha exp(-hnu/kT)
 
-**Type:** rddoub
+**Type:** Double
 
-**Unit:** co.gravitational_radius
+**Unit:** None
 
-**Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+**Value:** Any - sign is not asssumed so use negative if you want negative
 
 **Parent(s):**
   parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
@@ -74,65 +76,18 @@ L_nu=nu**alpha exp(-hnu/kT)
 **File:** setup_star_bh.c
 
 
-AGN.power_law_cutoff
+AGN.lamp_post_height
 ====================
-An advanced option - this is a low frequency cutoff for an 
-AGN power law spectrum. It prevents the powerlaw being 
-applied to low frequencies and giving an odd SED.
+Multi-line description, must keep indentation.
 
-**Type:** Double
+**Type:** rddoub
 
-**Unit:** Hz
+**Unit:** co.gravitational_radius
 
-**Value:** Greater than 0
+**Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 **Parent(s):**
-  parameter_: None
-
-
-**File:** setup_star_bh.c
-
-
-AGN.blackbody_temp
-==================
-The temperature of a blackbody SED to be used for the central AGN source
-
-**Type:** Double
-
-**Unit:** K
-
-**Value:** Greater than 0
-
-**Parent(s):**
-  parameter_: None
-
-
-**File:** setup_star_bh.c
-
-
-AGN.geometry_for_pl_source
-==========================
-Choose the geometry for the power law source.
-
-**Type:** Enum (Int)
-
-**Values:**
-
-sphere. *Sphere*
-   
-   The power law source is a sphere with radius equal to
-   the radius of the central object. In a BH system this is
-   often set to the ISCO.
-
-lamp_post. *Lamp-post*
-   
-   The power law source is a single point at some height above the origin.
-   Photons radiate isotropically from this point. The height is specified in
-   a subsequent parameter, lamp_post.height.
-
-
-**Parent(s):**
-  parameter_: QSO_BH_radiation
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 
 
 **File:** setup_star_bh.c

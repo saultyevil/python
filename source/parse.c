@@ -41,6 +41,10 @@
  * If changes to the command line interface are made they should
  * be described in the routine help 
  *
+ * Although this routine uses the standard Log and Error commands
+ * the diag files have not been created yet and so this information
+ * is really simply written to the terminal.  
+ *
  **********************************************************/
 
 int
@@ -90,7 +94,7 @@ parse_command_line (argc, argv)
         if (sscanf (argv[i + 1], "%lf", &time_max) != 1)
         {
           Error ("python: Expected time after -t switch\n");
-          exit (0);
+          exit (1);
         }
         set_max_time (files.root, time_max);
         i++;
@@ -116,7 +120,7 @@ parse_command_line (argc, argv)
         if (sscanf (argv[i + 1], "%d", &max_errors) != 1)
         {
           Error ("python: Expected max errors after -e switch\n");
-          exit (0);
+          exit (1);
         }
         Log_quit_after_n_errors (max_errors);
         i++;
@@ -129,7 +133,7 @@ parse_command_line (argc, argv)
         if (sscanf (argv[i + 1], "%d", &max_errors) != 1)
         {
           Error ("python: Expected max errors after -e switch\n");
-          exit (0);
+          exit (1);
         }
         Log_print_max (max_errors);
         i++;
@@ -171,13 +175,14 @@ parse_command_line (argc, argv)
       {
         Log ("Logarithmic photon stepping enabled\n");
         modes.photon_speedup = 1;
-
-        if (sscanf (argv[i + 1], "%lf", &PHOT_RANGE) != 1)
+        if (sscanf (argv[i + 1], "%lf", &PHOT_RANGE) == 1)
         {
-          PHOT_RANGE = 1.;
           i++;
         }
-        i++;
+        else
+        {
+          PHOT_RANGE = 1.;
+        }
         j = i;
       }
       else if (strcmp (argv[i], "--dry-run") == 0)
@@ -195,7 +200,7 @@ parse_command_line (argc, argv)
         int git_diff_status = GIT_DIFF_STATUS;
         if (git_diff_status > 0)
           Log ("This version was compiled with %i files with uncommitted changes.\n", git_diff_status);
-        exit (0);
+        exit (1);
       }
 
       else if (strncmp (argv[i], "-", 1) == 0)
@@ -210,7 +215,7 @@ parse_command_line (argc, argv)
     if (j + 1 == argc)
     {
       Error ("All of the command line has been consumed without specifying a parameter file name, so exiting\n");
-      exit (0);
+      exit (1);
     }
 
 

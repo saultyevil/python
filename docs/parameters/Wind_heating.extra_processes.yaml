@@ -1,0 +1,16 @@
+name: Wind_heating.extra_processes
+description: |
+  Multi-line description, must keep indentation.
+type: Enumerator
+values:
+  adiabatic: |
+    Multi-line description, must keep indentation.
+  both: |
+    Multi-line description, must keep indentation.
+  none: |
+    Multi-line description, must keep indentation.
+  nonthermal: |
+    Multi-line description, must keep indentation.
+parent:
+  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+file: setup.c

@@ -17,27 +17,6 @@ survace as a star would.
 **File:** setup.c
 
 
-Central_object.rad_type_for_star_to_make_wind
-=============================================
-The way in which radiation from the central object will be simulated, either as a bb or from models which
-have been read in separately.
-
-**Type:** Enum (Int)
-
-**Values:**
-
-0. bb
-
-1. models
-
-
-**Parent(s):**
-  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
-
-
-**File:** setup.c
-
-
 Central_object.temp
 ===================
 Multi-line description, must keep indentation.
@@ -47,6 +26,26 @@ Multi-line description, must keep indentation.
 **Unit:** None
 
 **Value:** Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+**Parent(s):**
+  parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+
+
+**File:** setup_star_bh.c
+
+
+Central_object.rad_type_to_make_wind
+====================================
+Multi-line description, must keep indentation.
+
+**Type:** Enumerator
+
+**Values:**
+
+bb. Multi-line description, must keep indentation.
+
+models. Multi-line description, must keep indentation.
+
 
 **Parent(s):**
   parameter_: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
@@ -91,19 +90,17 @@ Radius of the central object in the system, e.g the white dwarf or black hole
 
 Central_object.rad_type_in_final_spectrum
 =========================================
-The type of spectral models used to simulate radiation from the central object, where bb inplies
-bb radiation, models implies spectra from models that are read in, and uniform means a flat spectrum
-regardless of parameters like temperature.
+Multi-line description, must keep indentation.
 
-**Type:** Enum (Int)
+**Type:** Enumerator
 
 **Values:**
 
-0. bb
+bb. Multi-line description, must keep indentation.
 
-1. models
+models. Multi-line description, must keep indentation.
 
-2. uniform
+uniform. Multi-line description, must keep indentation.
 
 
 **Parent(s):**
