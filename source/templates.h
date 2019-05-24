@@ -30,6 +30,7 @@ double ds_to_wind (PhotPtr pp, int *ndom_current);
 int translate_in_wind (WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell (int ndom, PhotPtr p);
 int walls (PhotPtr p, PhotPtr pold, double *normal);
+double find_smax (PhotPtr p);
 /* photon_gen.c */
 int define_phot (PhotPtr p, double f1, double f2, long nphot_tot, int ioniz_or_final, int iwind, int freq_sampling);
 double populate_bands (int ioniz_or_final, int iwind, struct xbands *band);
@@ -645,6 +646,4 @@ double *get_one (int ndom, char variable_name[]);
 /* tau_diag.c */
 void tau_diag (WindPtr w);
 /* mean_opacities.c */
-void calculate_rosseland_opacity (void);
-void calculate_planck_opacity (void);
-double find_smax (PhotPtr p);
+int init_mean_opacities (void);

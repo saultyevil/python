@@ -144,7 +144,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
   sprintf (diag_filename, "diag_%s/%s.optical_depth.diag", files.root, files.root);
   if (!(tau_diag = fopen (diag_filename, "w")))
   {
-    Error ("%s:%i:%s: Unable to open optical depth diag file\n", __FILE__, __LINE__, __func__);
+    Error ("%s:%s:%i: Unable to open optical depth diag file\n", __FILE__, __func__, __LINE__);
     Exit (1);
   }
 
@@ -195,7 +195,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
 
   if (fclose (tau_diag))
   {
-    Error ("%s:%i:%s: could not close optical depth diag file\n");
+    Error ("%s:%s:%i: could not close optical depth diag file\n", __FILE__, __func__, __LINE__);
     Exit (1);
   }
 }
@@ -259,7 +259,7 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *t
 
   if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
   {
-    Error ("%s:%i:%s: pextract is not in grid\n", __FILE__, __LINE__, __func__);
+    Error ("%s:%s:%i: pextract is not in grid\n", __FILE__, __func__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -269,7 +269,7 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *t
 
   if ((smax = find_smax (pextract)) < 0)
   {
-    Error ("%s:%i:%s: abnormal value of smax for photon\n", __FILE__, __LINE__, __func__);
+    Error ("%s:%s:%i: abnormal value of smax for photon\n", __FILE__, __func__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -372,7 +372,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
       translate_in_space (&pextract);
       if (++n_trans_space > MAX_TRANS_SPACE)
       {
-        Error ("%s:%i:%s: photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__, __func__);
+        Error ("%s:%s:%i: photon transport ended due to too many translate_in_space\n", __FILE__, __func__, __LINE__);
         return EXIT_FAILURE;
       }
     }
@@ -387,7 +387,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
     }
     else
     {
-      Error ("%s:%i:%s: photon in unknown location, grid stat %i\n", __FILE__, __LINE__, __func__, pextract.grid);
+      Error ("%s:%s:%i: photon in unknown location, grid stat %i\n", __FILE__, __func__, __LINE__, pextract.grid);
       pextract.istat = -1;
       return EXIT_FAILURE;
     }
@@ -403,13 +403,13 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
 
   if (istat == P_HIT_STAR || istat == P_HIT_DISK)
   {
-    Error ("%s:%i:%s: photon hit star or disk, istat = %i\n", __FILE__, __LINE__, __func__, istat);
+    Error ("%s:%s:%i: photon hit star or disk, istat = %i\n", __FILE__, __func__, __LINE__, istat);
     return EXIT_FAILURE;
   }
 
   if (walls (&pextract, porig, norm) == -1)
   {
-    Error ("%s:%i:%s: abnormal return from walls for photon\n", __FILE__, __LINE__, __func__);
+    Error ("%s:%s:%i: abnormal return from walls for photon\n", __FILE__, __func__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -444,7 +444,7 @@ tau_diag_phot (PhotPtr pout, double nu)
 {
   if (nu < 0)
   {
-    Error ("%s:%i:%s: photon can't be created with negative nu\n", __FILE__, __LINE__, __func__);
+    Error ("%s:%s:%i: photon can't be created with negative nu\n", __FILE__, __func__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -453,9 +453,97 @@ tau_diag_phot (PhotPtr pout, double nu)
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
   pout->x[0] = 1.1 * geo.rstar;
-  pout->x[1] = 0;
-  pout->x[2] = 0;
-  pout->tau = 0;
+  pout->x[1] = 0.0;
+  pout->x[2] = 0.0;
+  pout->tau = 0.0;
+
+  return EXIT_SUCCESS;
+}
+
+/* ************************************************************************* */
+/**
+ * @brief
+ *
+ * @param[in]
+ *
+ * @return
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+int
+create_tau_spectrum (WindPtr w)
+{
+  int ispec;
+  int const FREQ_BINS = 10000;
+
+  double freq;
+  double dfreq;
+  double freq_min;
+  double freq_max;
+  double *observer;
+  double col_den;
+  double tau;
+
+  char tau_spec_filename[LINELENGTH];
+
+  struct photon ptau;
+
+  FILE *tau_spec_file;
+
+  sprintf (tau_spec_filename, "diag_%s/%s.tau_spec.diag", files.root, files.root);
+  if (!(tau_spec_file = fopen (tau_spec_filename, "w")))
+  {
+    Error ("%s:%s:%i: unable to open tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    return EXIT_FAILURE;
+  }
+
+  fprintf (tau_spec_file, "#freq,tau\n");
+
+  freq_max = C / (geo.swavemin * ANGSTROM);
+  freq = freq_min = C / (geo.swavemax * ANGSTROM);
+  dfreq = (freq_max - freq_min) / FREQ_BINS;
+
+  Log ("Minimum frequency: %e\n", freq_min);
+  Log ("Maximum frequency: %e\n", freq_max);
+  Log ("Frequency bins   : %e\n", FREQ_BINS);
+  Log ("dfreq            : %e\n", dfreq);
+
+  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  {
+    observer = xxspec[ispec].lmn;
+
+    while (freq < freq_max)
+    {
+      tau = 0;
+      col_den = 0;
+
+      if (tau_diag_phot (&ptau, freq) == EXIT_FAILURE)
+      {
+        Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, freq);
+        continue;
+      }
+
+      stuff_v (observer, ptau.lmn);
+
+      if (ptau.lmn[0] < 0)
+        ptau.x[0] *= -1;
+
+      if (extract_tau (w, &ptau, N_TAU, &col_den, &tau) == EXIT_FAILURE)
+        tau = -1;
+
+      fprintf (tau_spec_file, "%e,%e\n", freq, tau);
+
+      freq += dfreq;
+    }
+  }
+
+  if (fclose (tau_spec_file))
+  {
+    Error ("%s:%s:%i: could not close tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
 
   return EXIT_SUCCESS;
 }
@@ -528,6 +616,8 @@ tau_diag (WindPtr w)
 
   geo.ioniz_or_extract = 0;
 
+  // init_mean_opacities ();  // TODO: aaaaaaaaa
+
   /*
    * MSPEC here is used as this is where the actual observer angles start
    */
@@ -571,7 +661,7 @@ tau_diag (WindPtr w)
 
       if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
       {
-        Log ("%s:%i:%s: skipping photon of frequency %e\n", __FILE__, __LINE__, __func__, nu);
+        Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
         tau_store[ispec - MSPEC][itau] = -1;
         col_den_store[ispec - MSPEC] = -1;
         continue;
@@ -640,6 +730,13 @@ tau_diag (WindPtr w)
 #endif
 
     print_tau_table (tau_store, col_den_store);
+
+
+#ifdef MPI_ON
+  if (rank_global == 0)
+#endif
+
+  create_tau_spectrum (w);
 
   /*
    * Switch back to ionization mode - may be redundant but if this is called
