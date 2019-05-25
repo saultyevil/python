@@ -630,6 +630,10 @@ create_tau_spectrum (WindPtr w)
     }
   }
 
+#ifdef MPI_ON
+  if (rank_global == 0)
+#endif
+
   write_tau_spectrum (tau_spectrum, wave_min, dwave);
 }
 
