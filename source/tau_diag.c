@@ -63,6 +63,20 @@ enum SPEC_OPAC
   PLANCK_MEAN = 3,
 };
 
+typedef struct tau_diag_opacities
+{
+  double nu;
+  char name[50];
+} Opacities;
+
+Opacities TAU_DIAG_OPACS[] = {
+  {-ROSSEL_MEAN, "Rosseland"},
+  {-PLANCK_MEAN, "Planck"   },
+  {3.387485e+15, "Lyma_885A"},
+  {8.293014e+14, "Bal_3615A"},
+  {1.394384e+16, "HeII_215A"}
+};
+
 /*
  * TAU_NAME:
  * This array is used for book keeping purposes when printing information to
@@ -96,6 +110,14 @@ double PHOT_FREQ[] = {
   1.394384e+16,
 };
 
+typedef struct observer_angles
+{
+  char name[50];
+  double lmn[3];
+} Observers;
+
+Observers *diag_observers;
+
 int N_ANGLES = 0;
 
 #define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
@@ -114,67 +136,62 @@ int N_ANGLES = 0;
  *
  * ************************************************************************** */
 
-typedef struct observer_angles
-{
-  char name[50];
-  double lmn[3];
-} Observers;
-
-Observers *diag_observers;
-
 Observers *
-init_diag_angles (Observers *observers)
+init_diag_angles ()
 {
   int iangle;
+  int memory_req;
 
+  int n_default_angles = 7;
   double default_phase = 0.5;
-  double default_angles[] = {0.0, 22.5, 45.0, 67.5, 89};
+  double default_angles[] = {0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0};
 
-  int const default_n_angles = (sizeof (default_angles) / sizeof (*default_angles));
+  Observers *observers;
 
   if (geo.nangles)
   {
-    Log ("Using inclinations provided by extract for spectrum cycles\n");
+    Log ("Using inclinations provided for spectrum cycles as defined in xxspec\n");
 
     N_ANGLES = geo.nangles;
     observers = calloc (geo.nangles, sizeof (*observers));
 
     if (observers == NULL)
     {
-      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__,
-             geo.nangles * sizeof (*observers));
+      memory_req = geo.nangles * sizeof (*observers);
+      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
       Exit (1);
     }
-
-    for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
+    else
     {
-      strcpy (observers[iangle - MSPEC].name, xxspec[iangle].name);
-      observers[iangle - MSPEC].lmn[0] = xxspec[iangle].lmn[0];
-      observers[iangle - MSPEC].lmn[1] = xxspec[iangle].lmn[1];
-      observers[iangle - MSPEC].lmn[2] = xxspec[iangle].lmn[2];
+      for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
+      {
+        strcpy (observers[iangle - MSPEC].name, xxspec[iangle].name);
+        stuff_v (xxspec[iangle].lmn, observers[iangle].lmn);
+      }
     }
-
   }
   else
   {
-    Log ("As there are no spectrum cycles, using a set of default angles\n");
+    Log ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
 
-    N_ANGLES = default_n_angles;
-    observers = calloc (default_n_angles, sizeof (*observers));
+    N_ANGLES = n_default_angles;
+    observers = calloc (n_default_angles, sizeof (*observers));
 
     if (observers == NULL)
     {
-      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__,
-             default_n_angles * sizeof (*observers));
+      memory_req = n_default_angles * sizeof (*observers);
+      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
       Exit (1);
     }
-
-    for (iangle = 0; iangle < default_n_angles; iangle++)
+    else
     {
-      sprintf (observers[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
-      observers[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-      observers[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-      observers[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
+      for (iangle = 0; iangle < n_default_angles; iangle++)
+      {
+        sprintf (observers[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
+        observers[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
+        observers[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
+        observers[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
+      }
     }
   }
 
@@ -764,15 +781,14 @@ tau_diag (WindPtr w)
   double plasma_density;
   double max_plasma_density;
 
-  double tau_store[N_ANGLES][N_TAU];
-  double col_den_store[N_ANGLES];
-
   struct photon ptau;
 
   Log ("\nCalculating integrated optical depths along defined line of sights\n");
 
-  if (!(diag_observers = init_diag_angles (diag_observers)))
-    return;
+  diag_observers = init_diag_angles ();
+
+  double tau_store[N_ANGLES][N_TAU];
+  double col_den_store[N_ANGLES];
 
   /*
    * Switch to extract mode - this is bad generally not great practise but it
@@ -786,7 +802,6 @@ tau_diag (WindPtr w)
   {
     Log ("  - Calculating integrated optical depth for %s\n", diag_observers[ispec].name);
     observer = diag_observers[ispec].lmn;
-    Log ("lmn %f %f %f\n", observer[0], observer[1], observer[2]);
 
     for (itau = 0; itau < N_TAU; itau++)
     {
