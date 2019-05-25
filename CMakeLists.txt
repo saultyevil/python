@@ -113,7 +113,9 @@ add_executable(python
         source/get_models.c
         source/setup_line_transfer.c
         source/cv.c
-        source/wind_util.c source/tau_diag.c source/mean_opacities.c
+        source/wind_util.c
+        source/tau_diag.c
+        source/mean_opacities.c
         source/rdpar_init.c)
 
 add_executable(py_wind

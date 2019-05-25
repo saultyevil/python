@@ -232,7 +232,6 @@ init_mean_opacities (void)
   /*
    * We need to know how many cells we are going to be calculating the mean
    * opacities for...
-   * TODO: this will only work for domain 0 for now
    */
 
   nx = zdom[DEFAULT_DOMAIN].ndim;

@@ -98,6 +98,7 @@ double PHOT_FREQ[] = {
 #define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
 #define N_ANGLES (nspectra - MSPEC)
 #define MAX_TRANS_SPACE 10
+#define DEFAULT_DOMAIN 0
 
 /* ************************************************************************* */
 /**
@@ -202,6 +203,76 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
 
 /* ************************************************************************* */
 /**
+ * @brief           Write the various optical depth spectra to file
+ *
+ * @param[in]       double tau_spectrum     The various optical depth spectra
+ * @param[in]       double wave_min         The smallest wavelength in the
+ *                                          spectra
+ * @param[in]       double dwave            The size of the wavelength bins
+ *
+ * @return          void
+ *
+ * @details
+ *
+ * Simply write the optical depth spectra to the file named root.tau_spec.diag.
+ * This file will be located in the diag folder.
+ *
+ * ************************************************************************** */
+
+void
+write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, double dwave)
+{
+  int ispec;
+  int iwave;
+
+  double wavelength;
+
+  char tau_spec_filename[LINELENGTH];
+
+  FILE *tau_spec_file;
+
+  sprintf (tau_spec_filename, "diag_%s/%s.tau_spec.diag", files.root, files.root);
+  if (!(tau_spec_file = fopen (tau_spec_filename, "w")))
+  {
+    Error ("%s:%s:%i: unable to open tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
+
+  /*
+   * Write header to file
+   */
+
+  fprintf (tau_spec_file, "# Lambda ");
+  for (ispec = MSPEC; ispec < nspectra; ispec++)
+    fprintf (tau_spec_file, "%s ", xxspec[ispec].name);
+  fprintf (tau_spec_file, "\n");
+
+  /*
+   * Write out the tau spectrum for each inclination angle to file
+   */
+
+  wavelength = wave_min;
+
+  for (iwave = 0; iwave < NWAVE; iwave++)
+  {
+    fprintf (tau_spec_file, "%e ", wavelength);
+    for (ispec = MSPEC; ispec < nspectra; ispec++)
+    {
+      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec - MSPEC][iwave]);
+    }
+    fprintf (tau_spec_file, "\n");
+    wavelength += dwave;
+  }
+
+  if (fclose (tau_spec_file))
+  {
+    Error ("%s:%s:%i: could not close tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
+}
+
+/* ************************************************************************* */
+/**
  * @brief           Calculate the total optical depth a photon experiences
  *                  across the cell of distance smax.
  *
@@ -248,6 +319,12 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *t
 
   PlasmaPtr plasma_cell;
 
+  if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
+  {
+    Error ("%s:%s:%i: pextract is not in grid\n", __FILE__, __func__, __LINE__);
+    return EXIT_FAILURE;
+  }
+
   /*
    * Determine where in the plasma grid the cell is. This is required so a
    * column density can be calculated
@@ -256,12 +333,6 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *t
   nplasma = w[pextract->grid].nplasma;
   plasma_cell = &plasmamain[nplasma];
   density = plasma_cell->rho;
-
-  if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
-  {
-    Error ("%s:%s:%i: pextract is not in grid\n", __FILE__, __func__, __LINE__);
-    return EXIT_FAILURE;
-  }
 
   /*
    * smax should be the transverse distance of the cell the photon is in
@@ -435,7 +506,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
  * photons are required to have weight, but since the diagnostic functions do
  * not care about the weight of the photon, it is set to something large.
  *
- * TODO: allow more flexible photon placement
+ * TODO: allow more flexible photon placement in the future
  *
  * ************************************************************************** */
 
@@ -462,59 +533,80 @@ tau_diag_phot (PhotPtr pout, double nu)
 
 /* ************************************************************************* */
 /**
- * @brief
+ * @brief           Create spectra of tau vs lambda for each osberver angle.
  *
- * @param[in]
+ * @param[in]       WindPtr    w         A pointer to the wind
  *
- * @return
+ * @return          void
  *
  * @details
  *
+ * This is the main function which will generate the optical depth spectra for
+ * each observer angle in xxspec. The algorithm is similar to extract and the
+ * tau_diag algorithm which this function is called in.
+ *
+ * A photon is generated at the central source of the model and is extracted
+ * from this location towards the observer where it escapes, where extract_tau
+ * returns the integrated optical depth along its path to escape. This is done
+ * for a range of photon frequencies to find how optical depth changes with
+ * frequency.
+ *
+ * This processes can take some time compared to tau_diag. But since only NWAVE
+ * photons are being generated for each spectrum and the fact that these photons
+ * do not interact, this spectrum does not take that long to complete.
+ *
+ * TODO: remove hardcoded limits for spectra generation
+ *
  * ************************************************************************** */
 
-int
+void
 create_tau_spectrum (WindPtr w)
 {
   int ispec;
-  int const FREQ_BINS = 10000;
+  int ifreq;
 
+  double tau;
+  double col_den;
   double freq;
   double dfreq;
+  double dwave;
   double freq_min;
   double freq_max;
+  double wave_min;
+  double wave_max;
   double *observer;
-  double col_den;
-  double tau;
 
-  char tau_spec_filename[LINELENGTH];
+  double tau_spectrum[N_ANGLES][NWAVE];
 
   struct photon ptau;
 
-  FILE *tau_spec_file;
+  Log ("\nCreating optical depth spectrum\n");
 
-  sprintf (tau_spec_filename, "diag_%s/%s.tau_spec.diag", files.root, files.root);
-  if (!(tau_spec_file = fopen (tau_spec_filename, "w")))
-  {
-    Error ("%s:%s:%i: unable to open tau spectrum diag file\n", __FILE__, __func__, __LINE__);
-    return EXIT_FAILURE;
-  }
+  /*
+   * Define the limits of the spectra in both wavelength and frequency. The
+   * size of the frequency and wavelength bins is also defined. Note that the
+   * wavelength limits MUST be in units of Angstroms.
+   */
 
-  fprintf (tau_spec_file, "#freq,tau\n");
+  wave_min = 100;
+  wave_max = 10000;
+  dwave = (wave_max - wave_min) / NWAVE;
+  freq_max = C / (wave_min * ANGSTROM);
+  freq_min = C / (wave_max * ANGSTROM);
+  dfreq = (freq_max - freq_min) / NWAVE;
 
-  freq_max = C / (geo.swavemin * ANGSTROM);
-  freq = freq_min = C / (geo.swavemax * ANGSTROM);
-  dfreq = (freq_max - freq_min) / FREQ_BINS;
-
-  Log ("Minimum frequency: %e\n", freq_min);
-  Log ("Maximum frequency: %e\n", freq_max);
-  Log ("Frequency bins   : %e\n", FREQ_BINS);
-  Log ("dfreq            : %e\n", dfreq);
+  // Log ("Minimum wavelength : %.0f Angstroms\n", wave_min);
+  // Log ("Maximum wavelength : %.0f Angstroms\n", wave_max);
+  // Log ("Wavelength bins    : %i\n", NWAVE);
 
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
+    Log ("  - Creating optical depth spectrum for %s\n", xxspec[ispec].name);
+
+    freq = freq_min;
     observer = xxspec[ispec].lmn;
 
-    while (freq < freq_max)
+    for (ifreq = 0; ifreq < NWAVE; ifreq++)
     {
       tau = 0;
       col_den = 0;
@@ -533,26 +625,22 @@ create_tau_spectrum (WindPtr w)
       if (extract_tau (w, &ptau, N_TAU, &col_den, &tau) == EXIT_FAILURE)
         tau = -1;
 
-      fprintf (tau_spec_file, "%e,%e\n", freq, tau);
-
+      tau_spectrum[ispec - MSPEC][ifreq] = tau;
       freq += dfreq;
     }
   }
 
-  if (fclose (tau_spec_file))
-  {
-    Error ("%s:%s:%i: could not close tau spectrum diag file\n", __FILE__, __func__, __LINE__);
-    Exit (1);
-  }
-
-  return EXIT_SUCCESS;
+  write_tau_spectrum (tau_spectrum, wave_min, dwave);
 }
 
 /* ************************************************************************* */
 /**
- * @brief     The main controlling function for the optical depth diagnostics.
+ * @brief           The main controlling function for the optical depth
+ *                  diagnostics.
  *
- * @return    void
+ * @param[in]       WindPtr    w       A pointer to the wind
+ *
+ * @return          void
  *
  * @details
  *
@@ -570,7 +658,7 @@ create_tau_spectrum (WindPtr w)
  * The aim of these diagnostic numbers it to provide some sort of metric on the
  * optical thickness of the current model.
  *
- * TODO: fixed angles rather than angles in xxspec could be better - but this is complicated for binary systems
+ * TODO: investigate using fixed angles instead of xxspec's angles
  * TODO: method for calling this for individual cells instead of the entire wind
  *
  * ************************************************************************** */
@@ -593,20 +681,12 @@ tau_diag (WindPtr w)
   double plasma_density;
   double max_plasma_density;
 
-  struct photon ptau;
-
-  /*
-   * EP:
-   * 2d array for storing the optical depths for each observer angle and tau..
-   * I tried assigning this dynamically, in case this gets allocated on stack
-   * and causes a segfault, but this for some reason caused segfaults in other
-   * parts of the code.
-   * EP:
-   * I have also added an array for storing the column densities.
-   */
-
   double tau_store[N_ANGLES][N_TAU];
   double col_den_store[N_ANGLES];
+
+  struct photon ptau;
+
+  Log ("\nCalculating integrated optical depths along defined line of sights\n");
 
   /*
    * Switch to extract mode - this is bad generally not great practise but it
@@ -616,14 +696,9 @@ tau_diag (WindPtr w)
 
   geo.ioniz_or_extract = 0;
 
-  // init_mean_opacities ();  // TODO: aaaaaaaaa
-
-  /*
-   * MSPEC here is used as this is where the actual observer angles start
-   */
-
   for (ispec = MSPEC; ispec < nspectra; ispec++)
   {
+    Log ("  - Calculating integrated optical depth for %s\n", xxspec[ispec].name);
     observer = xxspec[ispec].lmn;
 
     for (itau = 0; itau < N_TAU; itau++)
@@ -653,10 +728,6 @@ tau_diag (WindPtr w)
        * Create the tau diag photon and point it towards the extract angle. If
        * something goes wrong with photon generation, warn the user, set tau to
        * -1 and skip this iteration.
-       *
-       * NOTE: nu HAS to be positive otherwise Python will fall over when later
-       *       in the tau_diag algorithm when it makes a call to radiation..
-       *       or I think it'll fall over at least.
        */
 
       if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
@@ -676,7 +747,8 @@ tau_diag (WindPtr w)
        * be launched from the origin, but will be launched from the most dense
        * cell at the bottom of the disk.
        *
-       * NOTE: this assumes that we only care about domain 0
+       * NOTE: this assumes that we only care about DEFAULT_DOMAIN which should
+       * be 0.
        *
        * TODO: we should only need to do this once for the upwards angle
        */
@@ -684,9 +756,9 @@ tau_diag (WindPtr w)
       if (ptau.lmn[0] == 0 && ptau.lmn[1] == 0 && ptau.lmn[2] == 1)
       {
         max_plasma_density = 0;
-        for (i = 0; i < zdom[0].ndim - 1; i++)
+        for (i = 0; i < zdom[DEFAULT_DOMAIN].ndim - 1; i++)
         {
-          wind_index = zdom[0].mdim * i + zdom[0].mdim;
+          wind_index = zdom[DEFAULT_DOMAIN].mdim * i + zdom[DEFAULT_DOMAIN].mdim;
           x_loc = wmain[wind_index].x[0];
           plasma_index = wmain[wind_index].nplasma;
           plasma_density = plasmamain[plasma_index].rho;
@@ -725,18 +797,13 @@ tau_diag (WindPtr w)
     }
   }
 
+  create_tau_spectrum (w);
+
 #ifdef MPI_ON
   if (rank_global == 0)
 #endif
 
     print_tau_table (tau_store, col_den_store);
-
-
-#ifdef MPI_ON
-  if (rank_global == 0)
-#endif
-
-  create_tau_spectrum (w);
 
   /*
    * Switch back to ionization mode - may be redundant but if this is called
