@@ -48,8 +48,7 @@ allocate_opacity_arrays (int ncells)
   wind_planck_opac = calloc (ncells, sizeof (*wind_planck_opac));
   if (wind_planck_opac == NULL)
   {
-    Error ("%s:%i:%s: cannot allocate %d bytes for wind_planck_opac\n", __FILE__, __func__, __LINE__, ncells *
-           sizeof (*wind_planck_opac));
+    Error ("%s:%i:%s: cannot allocate %d bytes for wind_planck_opac\n", __FILE__, __func__, __LINE__, ncells * sizeof (*wind_planck_opac));
     return EXIT_FAILURE;
   }
 
@@ -250,7 +249,7 @@ init_mean_opacities (void)
    * TODO: check that i should actually reach nstop or nstop - 1...
    */
 
-  double nu = 1e15; // TODO: set as 1e15 Hz for now.. update in future
+  double nu = 1e15;             // TODO: set as 1e15 Hz for now.. update in future
 
   for (i = wind_start_index; i < wind_stop_index; i++)
   {

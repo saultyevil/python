@@ -869,8 +869,7 @@ Exit (int error_code)
   else
     exit (error_code);
 #else
-  Log ("--------------------------------------------------------------------------\n"
-       "Aborting: exiting with error %i\n", error_code);
+  Log ("--------------------------------------------------------------------------\n" "Aborting: exiting with error %i\n", error_code);
   error_summary ("summary prior to abort");
   exit (error_code);
 #endif
