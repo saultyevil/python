@@ -120,7 +120,7 @@ Observers *diag_observers;
 
 int N_ANGLES = 0;
 
-#define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
+#define N_TAU (sizeof PHOT_FREQ / sizeof *PHOT_FREQ)
 #define MAX_TRANS_SPACE 10
 #define DEFAULT_DOMAIN 0
 
@@ -153,11 +153,11 @@ init_diag_angles ()
     Log ("Using inclinations provided for spectrum cycles as defined in xxspec\n");
 
     N_ANGLES = geo.nangles;
-    observers = calloc (geo.nangles, sizeof (*observers));
+    observers = calloc (geo.nangles, sizeof *observers);
 
     if (observers == NULL)
     {
-      memory_req = geo.nangles * sizeof (*observers);
+      memory_req = geo.nangles * sizeof *observers;
       Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
       Exit (1);
     }
@@ -175,11 +175,11 @@ init_diag_angles ()
     Log ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
 
     N_ANGLES = n_default_angles;
-    observers = calloc (n_default_angles, sizeof (*observers));
+    observers = calloc (n_default_angles, sizeof *observers);
 
     if (observers == NULL)
     {
-      memory_req = n_default_angles * sizeof (*observers);
+      memory_req = n_default_angles * sizeof *observers;
       Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
       Exit (1);
     }
@@ -224,7 +224,7 @@ init_diag_angles ()
 double print_xloc;
 
 void
-print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLES])
+print_tau_table (double *tau_store, double *col_den_store)
 {
   int itau;
   int ispec;
@@ -274,7 +274,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
     {
-      tau = tau_store[ispec][itau];
+      tau = tau_store[ispec * N_TAU + itau];
       line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_NAME[itau], tau);
 
       if (line_len > MAX_COL)
@@ -318,7 +318,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
  * ************************************************************************** */
 
 void
-write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, double dwave)
+write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave)
 {
   int ispec;
   int iwave;
@@ -356,7 +356,7 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
     fprintf (tau_spec_file, "%e ", wavelength);
     for (ispec = 0; ispec < N_ANGLES; ispec++)
     {
-      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec][iwave]);
+      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + iwave]);
     }
     fprintf (tau_spec_file, "\n");
     wavelength += dwave;
@@ -662,6 +662,7 @@ create_tau_spectrum (WindPtr w)
 {
   int ispec;
   int ifreq;
+  int memory_req;
 
   double tau;
   double col_den;
@@ -672,9 +673,17 @@ create_tau_spectrum (WindPtr w)
   double freq_max;
   double wave_min;
   double wave_max;
-  double *observer;
 
-  double tau_spectrum[N_ANGLES][NWAVE];
+  double *observer;
+  double *tau_spectrum;
+
+  tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum);
+  if (!tau_spectrum)
+  {
+    memory_req = N_ANGLES * NWAVE * sizeof *tau_spectrum;
+    Error ("%s:%s:%i: cannot allocate %d bytes for tau_spectrum\n", __FILE__, __func__, __LINE__, memory_req);
+    Exit (1);
+  }
 
   struct photon ptau;
 
@@ -723,15 +732,15 @@ create_tau_spectrum (WindPtr w)
       if (extract_tau (w, &ptau, N_TAU, &col_den, &tau) == EXIT_FAILURE)
         tau = -1;
 
-      tau_spectrum[ispec][ifreq] = tau;
+      tau_spectrum[ispec * NWAVE + ifreq] = tau;
       freq += dfreq;
     }
   }
 
   write_tau_spectrum (tau_spectrum, wave_min, dwave);
+
+  free (tau_spectrum);
 }
-
-
 
 /* ************************************************************************* */
 /**
@@ -772,6 +781,7 @@ tau_diag (WindPtr w)
   int opac_type;
   int wind_index;
   int plasma_index;
+  int memory_req;
 
   double nu;
   double tau;
@@ -781,14 +791,30 @@ tau_diag (WindPtr w)
   double plasma_density;
   double max_plasma_density;
 
+  double *tau_store;
+  double *col_den_store;
+
   struct photon ptau;
 
   Log ("\nCalculating integrated optical depths along defined line of sights\n");
 
   diag_observers = init_diag_angles ();
 
-  double tau_store[N_ANGLES][N_TAU];
-  double col_den_store[N_ANGLES];
+  tau_store = calloc (N_ANGLES * N_TAU, sizeof *tau_store);
+  if (!tau_store)
+  {
+    memory_req = N_ANGLES * N_TAU * sizeof *tau_store;
+    Error ("%s:%s:%i: cannot allocate %d bytes for tau_store\n", __FILE__, __func__, __LINE__, memory_req);
+    Exit (1);
+  }
+
+  col_den_store = calloc (N_ANGLES, sizeof *tau_store);
+  if (!col_den_store)
+  {
+    memory_req = N_ANGLES * sizeof *tau_store;
+    Error ("%s:%s:%i: cannot allocate %d bytes for col_den_store\n", __FILE__, __func__, __LINE__, memory_req);
+    Exit (1);
+  }
 
   /*
    * Switch to extract mode - this is bad generally not great practise but it
@@ -824,25 +850,23 @@ tau_diag (WindPtr w)
         nu = 1e15;
       }
       else
+      {
         opac_type = NORMAL_TAU;
+      }
 
       /*
-       * Create the tau diag photon and point it towards the extract angle. If
-       * something goes wrong with photon generation, warn the user, set tau to
-       * -1 and skip this iteration.
+       * Create the tau diag photon and point it towards the extract angle
        */
 
       if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
-        tau_store[ispec][itau] = -1;
+        tau_store[ispec * N_TAU + itau] = -1;
         col_den_store[ispec] = -1;
         continue;
       }
 
       stuff_v (observer, ptau.lmn);
-
-/* ************************************************************************** */
 
       /*
        * Hacky code for when photon is pointing upwards - this photon will not
@@ -885,16 +909,17 @@ tau_diag (WindPtr w)
       if (ptau.lmn[0] < 0)
         ptau.x[0] *= -1;
 
-/* ************************************************************************** */
-
       /*
        * Extract tau and add it to the tau storage array
        */
 
       if (extract_tau (w, &ptau, opac_type, &col_den, &tau) == EXIT_FAILURE)
+      {
+        col_den = -1;
         tau = -1;
+      }
 
-      tau_store[ispec][itau] = tau;
+      tau_store[ispec * N_TAU + itau] = tau;
       col_den_store[ispec] = col_den;
     }
   }
@@ -908,6 +933,8 @@ tau_diag (WindPtr w)
     print_tau_table (tau_store, col_den_store);
 
   free (diag_observers);
+  free (tau_store);
+  free (col_den_store);
 
   /*
    * Switch back to ionization mode - may be redundant but if this is called
