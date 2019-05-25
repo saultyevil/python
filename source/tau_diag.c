@@ -71,7 +71,7 @@ typedef struct tau_diag_opacities
 
 Opacities TAU_DIAG_OPACS[] = {
   {-ROSSEL_MEAN, "Rosseland"},
-  {-PLANCK_MEAN, "Planck"   },
+  {-PLANCK_MEAN, "Planck"},
   {3.387485e+15, "Lyma_885A"},
   {8.293014e+14, "Bal_3615A"},
   {1.394384e+16, "HeII_215A"}
@@ -144,7 +144,7 @@ init_diag_angles ()
 
   int n_default_angles = 7;
   double default_phase = 0.5;
-  double default_angles[] = {0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0};
+  double default_angles[] = { 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0 };
 
   Observers *observers;
 
@@ -528,7 +528,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
         return EXIT_FAILURE;
       }
     }
-    else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)  // Move the photon in the wind
+    else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)   // Move the photon in the wind
     {
       rc = find_tau (w, &pextract, opac_type, col_den, tau);
       if (rc)
@@ -754,9 +754,9 @@ create_tau_spectrum (WindPtr w)
   freq_min = C / (wave_max * ANGSTROM);
   dfreq = (freq_max - freq_min) / NWAVE;
 
-   Log_silent ("\nMinimum wavelength : %.0f Angstroms\n", wave_min);
-   Log_silent ("Maximum wavelength : %.0f Angstroms\n", wave_max);
-   Log_silent ("Wavelength bins    : %i\n\n", NWAVE);
+  Log_silent ("\nMinimum wavelength : %.0f Angstroms\n", wave_min);
+  Log_silent ("Maximum wavelength : %.0f Angstroms\n", wave_max);
+  Log_silent ("Wavelength bins    : %i\n\n", NWAVE);
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
