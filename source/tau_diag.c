@@ -42,6 +42,7 @@
  *
  * ************************************************************************** */
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -95,10 +96,90 @@ double PHOT_FREQ[] = {
   1.394384e+16,
 };
 
+int N_ANGLES = 0;
+
 #define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
-#define N_ANGLES (nspectra - MSPEC)
 #define MAX_TRANS_SPACE 10
 #define DEFAULT_DOMAIN 0
+
+/* ************************************************************************* */
+/**
+ * @brief
+ *
+ * @param[in]
+ *
+ * @return
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+typedef struct observer_angles
+{
+  char name[50];
+  double lmn[3];
+} Observers;
+
+Observers *diag_observers;
+
+Observers *
+init_diag_angles (Observers *observers)
+{
+  int iangle;
+
+  double default_phase = 0.5;
+  double default_angles[] = {0.0, 22.5, 45.0, 67.5, 89};
+
+  int const default_n_angles = (sizeof (default_angles) / sizeof (*default_angles));
+
+  if (geo.nangles)
+  {
+    Log ("Using inclinations provided by extract for spectrum cycles\n");
+
+    N_ANGLES = geo.nangles;
+    observers = calloc (geo.nangles, sizeof (*observers));
+
+    if (observers == NULL)
+    {
+      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__,
+             geo.nangles * sizeof (*observers));
+      Exit (1);
+    }
+
+    for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
+    {
+      strcpy (observers[iangle - MSPEC].name, xxspec[iangle].name);
+      observers[iangle - MSPEC].lmn[0] = xxspec[iangle].lmn[0];
+      observers[iangle - MSPEC].lmn[1] = xxspec[iangle].lmn[1];
+      observers[iangle - MSPEC].lmn[2] = xxspec[iangle].lmn[2];
+    }
+
+  }
+  else
+  {
+    Log ("As there are no spectrum cycles, using a set of default angles\n");
+
+    N_ANGLES = default_n_angles;
+    observers = calloc (default_n_angles, sizeof (*observers));
+
+    if (observers == NULL)
+    {
+      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__,
+             default_n_angles * sizeof (*observers));
+      Exit (1);
+    }
+
+    for (iangle = 0; iangle < default_n_angles; iangle++)
+    {
+      sprintf (observers[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
+      observers[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
+      observers[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
+      observers[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
+    }
+  }
+
+  return observers;
+}
 
 /* ************************************************************************* */
 /**
@@ -138,7 +219,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
 
   char tmp_str[50];
   char observer_name[40];
-  char diag_filename[LINELENGTH];
+  char diag_filename[1024];
 
   FILE *tau_diag;
 
@@ -152,13 +233,13 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
   Log ("\nOptical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
   fprintf (tau_diag, "Optical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
 
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    strcpy (observer_name, xxspec[ispec].name);
+    strcpy (observer_name, diag_observers[ispec].name);
     Log ("%s\n--------\n", observer_name);
     fprintf (tau_diag, "%s\n--------\n", observer_name);
 
-    col_den = col_den_store[ispec - MSPEC];
+    col_den = col_den_store[ispec];
     Log ("Column density: %3.2e g/cm^-2\n", col_den);
     fprintf (tau_diag, "Column density: %3.2e g/cm^-2\n", col_den);
 
@@ -176,7 +257,7 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
     {
-      tau = tau_store[ispec - MSPEC][itau];
+      tau = tau_store[ispec][itau];
       line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_NAME[itau], tau);
 
       if (line_len > MAX_COL)
@@ -227,7 +308,7 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
 
   double wavelength;
 
-  char tau_spec_filename[LINELENGTH];
+  char tau_spec_filename[1024];
 
   FILE *tau_spec_file;
 
@@ -243,8 +324,8 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
    */
 
   fprintf (tau_spec_file, "# Lambda ");
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
-    fprintf (tau_spec_file, "%s ", xxspec[ispec].name);
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
+    fprintf (tau_spec_file, "%s ", diag_observers[ispec].name);
   fprintf (tau_spec_file, "\n");
 
   /*
@@ -256,9 +337,9 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
   for (iwave = 0; iwave < NWAVE; iwave++)
   {
     fprintf (tau_spec_file, "%e ", wavelength);
-    for (ispec = MSPEC; ispec < nspectra; ispec++)
+    for (ispec = 0; ispec < N_ANGLES; ispec++)
     {
-      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec - MSPEC][iwave]);
+      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec][iwave]);
     }
     fprintf (tau_spec_file, "\n");
     wavelength += dwave;
@@ -599,12 +680,12 @@ create_tau_spectrum (WindPtr w)
   // Log ("Maximum wavelength : %.0f Angstroms\n", wave_max);
   // Log ("Wavelength bins    : %i\n", NWAVE);
 
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    Log ("  - Creating optical depth spectrum for %s\n", xxspec[ispec].name);
+    Log ("  - Creating optical depth spectrum for %s\n", diag_observers[ispec].name);
 
     freq = freq_min;
-    observer = xxspec[ispec].lmn;
+    observer = diag_observers[ispec].lmn;
 
     for (ifreq = 0; ifreq < NWAVE; ifreq++)
     {
@@ -625,13 +706,15 @@ create_tau_spectrum (WindPtr w)
       if (extract_tau (w, &ptau, N_TAU, &col_den, &tau) == EXIT_FAILURE)
         tau = -1;
 
-      tau_spectrum[ispec - MSPEC][ifreq] = tau;
+      tau_spectrum[ispec][ifreq] = tau;
       freq += dfreq;
     }
   }
 
   write_tau_spectrum (tau_spectrum, wave_min, dwave);
 }
+
+
 
 /* ************************************************************************* */
 /**
@@ -688,6 +771,9 @@ tau_diag (WindPtr w)
 
   Log ("\nCalculating integrated optical depths along defined line of sights\n");
 
+  if (!(diag_observers = init_diag_angles (diag_observers)))
+    return;
+
   /*
    * Switch to extract mode - this is bad generally not great practise but it
    * enables radiation (p, ds) to return the opacity in a cell without updating
@@ -696,10 +782,11 @@ tau_diag (WindPtr w)
 
   geo.ioniz_or_extract = 0;
 
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    Log ("  - Calculating integrated optical depth for %s\n", xxspec[ispec].name);
-    observer = xxspec[ispec].lmn;
+    Log ("  - Calculating integrated optical depth for %s\n", diag_observers[ispec].name);
+    observer = diag_observers[ispec].lmn;
+    Log ("lmn %f %f %f\n", observer[0], observer[1], observer[2]);
 
     for (itau = 0; itau < N_TAU; itau++)
     {
@@ -733,8 +820,8 @@ tau_diag (WindPtr w)
       if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
-        tau_store[ispec - MSPEC][itau] = -1;
-        col_den_store[ispec - MSPEC] = -1;
+        tau_store[ispec][itau] = -1;
+        col_den_store[ispec] = -1;
         continue;
       }
 
@@ -792,8 +879,8 @@ tau_diag (WindPtr w)
       if (extract_tau (w, &ptau, opac_type, &col_den, &tau) == EXIT_FAILURE)
         tau = -1;
 
-      tau_store[ispec - MSPEC][itau] = tau;
-      col_den_store[ispec - MSPEC] = col_den;
+      tau_store[ispec][itau] = tau;
+      col_den_store[ispec] = col_den;
     }
   }
 
@@ -804,6 +891,8 @@ tau_diag (WindPtr w)
 #endif
 
     print_tau_table (tau_store, col_den_store);
+
+  free (diag_observers);
 
   /*
    * Switch back to ionization mode - may be redundant but if this is called
