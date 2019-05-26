@@ -4,8 +4,8 @@
  * @author   Edward Parkinson
  * @date     April 2019
  *
- * @brief    The main resting place for all functions related to providing
- *           optical depth diagnostic.
+ * @brief    The main resting place for most functions related to providing
+ *           optical depth diagnostics.
  *
  * @details
  *
@@ -13,24 +13,20 @@
  * ------------------------------
  *
  * In theory it should be relatively straight forwards to add more optical
- * depths if desired. One should only need to update the the two arrays named
- * TAU_NAME and PHOT_FREQ.
+ * depths if desired. One should only need to update the the TAU_DIAG_OPACS
+ * array in tau_diag.h.
  *
- * All one should be required to do is to add a name for the optical depth in
- * TAU_NAME and to append the relevant photon frequency in PHOT_FREQ. This is
- * done as the function radiation is called to calculate the opacity for a
- * photon of a given frequency in the current cell. TAU_NAME is merely just a
- * way to give a name to the optical depth for display purposes.
+ * All one should be required to do is to add a name for the optical depth and
+ * any relevant frequency for photons to take. * This is done as the function
+ * radiation is called to calculate the opacity for a photon of a given
+ * frequency in the current cell.
  *
  * If one wishes to add a "special" opacity, which is an opacity which will
  * require it's own function to calculate, such as the Rosseland mean opacity,
- * then one should update the enumerator SPEC_OPAC with a new label for that
- * opacity, as well as the PHOT_FREQ and TAU_NAME arrays as described above.
- * However, PHOT_FREQ should be given a distinctive value as in the function
- * tau_diag (), the value of opac_type will need to be set as this will be
- * required in the function find_tau () to calculate the correct opacity. Thus,
- * one  should also add another else if branch for the variable opac_type in
- * find_tau ().
+ * then one should update the enumerator SPEC_OPAC in tau_diag.h with a new
+ * label for that opacity, as well as the frequency to be -ENUMERATOR in the
+ * TAU_DIAG_OPACS array. The frequency is set such as way so as in the function
+ * tau_diag, one can update the if statement to include the new opac type.
  *
  * If none of this makes sense, just try to follow how everything else is done!
  *
@@ -42,63 +38,14 @@
  *
  * ************************************************************************** */
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
 #include "atomic.h"
 #include "python.h"
-
-/*
- * SPEC_OPAC:
- * Enumerator to label any special opacities which are used. This is mainly for
- * the use of the Rosseland and Planck mean opacities.
- */
-
-enum SPEC_OPAC
-{
-  NORMAL_TAU = 1,
-  ROSSEL_MEAN = 2,
-  PLANCK_MEAN = 3,
-};
-
-/*
- * TAU_NAME:
- * This array is used for book keeping purposes when printing information to
- * the screen.
- * NOTE: this array is global for convenience purposes if more optical depths
- *       wish to be added
- */
-
-char *TAU_NAME[] = {
-  "Rosseland",                  // Rosseland mean opacity
-  "Planck",                     // Planck mean opacity
-  "Lyma_885A",                  // Hydrogen Lyman edge
-  "Bal_3615A",                  // Hydrogen Balmer edge
-  "HeII_215A",                  // He II edge at 54 eV
-};
-
-/*
- * PHOT_FREQ:
- * This array is used to set the frequency for a tau diag photon. By setting the
- * photon's frequency, Python should be able to calculate the frequency
- * dependent opacity for that photon.
- * NOTE: this array is global for convenience purposes if more optical depths
- *       wish to be added
- */
-
-double PHOT_FREQ[] = {
-  -ROSSEL_MEAN,
-  -PLANCK_MEAN,
-  3.387485e+15,
-  8.293014e+14,
-  1.394384e+16,
-};
-
-#define N_TAU (sizeof (PHOT_FREQ) / sizeof (*PHOT_FREQ))
-#define N_ANGLES (nspectra - MSPEC)
-#define MAX_TRANS_SPACE 10
-#define DEFAULT_DOMAIN 0
+#include "tau_diag.h"
 
 /* ************************************************************************* */
 /**
@@ -118,15 +65,10 @@ double PHOT_FREQ[] = {
  * The same information will also be printed to an individual diag file named
  * optical_depth.diag which is located in the diag folder of the simulation.
  *
- * TODO: Log followed by fprintf is ugly and revolting
- *
  * ************************************************************************** */
 
-// TODO: stop being lazy and pass this to the function without it being global
-double print_xloc;
-
 void
-print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLES])
+print_tau_table (double *tau_store, double *col_den_store)
 {
   int itau;
   int ispec;
@@ -136,31 +78,32 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
   double tau;
   double col_den;
 
-  char tmp_str[50];
-  char observer_name[40];
-  char diag_filename[LINELENGTH];
+  char tmp_str[LINELENGTH];
+  char observer_name[LINELENGTH];
+  char diag_filename[3 * LINELENGTH];
 
   FILE *tau_diag;
 
+  if (rank_global != 0)
+    return;
+
   sprintf (diag_filename, "diag_%s/%s.optical_depth.diag", files.root, files.root);
+
   if (!(tau_diag = fopen (diag_filename, "w")))
   {
     Error ("%s:%s:%i: Unable to open optical depth diag file\n", __FILE__, __func__, __LINE__);
     Exit (1);
   }
 
-  Log ("\nOptical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
+  Log ("Optical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
   fprintf (tau_diag, "Optical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
 
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    strcpy (observer_name, xxspec[ispec].name);
+    strcpy (observer_name, tau_diag_observers[ispec].name);
+
     Log ("%s\n--------\n", observer_name);
     fprintf (tau_diag, "%s\n--------\n", observer_name);
-
-    col_den = col_den_store[ispec - MSPEC];
-    Log ("Column density: %3.2e g/cm^-2\n", col_den);
-    fprintf (tau_diag, "Column density: %3.2e g/cm^-2\n", col_den);
 
     /*
      * For the photons which are pointing upwards and are not launched from the
@@ -172,12 +115,21 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
       Log ("Photon launched from x location: %e cm\n", print_xloc);
       fprintf (tau_diag, "Photon launched from x location: %e cm\n", print_xloc);
     }
+    else
+    {
+      Log ("Photon launched from x location: %e cm\n", 1.1 * geo.rstar);
+      fprintf (tau_diag, "Photon launched from x location: %e cm\n", 1.1 * geo.rstar);
+    }
+
+    col_den = col_den_store[ispec];
+    Log ("Column density: %3.2e g/cm^-2\n", col_den);
+    fprintf (tau_diag, "Column density: %3.2e g/cm^-2\n", col_den);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
     {
-      tau = tau_store[ispec - MSPEC][itau];
-      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_NAME[itau], tau);
+      tau = tau_store[ispec * N_TAU + itau];
+      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_DIAG_OPACS[itau].name, tau);
 
       if (line_len > MAX_COL)
       {
@@ -220,18 +172,22 @@ print_tau_table (double tau_store[N_ANGLES][N_TAU], double col_den_store[N_ANGLE
  * ************************************************************************** */
 
 void
-write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, double dwave)
+write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave)
 {
   int ispec;
   int iwave;
 
   double wavelength;
 
-  char tau_spec_filename[LINELENGTH];
+  char tau_spec_filename[3 * LINELENGTH];
 
   FILE *tau_spec_file;
 
+  if (rank_global != 0)
+    return;
+
   sprintf (tau_spec_filename, "diag_%s/%s.tau_spec.diag", files.root, files.root);
+
   if (!(tau_spec_file = fopen (tau_spec_filename, "w")))
   {
     Error ("%s:%s:%i: unable to open tau spectrum diag file\n", __FILE__, __func__, __LINE__);
@@ -239,16 +195,16 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
   }
 
   /*
-   * Write header to file
+   * Write the file header
    */
 
   fprintf (tau_spec_file, "# Lambda ");
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
-    fprintf (tau_spec_file, "%s ", xxspec[ispec].name);
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
+    fprintf (tau_spec_file, "%s ", tau_diag_observers[ispec].name);
   fprintf (tau_spec_file, "\n");
 
   /*
-   * Write out the tau spectrum for each inclination angle to file
+   * Write out the tau spectrum for each inclination angle
    */
 
   wavelength = wave_min;
@@ -256,10 +212,8 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
   for (iwave = 0; iwave < NWAVE; iwave++)
   {
     fprintf (tau_spec_file, "%e ", wavelength);
-    for (ispec = MSPEC; ispec < nspectra; ispec++)
-    {
-      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec - MSPEC][iwave]);
-    }
+    for (ispec = 0; ispec < N_ANGLES; ispec++)
+      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + iwave]);
     fprintf (tau_spec_file, "\n");
     wavelength += dwave;
   }
@@ -301,9 +255,8 @@ write_tau_spectrum (double tau_spectrum[N_ANGLES][NWAVE], double wave_min, doubl
  *
  * The photon status istat is updated and returned for some reason.
  *
- * TODO: implement Rosseland mean opacity
- * TODO: implement Planck mean opacity
- * TODO: figure out how to get H density in Python :^)
+ * TODO: implement mean opacities
+ * TODO: replace mass column density with hydrogen
  *
  * ************************************************************************** */
 
@@ -397,7 +350,7 @@ find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *t
  *
  * The direction of the observer is set in porig.lmn and should be set prior
  * to passing a photon to this function. If any values of lmn are negative, the
- * phton will translate in the negative direction. However, have no fear as this
+ * photon will translate in the negative direction. However, have no fear as this
  * is normal and is fine due to the assumed symmetry of models in Python.
  *
  * ************************************************************************** */
@@ -409,45 +362,33 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
   int ndom;
   int istat;
   int n_trans_space;
+  int const max_trans_space = 10;
 
   double norm[3];
 
   struct photon pextract;
 
-  // TODO: remove when Planck and Rosseland mean have been implemeneted properly
+  // TODO: remove when mean opacities are implemeneted
   if (opac_type == ROSSEL_MEAN || opac_type == PLANCK_MEAN)
     return EXIT_FAILURE;
 
   istat = P_INWIND;             // assume photon is in wind for initialisation reasons
   stuff_phot (porig, &pextract);
 
-  /*
-   * In the case of an observer which does not look into the wind from the
-   * photon origin, the while loop would become infinite as translate_in_space
-   * would fail to find the wind hence a limit is imposed here for the number
-   * of attempts to find the nearest wind boundary
-   */
-
   n_trans_space = 0;
 
   while (istat == P_INWIND)
   {
-    /*
-     * The first part of this while loop is concerned with translating the
-     * photon either in space, i.e. in the non-wind grid cells, or translates
-     * the photon one grid cell at a time using find_tau.
-     */
-
-    if (where_in_wind (pextract.x, &ndom) < 0)
+    if (where_in_wind (pextract.x, &ndom) < 0)  // Move the photon in the grid
     {
       translate_in_space (&pextract);
-      if (++n_trans_space > MAX_TRANS_SPACE)
+      if (++n_trans_space > max_trans_space)
       {
         Error ("%s:%s:%i: photon transport ended due to too many translate_in_space\n", __FILE__, __func__, __LINE__);
         return EXIT_FAILURE;
       }
     }
-    else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)
+    else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)   // Move the photon in the wind
     {
       rc = find_tau (w, &pextract, opac_type, col_den, tau);
       if (rc)
@@ -464,9 +405,8 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
     }
 
     /*
-     * Now that the photon has been translated, we update istat using the walls
-     * function which should return an istat which is not P_INWIND when the
-     * photon has exited in the wind -- hopefully when it has escaped
+     * Now that the photon has been translated, update istat using the walls.
+     * This should return istat != P_INWIND when the photon has escaped or smt
      */
 
     istat = walls (&pextract, porig, norm);
@@ -489,6 +429,76 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
 
 /* ************************************************************************* */
 /**
+ * @brief           Reposition a photon depending on various criteria
+ *
+ * @param[in, out]  PhotPtr pout    The photon to reposition
+ *
+ * @return          void
+ *
+ * @details
+ *
+ * This function assumes that we only care about DEFAULT_DOMAIN and whatever
+ * that has been set as.
+ *
+ * ************************************************************************** */
+
+void
+reposition_tau_photon (PhotPtr pout)
+{
+  int icell;
+  int wind_index;
+  int plasma_index;
+  int static xloc_init = 0;
+
+  double x_loc;
+  double static upward_x_loc;
+  double plasma_density;
+  double max_plasma_density;
+
+  /*
+   * Hacky code for when photon is pointing upwards - this photon will not
+   * be launched from the origin, but will be launched from the most dense
+   * cell at the bottom of the disk.
+   */
+
+  if (xloc_init == 0)
+  {
+    max_plasma_density = 0;
+    for (icell = 0; icell < zdom[DEFAULT_DOMAIN].ndim - 1; icell++)
+    {
+      wind_index = icell * zdom[DEFAULT_DOMAIN].mdim + zdom[DEFAULT_DOMAIN].mdim;
+      x_loc = wmain[wind_index].x[0];
+      plasma_index = wmain[wind_index].nplasma;
+      plasma_density = plasmamain[plasma_index].rho;
+
+      if (plasma_density > max_plasma_density)
+      {
+        print_xloc = upward_x_loc = x_loc;
+        max_plasma_density = plasma_density;
+      }
+    }
+
+    xloc_init = 1;
+  }
+
+  if (pout->lmn[0] == 0 && pout->lmn[1] == 0 && pout->lmn[2] == 1)
+    pout->x[0] = upward_x_loc;
+
+  /*
+   * When the photon is pointing in the negative x-direction, i.e. when
+   * ptau.lmn[0] < 0, then it's very likely that the photon will hit the
+   * central object and also not travel through the base of this wind. In
+   * this case, the photon is simply placed on the negative side of the
+   * x-axis which is absolutely fine due to the rotational symmetry in
+   * Python
+   */
+
+  if (pout->lmn[0] < 0)
+    pout->x[0] *= -1;
+}
+
+/* ************************************************************************* */
+/**
  * @brief           Generate a photon packet with a given frequency nu for use
  *                  with the optical depth diagnostic routines.
  *
@@ -506,12 +516,12 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
  * photons are required to have weight, but since the diagnostic functions do
  * not care about the weight of the photon, it is set to something large.
  *
- * TODO: allow more flexible photon placement in the future
+ * TODO: flexible photon placement
  *
  * ************************************************************************** */
 
 int
-tau_diag_phot (PhotPtr pout, double nu)
+create_tau_diag_phot (PhotPtr pout, double nu)
 {
   if (nu < 0)
   {
@@ -533,7 +543,81 @@ tau_diag_phot (PhotPtr pout, double nu)
 
 /* ************************************************************************* */
 /**
- * @brief           Create spectra of tau vs lambda for each osberver angle.
+ * @brief
+ *
+ * @param           void
+ *
+ * @return          Observers *observers     The initialised
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+Observers *
+init_tau_diag_angles (void)
+{
+  int iangle;
+  int memory_req;
+
+  int n_default_angles = 7;
+  double default_phase = 0.5;
+  double default_angles[] = { 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0 };
+
+  Observers *init_angles;
+
+  if (geo.nangles && xxspec != NULL)
+  {
+    Log_silent ("Using inclinations provided for spectrum cycles as defined in xxspec\n");
+
+    N_ANGLES = geo.nangles;
+    init_angles = calloc (geo.nangles, sizeof *init_angles);
+
+    if (init_angles == NULL)
+    {
+      memory_req = geo.nangles * sizeof *init_angles;
+      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
+      Exit (1);
+    }
+    else
+    {
+      for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
+      {
+        strcpy (init_angles[iangle - MSPEC].name, xxspec[iangle].name);
+        stuff_v (xxspec[iangle].lmn, init_angles[iangle - MSPEC].lmn);
+      }
+    }
+  }
+  else
+  {
+    Log_silent ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
+
+    N_ANGLES = n_default_angles;
+    init_angles = calloc (n_default_angles, sizeof *init_angles);
+
+    if (init_angles == NULL)
+    {
+      memory_req = n_default_angles * sizeof *init_angles;
+      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
+      Exit (1);
+    }
+    else
+    {
+      for (iangle = 0; iangle < n_default_angles; iangle++)
+      {
+        sprintf (init_angles[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
+        init_angles[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
+        init_angles[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
+        init_angles[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
+      }
+    }
+  }
+
+  return init_angles;
+}
+
+/* ************************************************************************* */
+/**
+ * @brief           Create spectra of tau vs lambda for each observer angle
  *
  * @param[in]       WindPtr    w         A pointer to the wind
  *
@@ -555,7 +639,7 @@ tau_diag_phot (PhotPtr pout, double nu)
  * photons are being generated for each spectrum and the fact that these photons
  * do not interact, this spectrum does not take that long to complete.
  *
- * TODO: remove hardcoded limits for spectra generation
+ * TODO: remove hardcoded limits for spectral ranges
  *
  * ************************************************************************** */
 
@@ -564,6 +648,7 @@ create_tau_spectrum (WindPtr w)
 {
   int ispec;
   int ifreq;
+  int memory_req;
 
   double tau;
   double col_den;
@@ -574,13 +659,23 @@ create_tau_spectrum (WindPtr w)
   double freq_max;
   double wave_min;
   double wave_max;
-  double *observer;
 
-  double tau_spectrum[N_ANGLES][NWAVE];
+  double *current_observer;
+  double *tau_spectrum;
 
   struct photon ptau;
 
   Log ("\nCreating optical depth spectrum\n");
+
+  tau_diag_observers = init_tau_diag_angles ();
+
+  tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum);
+  if (!tau_spectrum)
+  {
+    memory_req = N_ANGLES * NWAVE * sizeof *tau_spectrum;
+    Error ("%s:%s:%i: cannot allocate %d bytes for tau_spectrum\n", __FILE__, __func__, __LINE__, memory_req);
+    Exit (1);
+  }
 
   /*
    * Define the limits of the spectra in both wavelength and frequency. The
@@ -591,50 +686,55 @@ create_tau_spectrum (WindPtr w)
   wave_min = 100;
   wave_max = 10000;
   dwave = (wave_max - wave_min) / NWAVE;
+
   freq_max = C / (wave_min * ANGSTROM);
   freq_min = C / (wave_max * ANGSTROM);
   dfreq = (freq_max - freq_min) / NWAVE;
 
-  // Log ("Minimum wavelength : %.0f Angstroms\n", wave_min);
-  // Log ("Maximum wavelength : %.0f Angstroms\n", wave_max);
-  // Log ("Wavelength bins    : %i\n", NWAVE);
+  Log_silent ("\nMinimum wavelength : %.0f Angstroms\n", wave_min);
+  Log_silent ("Maximum wavelength : %.0f Angstroms\n", wave_max);
+  Log_silent ("Wavelength bins    : %i\n\n", NWAVE);
 
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    Log ("  - Creating optical depth spectrum for %s\n", xxspec[ispec].name);
+    Log ("  - Creating optical depth spectrum for %s\n", tau_diag_observers[ispec].name);
 
     freq = freq_min;
-    observer = xxspec[ispec].lmn;
+    current_observer = tau_diag_observers[ispec].lmn;
 
     for (ifreq = 0; ifreq < NWAVE; ifreq++)
     {
       tau = 0;
       col_den = 0;
 
-      if (tau_diag_phot (&ptau, freq) == EXIT_FAILURE)
+      if (create_tau_diag_phot (&ptau, freq) == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, freq);
         continue;
       }
 
-      stuff_v (observer, ptau.lmn);
+      /*
+       * Point the photon in the direction of the observer and reposition it if
+       * required
+       */
 
-      if (ptau.lmn[0] < 0)
-        ptau.x[0] *= -1;
+      stuff_v (current_observer, ptau.lmn);
+      reposition_tau_photon (&ptau);
 
-      if (extract_tau (w, &ptau, N_TAU, &col_den, &tau) == EXIT_FAILURE)
+      if (extract_tau (w, &ptau, NORMAL_TAU, &col_den, &tau) == EXIT_FAILURE)
         tau = -1;
 
-      tau_spectrum[ispec - MSPEC][ifreq] = tau;
+      tau_spectrum[ispec * NWAVE + ifreq] = tau;
       freq += dfreq;
     }
   }
 
-#ifdef MPI_ON
-  if (rank_global == 0)
-#endif
+  Log ("\n");
 
   write_tau_spectrum (tau_spectrum, wave_min, dwave);
+
+  free (tau_spectrum);
+  free (tau_diag_observers);
 }
 
 /* ************************************************************************* */
@@ -657,40 +757,55 @@ create_tau_spectrum (WindPtr w)
  *  - Planck mean
  *  - Lymann edge
  *  - Balmer edge
- *  - Average freq for the photon bands
+ *  - Helium II edge
+ *
+ * Once these integrated optical depths have been calculated for each angle, a
+ * spectrum of optical depth vs wavelength is created for each angle.
  *
  * The aim of these diagnostic numbers it to provide some sort of metric on the
  * optical thickness of the current model.
  *
- * TODO: investigate using fixed angles instead of xxspec's angles
  * TODO: method for calling this for individual cells instead of the entire wind
  *
  * ************************************************************************** */
 
 void
-tau_diag (WindPtr w)
+tau_integrate_angles (WindPtr w)
 {
-  int i;
   int itau;
   int ispec;
   int opac_type;
-  int wind_index;
-  int plasma_index;
+  int memory_req;
 
   double nu;
   double tau;
-  double x_loc;
   double col_den;
-  double *observer;
-  double plasma_density;
-  double max_plasma_density;
+  double *current_observer;
 
-  double tau_store[N_ANGLES][N_TAU];
-  double col_den_store[N_ANGLES];
+  double *tau_store;
+  double *col_den_store;
 
   struct photon ptau;
 
   Log ("\nCalculating integrated optical depths along defined line of sights\n");
+
+  tau_diag_observers = init_tau_diag_angles ();
+
+  tau_store = calloc (N_ANGLES * N_TAU, sizeof *tau_store);
+  if (!tau_store)
+  {
+    memory_req = N_ANGLES * N_TAU * sizeof *tau_store;
+    Error ("%s:%s:%i: cannot allocate %d bytes for tau_store\n", __FILE__, __func__, __LINE__, memory_req);
+    Exit (1);
+  }
+
+  col_den_store = calloc (N_ANGLES, sizeof *tau_store);
+  if (!col_den_store)
+  {
+    memory_req = N_ANGLES * sizeof *tau_store;
+    Error ("%s:%s:%i: cannot allocate %d bytes for col_den_store\n", __FILE__, __func__, __LINE__, memory_req);
+    Exit (1);
+  }
 
   /*
    * Switch to extract mode - this is bad generally not great practise but it
@@ -700,16 +815,16 @@ tau_diag (WindPtr w)
 
   geo.ioniz_or_extract = 0;
 
-  for (ispec = MSPEC; ispec < nspectra; ispec++)
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    Log ("  - Calculating integrated optical depth for %s\n", xxspec[ispec].name);
-    observer = xxspec[ispec].lmn;
+    Log ("  - Calculating integrated optical depth for %s\n", tau_diag_observers[ispec].name);
+    current_observer = tau_diag_observers[ispec].lmn;
 
     for (itau = 0; itau < N_TAU; itau++)
     {
-      tau = 0;
-      col_den = 0;
-      nu = PHOT_FREQ[itau];
+      tau = 0.0;
+      col_den = 0.0;
+      nu = TAU_DIAG_OPACS[itau].nu;
 
       /*
        * If the frequency is negative, a mean opacity will be used instead
@@ -726,93 +841,52 @@ tau_diag (WindPtr w)
         nu = 1e15;
       }
       else
+      {
         opac_type = NORMAL_TAU;
+      }
 
       /*
-       * Create the tau diag photon and point it towards the extract angle. If
-       * something goes wrong with photon generation, warn the user, set tau to
-       * -1 and skip this iteration.
+       * Create the tau diag photon and point it towards the extract angle
        */
 
-      if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
+      if (create_tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
-        tau_store[ispec - MSPEC][itau] = -1;
-        col_den_store[ispec - MSPEC] = -1;
+        tau_store[ispec * N_TAU + itau] = -1;
+        col_den_store[ispec] = -1;
         continue;
       }
 
-      stuff_v (observer, ptau.lmn);
-
-/* ************************************************************************** */
-
       /*
-       * Hacky code for when photon is pointing upwards - this photon will not
-       * be launched from the origin, but will be launched from the most dense
-       * cell at the bottom of the disk.
-       *
-       * NOTE: this assumes that we only care about DEFAULT_DOMAIN which should
-       * be 0.
-       *
-       * TODO: we should only need to do this once for the upwards angle
+       * Point the photon in the direction of the observer and reposition it if
+       * required
        */
 
-      if (ptau.lmn[0] == 0 && ptau.lmn[1] == 0 && ptau.lmn[2] == 1)
-      {
-        max_plasma_density = 0;
-        for (i = 0; i < zdom[DEFAULT_DOMAIN].ndim - 1; i++)
-        {
-          wind_index = zdom[DEFAULT_DOMAIN].mdim * i + zdom[DEFAULT_DOMAIN].mdim;
-          x_loc = wmain[wind_index].x[0];
-          plasma_index = wmain[wind_index].nplasma;
-          plasma_density = plasmamain[plasma_index].rho;
-
-          if (plasma_density > max_plasma_density)
-          {
-            print_xloc = ptau.x[0] = x_loc;
-            max_plasma_density = plasma_density;
-          }
-        }
-      }
-
-      /*
-       * When the photon is pointing in the negative x-direction, i.e. when
-       * ptau.lmn[0] < 0, then it's very likely that the photon will hit the
-       * central object and also not travel through the base of this wind. In
-       * this case, the photon is simply placed on the negative side of the
-       * x-axis which is absolutely fine due to the rotational symmetry in
-       * Python
-       */
-
-      if (ptau.lmn[0] < 0)
-        ptau.x[0] *= -1;
-
-/* ************************************************************************** */
+      stuff_v (current_observer, ptau.lmn);
+      reposition_tau_photon (&ptau);
 
       /*
        * Extract tau and add it to the tau storage array
        */
 
       if (extract_tau (w, &ptau, opac_type, &col_den, &tau) == EXIT_FAILURE)
+      {
+        col_den = -1;
         tau = -1;
+      }
 
-      tau_store[ispec - MSPEC][itau] = tau;
-      col_den_store[ispec - MSPEC] = col_den;
+      tau_store[ispec * N_TAU + itau] = tau;
+      col_den_store[ispec] = col_den;
     }
   }
 
-  create_tau_spectrum (w);
+  Log ("\n");
 
-#ifdef MPI_ON
-  if (rank_global == 0)
-#endif
+  print_tau_table (tau_store, col_den_store);
 
-    print_tau_table (tau_store, col_den_store);
-
-  /*
-   * Switch back to ionization mode - may be redundant but if this is called
-   * during each ionisation cycle then this will be required...
-   */
+  free (tau_store);
+  free (col_den_store);
+  free (tau_diag_observers);
 
   geo.ioniz_or_extract = 1;
 }

@@ -631,11 +631,11 @@ int level_emissoverview (int nlev, WindPtr w, char rootname[], int ochoice);
 int level_escapeoverview (int nlev, WindPtr w, char rootname[], int ochoice);
 int level_tauoverview (int nlev, WindPtr w, char rootname[], int ochoice);
 /* py_wind.c */
-int main (int argc, char *argv[]);
+//REDUNDANT: int main (int argc, char *argv[]);
 int one_choice (int choice, char *root, int ochoice);
 void py_wind_help (void);
 /* windsave2table.c */
-int main (int argc, char *argv[]);
+//REDUNDANT: int main (int argc, char *argv[]);
 /* windsave2table_sub.c */
 int do_windsave2table (char *root);
 int create_master_table (int ndom, char rootname[]);
@@ -643,7 +643,8 @@ int create_heat_table (int ndom, char rootname[]);
 int create_ion_table (int ndom, char rootname[], int iz);
 double *get_ion (int ndom, int element, int istate, int iswitch);
 double *get_one (int ndom, char variable_name[]);
-/* tau_diag.c */
-void tau_diag (WindPtr w);
+/* tau_integrate.c */
+void tau_integrate_angles (WindPtr w);
+void create_tau_spectrum (WindPtr w);
 /* mean_opacities.c */
 int init_mean_opacities (void);
