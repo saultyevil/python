@@ -114,9 +114,11 @@ add_executable(python
         source/setup_line_transfer.c
         source/cv.c
         source/wind_util.c
+        source/rdpar_init.c
         source/tau_diag.c
+        source/tau_diag_util.c
         source/mean_opacities.c
-        source/rdpar_init.c)
+        source/tau_diag.h)
 
 add_executable(py_wind
         source/bb.c
