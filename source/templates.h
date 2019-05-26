@@ -550,7 +550,7 @@ double integ_brem (double freq);
 double brem_d (double alpha);
 double get_rand_brem (double freqmin, double freqmax);
 /* synonyms.c */
-int check_synonyms (char new_question[], char old_question[]);
+//REDUNDANT: int check_synonyms (char new_question[], char old_question[]);
 /* setup_reverb.c */
 int get_meta_params (void);
 /* setup_line_transfer.c */
@@ -637,12 +637,12 @@ void py_wind_help (void);
 /* windsave2table.c */
 //REDUNDANT: int main (int argc, char *argv[]);
 /* windsave2table_sub.c */
-int do_windsave2table (char *root);
-int create_master_table (int ndom, char rootname[]);
-int create_heat_table (int ndom, char rootname[]);
-int create_ion_table (int ndom, char rootname[], int iz);
-double *get_ion (int ndom, int element, int istate, int iswitch);
-double *get_one (int ndom, char variable_name[]);
+//REDUNDANT: int do_windsave2table (char *root);
+//REDUNDANT: int create_master_table (int ndom, char rootname[]);
+//REDUNDANT: int create_heat_table (int ndom, char rootname[]);
+//REDUNDANT: int create_ion_table (int ndom, char rootname[], int iz);
+//REDUNDANT: double *get_ion (int ndom, int element, int istate, int iswitch);
+//REDUNDANT: double *get_one (int ndom, char variable_name[]);
 /* tau_integrate.c */
 void tau_integrate_angles (WindPtr w);
 void create_tau_spectrum (WindPtr w);

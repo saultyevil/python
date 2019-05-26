@@ -70,8 +70,8 @@ typedef struct observer_angles
 
 Observers *tau_diag_observers;
 
-int N_ANGLES;  // The number of inclination angles
-double print_xloc;  // Used as a lazy way to pass the vertical photon's x location
-#define DEFAULT_DOMAIN 0  // For now, assume we only care about domain 0 diagnostics
+int N_ANGLES;                   // The number of inclination angles
+double print_xloc;              // Used as a lazy way to pass the vertical photon's x location
+#define DEFAULT_DOMAIN 0        // For now, assume we only care about domain 0 diagnostics
 
 #endif
