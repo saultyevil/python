@@ -112,13 +112,13 @@ print_tau_table (double *tau_store, double *col_den_store)
 
     if (strcmp (observer_name, "A00P0.50") == 0)
     {
-      Log ("Photon launched from x location: %e cm\n", print_xloc);
-      fprintf (tau_diag, "Photon launched from x location: %e cm\n", print_xloc);
+      Log ("Photon launched from x location: %.2f Rstar\n", print_xloc / geo.rstar);
+      fprintf (tau_diag, "Photon launched from x location: %3.2f Rstar\n", print_xloc / geo.rstar);
     }
     else
     {
-      Log ("Photon launched from x location: %e cm\n", 1.1 * geo.rstar);
-      fprintf (tau_diag, "Photon launched from x location: %e cm\n", 1.1 * geo.rstar);
+      Log ("Photon launched from x location: 1.1 Rstar\n");
+      fprintf (tau_diag, "Photon launched from x location: 1.1 Rstar\n");
     }
 
     col_den = col_den_store[ispec];
@@ -212,9 +212,12 @@ write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave)
   for (iwave = 0; iwave < NWAVE; iwave++)
   {
     fprintf (tau_spec_file, "%e ", wavelength);
+
     for (ispec = 0; ispec < N_ANGLES; ispec++)
       fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + iwave]);
+
     fprintf (tau_spec_file, "\n");
+
     wavelength += dwave;
   }
 
@@ -678,6 +681,14 @@ create_tau_spectrum (WindPtr w)
   }
 
   /*
+   * Switch to extract mode - this is bad generally not great practise but it
+   * enables radiation (p, ds) to return the opacity in a cell without updating
+   * the monte carlo estimators
+   */
+
+  geo.ioniz_or_extract = 0;
+
+  /*
    * Define the limits of the spectra in both wavelength and frequency. The
    * size of the frequency and wavelength bins is also defined. Note that the
    * wavelength limits MUST be in units of Angstroms.
@@ -735,6 +746,8 @@ create_tau_spectrum (WindPtr w)
 
   free (tau_spectrum);
   free (tau_diag_observers);
+
+  geo.ioniz_or_extract = 1;
 }
 
 /* ************************************************************************* */
