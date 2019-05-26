@@ -51,7 +51,7 @@ Opacities TAU_DIAG_OPACS[] = {
   {1.394384e+16, "HeII_215A"}
 };
 
-#define N_TAU (sizeof TAU_DIAG_OPACS / sizeof *TAU_DIAG_OPACS)
+int const N_TAU = sizeof TAU_DIAG_OPACS / sizeof *TAU_DIAG_OPACS;
 
 /*
  * tau_diag_observers
@@ -70,7 +70,7 @@ typedef struct observer_angles
 
 Observers *tau_diag_observers;
 
-int N_ANGLES = 0;  // The number of inclination angles
+int N_ANGLES;  // The number of inclination angles
 double print_xloc;  // Used as a lazy way to pass the vertical photon's x location
 #define DEFAULT_DOMAIN 0  // For now, assume we only care about domain 0 diagnostics
 

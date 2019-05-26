@@ -646,8 +646,5 @@ double *get_one (int ndom, char variable_name[]);
 /* tau_integrate.c */
 void tau_integrate_angles (WindPtr w);
 void create_tau_spectrum (WindPtr w);
-/* tau_diag_util.c */
-void print_tau_table (double *tau_store, double *col_den_store);
-void write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave);
 /* mean_opacities.c */
 int init_mean_opacities (void);

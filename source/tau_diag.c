@@ -23,10 +23,10 @@
  *
  * If one wishes to add a "special" opacity, which is an opacity which will
  * require it's own function to calculate, such as the Rosseland mean opacity,
- * then one should update the enumerator SPEC_OPAC with a new label for that
- * opacity, as well as the frequency to be -ENUMERATOR in the TAU_DIAG_OPACS
- * array. The frequency is set such as way so as in the function tau_diag, one
- * can update the if statement to include the new opac type.
+ * then one should update the enumerator SPEC_OPAC in tau_diag.h with a new
+ * label for that opacity, as well as the frequency to be -ENUMERATOR in the
+ * TAU_DIAG_OPACS array. The frequency is set such as way so as in the function
+ * tau_diag, one can update the if statement to include the new opac type.
  *
  * If none of this makes sense, just try to follow how everything else is done!
  *
@@ -46,6 +46,184 @@
 #include "atomic.h"
 #include "python.h"
 #include "tau_diag.h"
+
+/* ************************************************************************* */
+/**
+ * @brief           Print the various optical depths calculated using this
+ *                  routine
+ *
+ * @param[in]       double   tau_store      The 2d array containing the optical
+ *                                          depth for each observer and tau
+ * @param[in]       double   col_den_store  The 2d array containing the column
+ *                                          densities for each observer
+ *
+ * @return          void
+ *
+ * @details
+ *
+ * Simply prints the different optical depths for each angle and optical depth.
+ * The same information will also be printed to an individual diag file named
+ * optical_depth.diag which is located in the diag folder of the simulation.
+ *
+ * ************************************************************************** */
+
+void
+print_tau_table (double *tau_store, double *col_den_store)
+{
+  int itau;
+  int ispec;
+  int line_len;
+  int const MAX_COL = 120;
+
+  double tau;
+  double col_den;
+
+  char tmp_str[LINELENGTH];
+  char observer_name[LINELENGTH];
+  char diag_filename[3 * LINELENGTH];
+
+  FILE *tau_diag;
+
+  if (rank_global != 0)
+    return;
+
+  sprintf (diag_filename, "diag_%s/%s.optical_depth.diag", files.root, files.root);
+
+  if (!(tau_diag = fopen (diag_filename, "w")))
+  {
+    Error ("%s:%s:%i: Unable to open optical depth diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
+
+  Log ("Optical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
+  fprintf (tau_diag, "Optical depths along the defined line of sights:\n(-1 indicates an error occured)\n\n");
+
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
+  {
+    strcpy (observer_name, tau_diag_observers[ispec].name);
+
+    Log ("%s\n--------\n", observer_name);
+    fprintf (tau_diag, "%s\n--------\n", observer_name);
+
+    /*
+     * For the photons which are pointing upwards and are not launched from the
+     * origin
+     */
+
+    if (strcmp (observer_name, "A00P0.50") == 0)
+    {
+      Log ("Photon launched from x location: %e cm\n", print_xloc);
+      fprintf (tau_diag, "Photon launched from x location: %e cm\n", print_xloc);
+    }
+    else
+    {
+      Log ("Photon launched from x location: %e cm\n", 1.1 * geo.rstar);
+      fprintf (tau_diag, "Photon launched from x location: %e cm\n", 1.1 * geo.rstar);
+    }
+
+    col_den = col_den_store[ispec];
+    Log ("Column density: %3.2e g/cm^-2\n", col_den);
+    fprintf (tau_diag, "Column density: %3.2e g/cm^-2\n", col_den);
+
+    line_len = 0;
+    for (itau = 0; itau < N_TAU; itau++)
+    {
+      tau = tau_store[ispec * N_TAU + itau];
+      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_DIAG_OPACS[itau].name, tau);
+
+      if (line_len > MAX_COL)
+      {
+        line_len = 0;
+        Log ("\n");
+        fprintf (tau_diag, "\n");
+      }
+
+      Log ("%s", tmp_str);
+      fprintf (tau_diag, "%s", tmp_str);
+    }
+
+    Log ("\n\n");
+    fprintf (tau_diag, "\n\n");
+  }
+
+  if (fclose (tau_diag))
+  {
+    Error ("%s:%s:%i: could not close optical depth diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
+}
+
+/* ************************************************************************* */
+/**
+ * @brief           Write the various optical depth spectra to file
+ *
+ * @param[in]       double tau_spectrum     The various optical depth spectra
+ * @param[in]       double wave_min         The smallest wavelength in the
+ *                                          spectra
+ * @param[in]       double dwave            The size of the wavelength bins
+ *
+ * @return          void
+ *
+ * @details
+ *
+ * Simply write the optical depth spectra to the file named root.tau_spec.diag.
+ * This file will be located in the diag folder.
+ *
+ * ************************************************************************** */
+
+void
+write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave)
+{
+  int ispec;
+  int iwave;
+
+  double wavelength;
+
+  char tau_spec_filename[3 * LINELENGTH];
+
+  FILE *tau_spec_file;
+
+  if (rank_global != 0)
+    return;
+
+  sprintf (tau_spec_filename, "diag_%s/%s.tau_spec.diag", files.root, files.root);
+
+  if (!(tau_spec_file = fopen (tau_spec_filename, "w")))
+  {
+    Error ("%s:%s:%i: unable to open tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
+
+  /*
+   * Write the file header
+   */
+
+  fprintf (tau_spec_file, "# Lambda ");
+  for (ispec = 0; ispec < N_ANGLES; ispec++)
+    fprintf (tau_spec_file, "%s ", tau_diag_observers[ispec].name);
+  fprintf (tau_spec_file, "\n");
+
+  /*
+   * Write out the tau spectrum for each inclination angle
+   */
+
+  wavelength = wave_min;
+
+  for (iwave = 0; iwave < NWAVE; iwave++)
+  {
+    fprintf (tau_spec_file, "%e ", wavelength);
+    for (ispec = 0; ispec < N_ANGLES; ispec++)
+      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + iwave]);
+    fprintf (tau_spec_file, "\n");
+    wavelength += dwave;
+  }
+
+  if (fclose (tau_spec_file))
+  {
+    Error ("%s:%s:%i: could not close tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Exit (1);
+  }
+}
 
 /* ************************************************************************* */
 /**
@@ -343,7 +521,7 @@ reposition_tau_photon (PhotPtr pout)
  * ************************************************************************** */
 
 int
-tau_diag_phot (PhotPtr pout, double nu)
+create_tau_diag_phot (PhotPtr pout, double nu)
 {
   if (nu < 0)
   {
@@ -375,30 +553,28 @@ tau_diag_phot (PhotPtr pout, double nu)
  *
  * ************************************************************************** */
 
-int
-init_diag_angles (void)
+Observers *
+init_tau_diag_angles (void)
 {
   int iangle;
   int memory_req;
-  int static observer_init = 0;
 
   int n_default_angles = 7;
   double default_phase = 0.5;
   double default_angles[] = { 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0 };
 
-  if (observer_init != 0)
-    return EXIT_SUCCESS;
+  Observers *init_angles;
 
   if (geo.nangles && xxspec != NULL)
   {
-    Log ("Using inclinations provided for spectrum cycles as defined in xxspec\n");
+    Log_silent ("Using inclinations provided for spectrum cycles as defined in xxspec\n");
 
     N_ANGLES = geo.nangles;
-    tau_diag_observers = calloc (geo.nangles, sizeof *tau_diag_observers);
+    init_angles = calloc (geo.nangles, sizeof *init_angles);
 
-    if (tau_diag_observers == NULL)
+    if (init_angles == NULL)
     {
-      memory_req = geo.nangles * sizeof *tau_diag_observers;
+      memory_req = geo.nangles * sizeof *init_angles;
       Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
       Exit (1);
     }
@@ -406,21 +582,21 @@ init_diag_angles (void)
     {
       for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
       {
-        strcpy (tau_diag_observers[iangle - MSPEC].name, xxspec[iangle].name);
-        stuff_v (xxspec[iangle].lmn, tau_diag_observers[iangle].lmn);
+        strcpy (init_angles[iangle - MSPEC].name, xxspec[iangle].name);
+        stuff_v (xxspec[iangle].lmn, init_angles[iangle - MSPEC].lmn);
       }
     }
   }
   else
   {
-    Log ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
+    Log_silent ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
 
     N_ANGLES = n_default_angles;
-    tau_diag_observers = calloc (n_default_angles, sizeof *tau_diag_observers);
+    init_angles = calloc (n_default_angles, sizeof *init_angles);
 
-    if (tau_diag_observers == NULL)
+    if (init_angles == NULL)
     {
-      memory_req = n_default_angles * sizeof *tau_diag_observers;
+      memory_req = n_default_angles * sizeof *init_angles;
       Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
       Exit (1);
     }
@@ -428,15 +604,15 @@ init_diag_angles (void)
     {
       for (iangle = 0; iangle < n_default_angles; iangle++)
       {
-        sprintf (tau_diag_observers[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
-        tau_diag_observers[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-        tau_diag_observers[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-        tau_diag_observers[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
+        sprintf (init_angles[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
+        init_angles[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
+        init_angles[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
+        init_angles[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
       }
     }
   }
 
-  return EXIT_SUCCESS;
+  return init_angles;
 }
 
 /* ************************************************************************* */
@@ -484,14 +660,14 @@ create_tau_spectrum (WindPtr w)
   double wave_min;
   double wave_max;
 
-  double *observer;
+  double *current_observer;
   double *tau_spectrum;
 
   struct photon ptau;
 
   Log ("\nCreating optical depth spectrum\n");
 
-  init_diag_angles ();
+  tau_diag_observers = init_tau_diag_angles ();
 
   tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum);
   if (!tau_spectrum)
@@ -524,14 +700,14 @@ create_tau_spectrum (WindPtr w)
     Log ("  - Creating optical depth spectrum for %s\n", tau_diag_observers[ispec].name);
 
     freq = freq_min;
-    observer = tau_diag_observers[ispec].lmn;
+    current_observer = tau_diag_observers[ispec].lmn;
 
     for (ifreq = 0; ifreq < NWAVE; ifreq++)
     {
       tau = 0;
       col_den = 0;
 
-      if (tau_diag_phot (&ptau, freq) == EXIT_FAILURE)
+      if (create_tau_diag_phot (&ptau, freq) == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, freq);
         continue;
@@ -542,7 +718,7 @@ create_tau_spectrum (WindPtr w)
        * required
        */
 
-      stuff_v (observer, ptau.lmn);
+      stuff_v (current_observer, ptau.lmn);
       reposition_tau_photon (&ptau);
 
       if (extract_tau (w, &ptau, NORMAL_TAU, &col_den, &tau) == EXIT_FAILURE)
@@ -553,9 +729,12 @@ create_tau_spectrum (WindPtr w)
     }
   }
 
+  Log ("\n");
+
   write_tau_spectrum (tau_spectrum, wave_min, dwave);
 
   free (tau_spectrum);
+  free (tau_diag_observers);
 }
 
 /* ************************************************************************* */
@@ -601,7 +780,7 @@ tau_integrate_angles (WindPtr w)
   double nu;
   double tau;
   double col_den;
-  double *observer;
+  double *current_observer;
 
   double *tau_store;
   double *col_den_store;
@@ -610,7 +789,7 @@ tau_integrate_angles (WindPtr w)
 
   Log ("\nCalculating integrated optical depths along defined line of sights\n");
 
-  init_diag_angles ();
+  tau_diag_observers = init_tau_diag_angles ();
 
   tau_store = calloc (N_ANGLES * N_TAU, sizeof *tau_store);
   if (!tau_store)
@@ -639,7 +818,7 @@ tau_integrate_angles (WindPtr w)
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
     Log ("  - Calculating integrated optical depth for %s\n", tau_diag_observers[ispec].name);
-    observer = tau_diag_observers[ispec].lmn;
+    current_observer = tau_diag_observers[ispec].lmn;
 
     for (itau = 0; itau < N_TAU; itau++)
     {
@@ -670,7 +849,7 @@ tau_integrate_angles (WindPtr w)
        * Create the tau diag photon and point it towards the extract angle
        */
 
-      if (tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
+      if (create_tau_diag_phot (&ptau, nu) == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
         tau_store[ispec * N_TAU + itau] = -1;
@@ -683,7 +862,7 @@ tau_integrate_angles (WindPtr w)
        * required
        */
 
-      stuff_v (observer, ptau.lmn);
+      stuff_v (current_observer, ptau.lmn);
       reposition_tau_photon (&ptau);
 
       /*
@@ -701,11 +880,13 @@ tau_integrate_angles (WindPtr w)
     }
   }
 
+  Log ("\n");
+
   print_tau_table (tau_store, col_den_store);
 
-  free (tau_diag_observers);
   free (tau_store);
   free (col_den_store);
+  free (tau_diag_observers);
 
   geo.ioniz_or_extract = 1;
 }

@@ -116,7 +116,6 @@ add_executable(python
         source/wind_util.c
         source/rdpar_init.c
         source/tau_diag.c
-        source/tau_diag_util.c
         source/mean_opacities.c
         source/tau_diag.h)
 
