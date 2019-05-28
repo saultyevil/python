@@ -476,7 +476,7 @@ reposition_tau_photon (PhotPtr pout)
 
       if (plasma_density > max_plasma_density)
       {
-        print_xloc = upward_x_loc = x_loc;
+        print_xloc = upward_x_loc = x_loc + wmain[wind_index].dfudge;
         max_plasma_density = plasma_density;
       }
     }
