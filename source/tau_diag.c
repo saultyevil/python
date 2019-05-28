@@ -562,9 +562,9 @@ init_tau_diag_angles (void)
   int iangle;
   int memory_req;
 
-  int n_default_angles = 7;
+  int n_default_angles = 10;
   double default_phase = 0.5;
-  double default_angles[] = { 0.0, 15.0, 30.0, 45.0, 60.0, 75.0, 90.0 };
+  double default_angles[] = { 0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0 };
 
   Observers *init_angles;
 
