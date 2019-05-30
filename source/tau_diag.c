@@ -737,6 +737,15 @@ create_tau_spectrum (WindPtr w)
 
       tau_spectrum[ispec * NWAVE + ifreq] = tau;
       freq += dfreq;
+
+      if (ifreq % (NWAVE / 4) == 0)
+      {
+        Log ("      - %3.f %% of the spectrum generated\n", (double) ifreq / NWAVE * 100.0);
+      }
+      else if (ifreq == NWAVE - 1)
+      {
+        Log ("      - %3.f %% of the spectrum generated\n", (double) ifreq / NWAVE * 100.0);
+      }
     }
   }
 

@@ -172,7 +172,6 @@ radiation (PhotPtr p, double ds)
   int n, nion;
   double q, x, z;
   double w_ave, w_in, w_out;
-  double den_config ();
   int nconf;
   double p_in[3], p_out[3], dp_cyl[3];  //The initial and final momentum.
 //  double weight_of_packet, y;  //to do with augerion calcs, now deprecated
