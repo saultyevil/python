@@ -172,12 +172,13 @@ print_tau_table (double *tau_store, double *col_den_store)
  * ************************************************************************** */
 
 void
-write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave)
+write_tau_spectrum (double *tau_spectrum, double freq_min, double dfreq)
 {
   int ispec;
-  int iwave;
+  int ifreq;
 
   double wavelength;
+  double frequency;
 
   char tau_spec_filename[3 * LINELENGTH];
 
@@ -207,18 +208,19 @@ write_tau_spectrum (double *tau_spectrum, double wave_min, double dwave)
    * Write out the tau spectrum for each inclination angle
    */
 
-  wavelength = wave_min;
+  frequency = freq_min;
 
-  for (iwave = 0; iwave < NWAVE; iwave++)
+  for (ifreq = 0; ifreq < NWAVE; ifreq++)
   {
+    wavelength = (C / frequency) / ANGSTROM;
     fprintf (tau_spec_file, "%e ", wavelength);
 
     for (ispec = 0; ispec < N_ANGLES; ispec++)
-      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + iwave]);
+      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + ifreq]);
 
     fprintf (tau_spec_file, "\n");
 
-    wavelength += dwave;
+    frequency += dfreq;
   }
 
   if (fclose (tau_spec_file))
@@ -657,7 +659,6 @@ create_tau_spectrum (WindPtr w)
   double col_den;
   double freq;
   double dfreq;
-  double dwave;
   double freq_min;
   double freq_max;
   double wave_min;
@@ -696,7 +697,6 @@ create_tau_spectrum (WindPtr w)
 
   wave_min = 100;
   wave_max = 10000;
-  dwave = (wave_max - wave_min) / NWAVE;
 
   freq_max = C / (wave_min * ANGSTROM);
   freq_min = C / (wave_max * ANGSTROM);
@@ -751,7 +751,7 @@ create_tau_spectrum (WindPtr w)
 
   Log ("\n");
 
-  write_tau_spectrum (tau_spectrum, wave_min, dwave);
+  write_tau_spectrum (tau_spectrum, freq_min, dfreq);
 
   free (tau_spectrum);
   free (tau_diag_observers);
