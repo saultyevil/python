@@ -10,5 +10,5 @@ values:
   power: |
     Multi-line description, must keep indentation.
 parent:
-  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+  Spectrum_cycles: Greater than or equal to 0
 file: python.c

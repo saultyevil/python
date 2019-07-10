@@ -54,10 +54,10 @@ calculate_ionization (restart_stat)
      int restart_stat;
 {
   int n, nn;
-  double zz, zzz, zze, ztot, zz_adiab;
+  double zz, zzz, zze, ztot, zz_adiab, zz_lofreq;
   double zz_abs, zz_scat, zz_star, zz_disk;
   double zz_err, zz_else;
-  int nn_adiab;
+  int nn_adiab, nn_lofreq;
   WindPtr w;
   PhotPtr p;
 
@@ -168,7 +168,6 @@ calculate_ionization (restart_stat)
       {
         NPHOT = NPHOT_MAX;
       }
-      //OLD NPHOT = ((geo.wcycle + 1.0) / geo.wcycles) * NPHOT_MAX;
     }
 
     Log ("!!Python: %1.2e photons will be transported for cycle %i\n", (double) NPHOT, geo.wcycle);
@@ -227,8 +226,8 @@ calculate_ionization (restart_stat)
     trans_phot (w, p, 0);
 
     /*Determine how much energy was absorbed in the wind */
-    zze = zzz = zz_adiab = zz_abs = zz_scat = zz_star = zz_disk = zz_err = zz_else = 0.0;
-    nn_adiab = 0;
+    zze = zzz = zz_adiab = zz_abs = zz_scat = zz_star = zz_disk = zz_err = zz_else = zz_lofreq = 0.0;
+    nn_adiab = nn_lofreq = 0;
     for (nn = 0; nn < NPHOT; nn++)
     {
       zzz += p[nn].w;
@@ -240,6 +239,11 @@ calculate_ionization (restart_stat)
       {
         zz_adiab += p[nn].w;
         nn_adiab++;
+      }
+      else if (p[nn].istat == P_LOFREQ_FF)
+      {
+        zz_lofreq += p[nn].w;
+        nn_lofreq++;
       }
       else if (p[nn].istat == P_ABSORB)
       {
@@ -271,7 +275,10 @@ calculate_ionization (restart_stat)
       ("!!python: Total photon luminosity after transphot  %18.12e (absorbed/lost  %18.12e). Radiated luminosity %18.12e\n",
        zzz, zzz - zz, zze);
     if (geo.rt_mode == RT_MODE_MACRO)
+    {
       Log ("!!python: luminosity lost by adiabatic kpkt destruction %18.12e number of packets %d\n", zz_adiab, nn_adiab);
+      Log ("!!python: luminosity lost to low-frequency free-free    %18.12e number of packets %d\n", zz_lofreq, nn_lofreq);
+    }
     Log ("!!python: luminosity lost by being completely absorbed  %18.12e \n", zz_abs);
     Log ("!!python: luminosity lost by too many scatters          %18.12e \n", zz_scat);
     Log ("!!python: luminosity lost by hitting the star           %18.12e \n", zz_star);
@@ -386,7 +393,7 @@ calculate_ionization (restart_stat)
       {
         strcpy (dummy, "");
         sprintf (dummy, "diag_%s/%s%02d", files.root, files.root, geo.wcycle);
-        do_windsave2table (dummy);
+        do_windsave2table (dummy, 0);
       }
 
 #ifdef MPI_ON
@@ -491,6 +498,15 @@ make_spectra (restart_stat)
    */
 
   kbf_need (freqmin, freqmax);
+
+  /* force recalculation of kpacket rates */
+  if (geo.rt_mode == RT_MODE_MACRO)
+  {
+    for (n = 0; n < NPLASMA; n++)
+    {
+      macromain[n].kpkt_rates_known = -1;
+    }
+  }
 
   /* BEGIN CYCLES TO CREATE THE DETAILED SPECTRUM */
 

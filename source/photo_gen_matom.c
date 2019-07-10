@@ -327,7 +327,8 @@ get_matom_f (mode)
 
                 if (nres > NLINES + nphot_total)
                 {
-                  Error ("Problem in get_matom_f (1). Abort. \n");
+                  Error ("Problem in get_matom_f (1). Abort. nres is %d, NLINES %d, nphot_total %d m %d %8.4e\n",
+                         nres, NLINES, nphot_total, m, macromain[n].matom_abs[m]);
                   Exit (0);
                 }
 

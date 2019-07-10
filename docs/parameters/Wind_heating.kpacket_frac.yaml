@@ -5,5 +5,6 @@ type: Double
 unit: None
 values: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
 parent:
-  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+  Wind_heating.extra_processes: [nonthermal, both]
+  Line_transfer: [macro_atoms, macro_atoms_thermal_trapping]
 file: setup.c

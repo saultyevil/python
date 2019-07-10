@@ -3,7 +3,7 @@ description: |
   Multi-line description, must keep indentation.
 type: Double
 unit: M☉/year
-values: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+values: Greater than 0
 parent:
-  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
-file: knigge.c
+  Wind.type: [knigge, SV]
+file: [knigge.c, sv.c]

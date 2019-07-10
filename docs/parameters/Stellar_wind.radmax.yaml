@@ -3,7 +3,7 @@ description: |
   Multi-line description, must keep indentation.
 type: Double
 unit: cm
-values: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+values: Greater than or equal to :ref:`Stellar_wind.radmin`
 parent:
-  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+  Wind.type: star
 file: stellar_wind.c

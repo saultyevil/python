@@ -21,48 +21,6 @@
 
 
 
-//OLD /***********************************************************
-//OLD                                        Space Telescope Science Institute
-//OLD
-//OLD  Synopsis:
-//OLD
-//OLD double one_continuum(spectype,t,g,freqmin,freqmax) gets a photon frequency
-//OLD from a continuum grid
-//OLD
-//OLD Arguments:
-//OLD
-//OLD   spectype                                An index to the continum grid which one wants
-//OLD                                           to use for obtaining a photon
-//OLD   double t,g,                             Two parameters defining the model for which
-//OLD                                           a photon is requried, often temperature and
-//OLD                                           gravity, though this is not required
-//OLD   freqmin,freqmax;                        minimum and maximum frequency of interest
-//OLD
-//OLD
-//OLD Returns:
-//OLD
-//OLD
-//OLD Description:
-//OLD
-//OLD
-//OLD Notes:
-//OLD   In versions of python prior to python_52, different routines
-//OLD   were used to read kurucz models and hubeny models.  This was
-//OLD   historical, since the routines ksl had to read the kurucz models
-//OLD   read binary files (from a time when compputers were very slow).
-//OLD
-//OLD   The new routines are much more general, and are based on routines
-//OLD   ksl had written for his fitting program kslfit.  The underlying
-//OLD   routines can interpolate between grids of more than two dimensions
-//OLD   although here we assume that all of the continuum grids are two
-//OLD   dimensional.
-//OLD
-//OLD History:
-//OLD   04aug   ksl     created from hub.c usied in all versions
-//OLD                   of python prior to python_52.
-//OLD
-//OLD **************************************************************/
-
 double old_t, old_g, old_freqmin, old_freqmax;
 double jump[] = { 913.8 };
 
@@ -94,13 +52,15 @@ double jump[] = { 913.8 };
  *
  * ### Notes ###
  *
- * @bug  The model structure is general in the sense that it was intended
+ * The model structure is general in the sense that it was intended
  * for situation with any number of variables.
  * However what is written here
  * is specific to the case of two variables. This is a problem, as we have
  * found in trying to use this in other situations.  A more general routine is needed.
  * The first step in doing this is to replace much of the code here with
  * a call to the routine model (spectype, par) in models.c
+ * This issue #539
+ *
  *
  **********************************************************/
 
@@ -157,7 +117,6 @@ one_continuum (spectype, t, g, freqmin, freqmax)
 
     for (n = 0; n < comp[spectype].nwaves; n++)
     {
-//OLD      if (comp[spectype].xmod.w[n] > lambdamin && comp[spectype].xmod.w[n] <= lambdamax)
       if (comp[spectype].xmod.w[n] > lambdamin && comp[spectype].xmod.w[n] < lambdamax)
       {
         w_local[nwave] = comp[spectype].xmod.w[n];
@@ -272,7 +231,6 @@ emittance_continuum (spectype, freqmin, freqmax, t, g)
   int nwav;
   double x, lambdamin, lambdamax;
 
-//  double dlambda;
   double par[2];
   int model ();
 

@@ -198,7 +198,7 @@ cone_dummy, *ConePtr;
 
 /* End of structures which are used to define boundaries to the emission regions */
 
-#define NDIM_MAX 500            // maximum size of the grid in each dimension
+#define NDIM_MAX 1000           // maximum size of the grid in each dimension
 
 typedef struct domain
 {
@@ -1002,7 +1002,7 @@ typedef struct macro
      and used to select destruction rates for kpkts */
   double cooling_normalisation;
   double cooling_bbtot, cooling_bftot, cooling_bf_coltot;
-  double cooling_ff;
+  double cooling_ff, cooling_ff_lofreq;
   double cooling_adiabatic;     // this is just cool_adiabatic / vol / ne
 
 
@@ -1071,7 +1071,8 @@ typedef struct photon
     P_HIT_DISK = 7,             //Banged into disk
     P_SEC = 8,                  //Photon hit secondary
     P_ADIABATIC = 9,            //records that a photon created a kpkt which was destroyed by adiabatic cooling
-    P_ERROR_MATOM = 10          //Some kind of error in processing of a photon which excited a macroattom
+    P_ERROR_MATOM = 10,         //Some kind of error in processing of a photon which excited a macroattom
+    P_LOFREQ_FF = 11            //records a photon that had too low a frequency  
   } istat;                      /*status of photon. */
 
   int nscat;                    /*number of scatterings */

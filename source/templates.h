@@ -483,10 +483,10 @@ int photo_gen_matom (PhotPtr p, double weight, int photstart, int nphot);
 int macro_gov (PhotPtr p, int *nres, int matom_or_kpkt, int *which_out);
 int macro_pops (PlasmaPtr xplasma, double xne);
 /* windsave2table_sub.c */
-int do_windsave2table (char *root);
+int do_windsave2table (char *root, int ion_switch);
 int create_master_table (int ndom, char rootname[]);
 int create_heat_table (int ndom, char rootname[]);
-int create_ion_table (int ndom, char rootname[], int iz);
+int create_ion_table (int ndom, char rootname[], int iz, int ion_switch);
 double *get_ion (int ndom, int element, int istate, int iswitch);
 double *get_one (int ndom, char variable_name[]);
 /* import.c */
@@ -550,7 +550,7 @@ double integ_brem (double freq);
 double brem_d (double alpha);
 double get_rand_brem (double freqmin, double freqmax);
 /* synonyms.c */
-//REDUNDANT: int check_synonyms (char new_question[], char old_question[]);
+int check_synonyms (char new_question[], char old_question[]);
 /* setup_reverb.c */
 int get_meta_params (void);
 /* setup_line_transfer.c */
@@ -631,18 +631,19 @@ int level_emissoverview (int nlev, WindPtr w, char rootname[], int ochoice);
 int level_escapeoverview (int nlev, WindPtr w, char rootname[], int ochoice);
 int level_tauoverview (int nlev, WindPtr w, char rootname[], int ochoice);
 /* py_wind.c */
-//REDUNDANT: int main (int argc, char *argv[]);
+int main (int argc, char *argv[]);
 int one_choice (int choice, char *root, int ochoice);
 void py_wind_help (void);
 /* windsave2table.c */
-//REDUNDANT: int main (int argc, char *argv[]);
+void parse_arguments (int argc, char *argv[], char root[], int *ion_switch);
+int main (int argc, char *argv[]);
 /* windsave2table_sub.c */
-//REDUNDANT: int do_windsave2table (char *root);
-//REDUNDANT: int create_master_table (int ndom, char rootname[]);
-//REDUNDANT: int create_heat_table (int ndom, char rootname[]);
-//REDUNDANT: int create_ion_table (int ndom, char rootname[], int iz);
-//REDUNDANT: double *get_ion (int ndom, int element, int istate, int iswitch);
-//REDUNDANT: double *get_one (int ndom, char variable_name[]);
+int do_windsave2table (char *root, int ion_switch);
+int create_master_table (int ndom, char rootname[]);
+int create_heat_table (int ndom, char rootname[]);
+int create_ion_table (int ndom, char rootname[], int iz, int ion_switch);
+double *get_ion (int ndom, int element, int istate, int iswitch);
+double *get_one (int ndom, char variable_name[]);
 /* tau_integrate.c */
 void tau_integrate_angles (WindPtr w);
 void create_tau_spectrum (WindPtr w);

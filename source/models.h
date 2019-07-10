@@ -16,7 +16,7 @@
 #define NDIM	10              // The maximum number of free parameters
 #define NCOMPS	10              //The maximum number of separate components
 #define NPARS	10              //The maximum number of parameters in a component (not all variable)
-#define NMODS   1000            //The total number of models read in in all components
+#define NMODS   2000            //The total number of models read in in all components
 #define LINELEN 160             //This should always be the same as LINELENGTH in python.h!
 
 

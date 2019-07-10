@@ -48,11 +48,13 @@
  **********************************************************/
 
 int
-do_windsave2table (root)
+do_windsave2table (root, ion_switch)
      char *root;
+     int ion_switch;
 {
   int ndom;
   char rootname[LINELENGTH];
+
 
   for (ndom = 0; ndom < geo.ndomain; ndom++)
   {
@@ -61,14 +63,14 @@ do_windsave2table (root)
 
     create_master_table (ndom, rootname);
     create_heat_table (ndom, rootname);
-    create_ion_table (ndom, rootname, 1);
-    create_ion_table (ndom, rootname, 2);
-    create_ion_table (ndom, rootname, 6);
-    create_ion_table (ndom, rootname, 7);
-    create_ion_table (ndom, rootname, 8);
-    create_ion_table (ndom, rootname, 11);
-    create_ion_table (ndom, rootname, 14);
-    create_ion_table (ndom, rootname, 26);
+    create_ion_table (ndom, rootname, 1, ion_switch);
+    create_ion_table (ndom, rootname, 2, ion_switch);
+    create_ion_table (ndom, rootname, 6, ion_switch);
+    create_ion_table (ndom, rootname, 7, ion_switch);
+    create_ion_table (ndom, rootname, 8, ion_switch);
+    create_ion_table (ndom, rootname, 11, ion_switch);
+    create_ion_table (ndom, rootname, 14, ion_switch);
+    create_ion_table (ndom, rootname, 26, ion_switch);
   }
   return (0);
 }
@@ -563,10 +565,11 @@ create_heat_table (ndom, rootname)
  **********************************************************/
 
 int
-create_ion_table (ndom, rootname, iz)
+create_ion_table (ndom, rootname, iz, ion_switch)
      int ndom;
      char rootname[];
      int iz;                    // Where z is the element
+     int ion_switch;            // Determines what is actually printed out
 {
   char filename[132];
   double *c[50];
@@ -606,12 +609,13 @@ create_ion_table (ndom, rootname, iz)
   fptr = fopen (filename, "w");
 
 
+
   i = 0;
   while (i < number_ions)
   {
     istate[i] = ion[first_ion + i].istate;
 
-    c[i] = get_ion (ndom, iz, istate[i], 0);
+    c[i] = get_ion (ndom, iz, istate[i], ion_switch);
     i++;
   }
 
@@ -723,7 +727,7 @@ get_ion (ndom, element, istate, iswitch)
 {
   int nion, nelem;
   int n;
-  char name[LINELENGTH];
+//OLD  char name[LINELENGTH];
   int nplasma;
   double *x;
   int nstart, ndim2;
@@ -749,7 +753,7 @@ get_ion (ndom, element, istate, iswitch)
   while (nelem < nelements && ele[nelem].z != element)
     nelem++;
 
-  strcpy (name, "");
+//OLD  strcpy (name, "");
 
   /* Now populate the array */
 
@@ -761,29 +765,29 @@ get_ion (ndom, element, istate, iswitch)
     {
       if (iswitch == 0)
       {
-        sprintf (name, "Element %d (%s) ion %d fractions\n", element, ele[nelem].name, istate);
+//OLD        sprintf (name, "Element %d (%s) ion %d fractions\n", element, ele[nelem].name, istate);
         x[n] = plasmamain[nplasma].density[nion];
         nh = rho2nh * plasmamain[nplasma].rho;
         x[n] /= (nh * ele[nelem].abun);
       }
       else if (iswitch == 1)
       {
-        sprintf (name, "Element %d (%s) ion %d density\n", element, ele[nelem].name, istate);
+//OLD        sprintf (name, "Element %d (%s) ion %d density\n", element, ele[nelem].name, istate);
         x[n] = plasmamain[nplasma].density[nion];
       }
       else if (iswitch == 2)
       {
-        sprintf (name, "Element %d (%s) ion %d  #scatters\n", element, ele[nelem].name, istate);
-        x[n] = plasmamain[nplasma].scatters[nion];
+//OLD        sprintf (name, "Element %d (%s) ion %d  #scatters\n", element, ele[nelem].name, istate);
+        x[n] = (double) plasmamain[nplasma].scatters[nion] / plasmamain[nplasma].vol;
       }
       else if (iswitch == 3)
       {
-        sprintf (name, "Element %d (%s) ion %d scattered flux\n", element, ele[nelem].name, istate);
+//OLD        sprintf (name, "Element %d (%s) ion %d scattered flux\n", element, ele[nelem].name, istate);
         x[n] = plasmamain[nplasma].xscatters[nion];
       }
       else
       {
-        Error ("xion_summary : Unknown switch %d \n", iswitch);
+        Error ("get_ion : Unknown switch %d \n", iswitch);
         exit (0);
       }
     }

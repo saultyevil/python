@@ -8,6 +8,7 @@ Arguments:
     Any
         Prints this documentation
 """
+#!/usr/bin/env python
 from typing import TextIO
 import os
 import sys
@@ -36,7 +37,7 @@ def write_header_by_level(output_file: TextIO, string: str, level: int = 0):
         output_file.write('**{}**\n{}\n'.format(string, ''.join('"' for i in range(len(string)+4))))
 
 
-def write_str_indent(output_file: TextIO, string: str, indent: str = "  "):
+def write_str_indent(output_file: TextIO, string: str, indent: str = "  ", all: bool = False):
     """
     Writes a passed string to the output file. If it's split over multiple lines,
     indent the subsequent lines by the specified amount.
@@ -45,16 +46,21 @@ def write_str_indent(output_file: TextIO, string: str, indent: str = "  "):
         output_file: The file to write to
         string: The text to write
         indent: The indent to apply if the text splits over multiple lines
+        all: Whether or not all lines should be indented
     """
     lines = string.splitlines()
-    output_file.write("{}\n".format(lines[0]))
+    if all:
+        output_file.write("{}{}\n".format(indent, lines[0]))
+    else:
+        output_file.write("{}\n".format(lines[0]))
+
     for line in lines[1:]:
         output_file.write("{}{}\n".format(indent, line))
     output_file.write("\n")
     return
 
 
-def output_parameter(output_file: TextIO, parameter: dict, level: int = 0):
+def output_parameter(output_file: TextIO, parameter: dict, level: int = 0, no_separator: bool = False):
     """
     Output a parameter to file
 
@@ -64,7 +70,7 @@ def output_parameter(output_file: TextIO, parameter: dict, level: int = 0):
         level: The level of the parameter, e.g. heading, subheading
     """
     # Suppress transition line at top level
-    if level:
+    if not level and not no_separator:
         output_file.write("----------------------------------------\n\n")
     write_header_by_level(output_file, parameter['name'], level)
     output_file.write("{}\n".format(parameter['description']))
@@ -78,35 +84,38 @@ def output_parameter(output_file: TextIO, parameter: dict, level: int = 0):
         if isinstance(parameter['values'], dict):
             output_file.write("**Values:**\n\n")
             for key, value in parameter['values'].items():
+                output_file.write("{}\n".format(key))
                 if isinstance(value, str):
-                    write_str_indent(output_file, "{}. {}".format(key, value.strip()), indent="   ")
+                    write_str_indent(output_file, value.strip(), indent="  ", all=True)
                 elif isinstance(value, list):
-                    list_text = ', '.join([str(x) for x in value])
-                    write_str_indent(output_file, "{}. {}".format(key, list_text, indent="   "))
+                    write_str_indent(
+                        output_file,
+                        ', '.join([str(x) for x in value]), indent="  ", all=True
+                    )
                 else:
-                    output_file.write("{}\n. {}\n".format(key, value))
+                    output_file.write("    "+str(value))
 
         elif isinstance(parameter['values'], list):
             # If this is a list of values, write each out as a bullet-point
-            output_file.write("**Values:**\n\n")
+            output_file.write("**Values:**\n")
             for value in parameter['values'].items():
                 write_str_indent(output_file, "* {}".format(value), indent="  ")
 
         else:
-            output_file.write("**Value:** {}\n".format(parameter['values']))
+            output_file.write("**Values:** {}\n".format(parameter['values']))
         output_file.write("\n")
 
     if parameter.get('parent'):
         if isinstance(parameter['parent'], dict):
-            output_file.write("**Parent(s):**\n")
+            output_file.write("**Parent(s):**\n\n")
             for key, value in parameter['parent'].items():
                 if isinstance(value, str):
-                    write_str_indent(output_file, "  {}_: {}".format(key, value), indent="    ")
+                    write_str_indent(output_file, "* :ref:`{}`: {}".format(key, value), indent="  ")
                 elif isinstance(value, list):
-                    list_text = ', '.join([str(x) for x in value])
-                    write_str_indent(output_file, "  {}_: {}".format(key, list_text, indent="    "))
+                    list_text = ', '.join(['``'+str(x)+'``' for x in value])
+                    write_str_indent(output_file, "* :ref:`{}`: {}".format(key, list_text, indent="  "))
                 else:
-                    output_file.write("  {}_: {}\n\n".format(key, value))
+                    output_file.write("* :ref:`{}`: ``{}``\n\n".format(key, value))
             output_file.write("\n")
 
         elif isinstance(parameter['parent'], list):
@@ -172,16 +181,18 @@ def write_rst(output_folder: str, dox_structured: dict):
     for parameter_type, type_parameters in dox_structured.items():
         with open(os.path.join(output_folder, "{}.autogen.rst".format(parameter_type)), 'w') as type_file:
             header_line = ''.join('=' for i in range(len(parameter_type)))
-            type_file.write("\n{}\n{}\n{}\n\n".format(header_line, parameter_type, header_line))
+            type_file.write("{}\n{}\n{}\n\n".format(header_line, parameter_type, header_line))
+            no_separator=True
             for parameter in type_parameters.values():
-                output_parameter(type_file, parameter, level=0)
+                output_parameter(type_file, parameter, level=0, no_separator=True)
+                no_separator=False
 
 
 def autogenerate_rtd_pages():
     """
     Write the RTD files to disk and add them to git, then run sphinx-build to generate the docs.
     """
-    output_folder = os.path.join(os.environ["PYTHON"], "docs", "rst")
+    output_folder = os.path.join(os.environ["PYTHON"], "docs", "rst", "parameters")
     html_folder = os.path.join(os.environ["PYTHON"], "docs", "html")
     docs_folder = os.path.join(os.environ["PYTHON"], "docs")
     dox_all = {}
@@ -239,7 +250,7 @@ def autogenerate_rtd_pages():
                             dox_all[parent_name]["children"][parameter_name] = parameter
                             # And then 'continue' on, skipping other parents
                             found_parent = True
-                            continue
+                            break
 
             if not found_parent:
                 # If we didn't find the parameter's parent elsewhere,

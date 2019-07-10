@@ -170,8 +170,22 @@ def get_data(filename='fiducial_agn_master.txt', var='t_r',grid='ij',inwind='',s
     elif grid=='log':
         x=numpy.array(data['x']) 
         y=numpy.array(data['z'])
-        x=numpy.log10(x)
-        y=numpy.log10(y)
+        # find the minimum value in x and y that is greater than 0
+        xmin=1e50
+        ymin=1e50
+        i=0
+        while i<len(x):
+            if x[i]>1 and x[i]<xmin:
+                xmin= x[i]
+            if y[i]>1 and y[i]<ymin:
+                ymin= y[i]
+            i+=1
+        xlogmin=numpy.log10(xmin/10)
+        ylogmin=numpy.log10(xmin/10)
+        x=numpy.select([x>1],[numpy.log10(x)],default=xlogmin)
+        y=numpy.select([y>1],[numpy.log10(y)],default=ylogmin)
+        # x=numpy.log10(x)
+        # y=numpy.log10(y)
         xlabel='log(x)'
         ylabel='log(z)'
     else:
@@ -256,10 +270,11 @@ def just_plot(x,y,xvar,root,title,xlabel,ylabel,fig_no=1):
     ax=pylab.gca()
     cmap=pylab.cm.jet
     cmap.set_bad(color='white')
+    ax.tick_params(labelsize=14)
     im=ax.pcolormesh(x,y,xvar,cmap=cmap)
-    pylab.title(title)
-    pylab.xlabel(xlabel)
-    pylab.ylabel(ylabel)
+    pylab.title(title,size=16)
+    pylab.xlabel(xlabel,size=16)
+    pylab.ylabel(ylabel,size=16)
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)
     pylab.colorbar(im, cax=cax)
@@ -276,7 +291,8 @@ def just_plot(x,y,xvar,root,title,xlabel,ylabel,fig_no=1):
 
 
 
-def doit(filename='fiducial_agn.master.txt', var='t_r',grid='ij',inwind='',scale='guess',zmin=-1e50,zmax=1e50,plot_dir=''):
+def doit(filename='fiducial_agn.master.txt', var='t_r',grid='ij',inwind='',scale='guess',zmin=-1e50,zmax=1e50,
+        plot_dir='',root=''):
     '''
     Plot a single variable from an astropy table (normally created with windsave2table, with various
     options
@@ -292,8 +308,9 @@ def doit(filename='fiducial_agn.master.txt', var='t_r',grid='ij',inwind='',scale
 
     '''
 
-    root=filename.split('.')
-    root=root[0]
+    if root=='':
+        root=filename.split('.')
+        root=root[0]
 
     x,y,xvar,title,xlabel,ylabel=get_data(filename,var,grid,inwind,scale,zmin,zmax)
     if plot_dir!='':

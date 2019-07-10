@@ -31,10 +31,12 @@ Once you have the files, you need to cd to the new directory and set your enviro
     $ export PYTHON = /path/to/python/
     $ cd $PYTHON 
     $ ./configure
-    $ make install
+    $ make install  (or better make install 2>&1 | tee today.txt)
     $ make clean
 
-note that export syntax is for bash- for csh use 
+If you have any difficulties with the installation, please submit an issue, along with the file today.txt
+
+Note that the export syntax is for bash- for csh use 
   
     $ setenv PYTHON /path/to/python/
 

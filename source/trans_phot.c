@@ -500,7 +500,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
           track_scatters (&pp, wmain[n].nplasma, "Resonant");
 
 
-        plasmamain[wmain[n].nplasma].scatters[line[nres].nion] += pp.w;
+        plasmamain[wmain[n].nplasma].scatters[line[nres].nion] += 1;
 
         if (geo.rt_mode == RT_MODE_2LEVEL)      // only do next line for non-macro atom case
         {
@@ -614,16 +614,9 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       break;
     }
 
-    if (pp.istat == P_ADIABATIC)
+    if (pp.istat == P_ERROR_MATOM || pp.istat == P_LOFREQ_FF || pp.istat == P_ADIABATIC)
     {
-      istat = pp.istat = p->istat = P_ADIABATIC;
-      stuff_phot (&pp, p);
-      break;
-    }
-
-    if (pp.istat == P_ERROR_MATOM)
-    {
-      istat = pp.istat = p->istat = P_ERROR_MATOM;
+      istat = p->istat = pp.istat;
       stuff_phot (&pp, p);
       break;
     }

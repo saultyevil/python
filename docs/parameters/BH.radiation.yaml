@@ -1,7 +1,7 @@
 name: BH.radiation
 description: |
-  Multi-line description, must keep indentation.
+  Whether or not the BH/AGN should radiate.
 type: Boolean (yes/no)
 parent:
-  parameter: Condition e.g. greater than 0 or list e.g. [1, 2, 5]
+  System_type: agn
 file: setup_star_bh.c
