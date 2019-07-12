@@ -65,6 +65,8 @@
  * The same information will also be printed to an individual diag file named
  * optical_depth.diag which is located in the diag folder of the simulation.
  *
+ * TODO: this likely doesn't actually need writing to file
+ *
  * ************************************************************************** */
 
 void
@@ -261,12 +263,12 @@ write_tau_spectrum (double *tau_spectrum, double freq_min, double dfreq)
  * The photon status istat is updated and returned for some reason.
  *
  * TODO: implement mean opacities
- * TODO: replace mass column density with hydrogen
+ * TODO: replace mass column density with electron
  *
  * ************************************************************************** */
 
 int
-find_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *tau)
+calculate_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *tau)
 {
   int istat;
   int nplasma;
@@ -395,7 +397,7 @@ extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *t
     }
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)   // Move the photon in the wind
     {
-      rc = find_tau (w, &pextract, opac_type, col_den, tau);
+      rc = calculate_tau (w, &pextract, opac_type, col_den, tau);
       if (rc)
       {
         pextract.istat = -1;
@@ -564,11 +566,16 @@ init_tau_diag_angles (void)
   int iangle;
   int memory_req;
 
-  int n_default_angles = 10;
   double default_phase = 0.5;
-  double default_angles[] = { 0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0 };
+  double default_angles[] = { 0.0, 10.0, 40.0, 60.0, 80.0, 90.0 };
+  int n_default_angles = sizeof default_angles / sizeof default_angles[0];
 
   Observers *init_angles;
+
+  /*
+   * Use the angles specified for by the user for spectrum generation, this
+   * requires for xxspec to be initialised.
+   */
 
   if (geo.nangles && xxspec != NULL)
   {
@@ -592,6 +599,12 @@ init_tau_diag_angles (void)
       }
     }
   }
+
+  /*
+   * If no spectrum cycles are being run, or if the model is being restarted
+   * without initialising xxspec, then a default set of angles is used instead.
+   */
+
   else
   {
     Log_silent ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
