@@ -110,8 +110,8 @@ teff (t, x)
     }
     else
     {
-              linterp(r,&blmod.r[0],&blmod.t[0],blmod.n_blpts,&temp,0);
-              return(temp);
+      linterp (r, &blmod.r[0], &blmod.t[0], blmod.n_blpts, &temp, 0);
+      return (temp);
 
 //OLD      for (n = 1; n < blmod.n_blpts; n++)
 //OLD      {

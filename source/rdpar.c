@@ -610,7 +610,7 @@ string_process_from_file (question, dummy)
      * that have been replaced by a new keyword
      */
 
-    if (is_input_line_synonym_for_question(question, line))
+    if (is_input_line_synonym_for_question (question, line))
     {
       strict = 1;
       Error ("Had to parse a synonym. Program will stop after writing out a new parameter file\n");

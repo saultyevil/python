@@ -27,10 +27,10 @@ int main (int argc, char *argv[]);
 int translate (WindPtr w, PhotPtr pp, double tau_scat, double *tau, int *nres);
 int translate_in_space (PhotPtr pp);
 double ds_to_wind (PhotPtr pp, int *ndom_current);
+double find_smax (PhotPtr p);
 int translate_in_wind (WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell (int ndom, PhotPtr p);
 int walls (PhotPtr p, PhotPtr pold, double *normal);
-double find_smax (PhotPtr p);
 /* photon_gen.c */
 int define_phot (PhotPtr p, double f1, double f2, long nphot_tot, int ioniz_or_final, int iwind, int freq_sampling);
 double populate_bands (int ioniz_or_final, int iwind, struct xbands *band);
@@ -347,10 +347,6 @@ double get_alpha_st_e (struct topbase_phot *cont_ptr, PlasmaPtr xplasma);
 double alpha_st_e_integrand (double freq);
 /* wind_sum.c */
 int xtemp_rad (WindPtr w);
-/* yso.c */
-int get_yso_wind_params (int ndom);
-double yso_velocity (int ndom, double x[], double v[]);
-double yso_rho (int ndom, double x[]);
 /* cylindrical.c */
 double cylind_ds_in_cell (int ndom, PhotPtr p);
 int cylind_make_grid (int ndom, WindPtr w);
@@ -550,7 +546,9 @@ double integ_brem (double freq);
 double brem_d (double alpha);
 double get_rand_brem (double freqmin, double freqmax);
 /* synonyms.c */
-int check_synonyms (char new_question[], char old_question[]);
+int get_question_name_length (char question[]);
+int are_synonym_lists_valid (void);
+int is_input_line_synonym_for_question (char question[], char input_line[]);
 /* setup_reverb.c */
 int get_meta_params (void);
 /* setup_line_transfer.c */
@@ -561,6 +559,25 @@ double wdrad (double m);
 double diskrad (double m1, double m2, double period);
 double roche2 (double q, double a);
 double logg (double mass, double rwd);
+/* tau_diag.c */
+void print_tau_table (double *tau_store, double *col_den_store);
+void write_tau_spectrum (double *tau_spectrum, double freq_min, double dfreq);
+int calculate_tau (WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *tau);
+int extract_tau (WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *tau);
+void reposition_tau_photon (PhotPtr pout);
+int create_tau_diag_phot (PhotPtr pout, double nu);
+Observers *init_tau_diag_angles (void);
+void create_tau_spectrum (WindPtr w);
+void tau_integrate_angles (WindPtr w);
+/* mean_opacities.c */
+int allocate_opacity_arrays (int ncells);
+void free_opacity_arrays (void);
+double dB_nu_dT (double nu);
+void set_ross_integ_temp (double temperature);
+void compute_rosseland_opacity (void);
+void compute_planck_opacity (void);
+int create_test_photon (PhotPtr pout, double nu, double x[3]);
+int init_mean_opacities (void);
 /* py_wind_sub.c */
 int zoom (int direction);
 int overview (WindPtr w, char rootname[]);
@@ -644,8 +661,3 @@ int create_heat_table (int ndom, char rootname[]);
 int create_ion_table (int ndom, char rootname[], int iz, int ion_switch);
 double *get_ion (int ndom, int element, int istate, int iswitch);
 double *get_one (int ndom, char variable_name[]);
-/* tau_integrate.c */
-void tau_integrate_angles (WindPtr w);
-void create_tau_spectrum (WindPtr w);
-/* mean_opacities.c */
-int init_mean_opacities (void);

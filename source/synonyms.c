@@ -122,28 +122,37 @@ int synonyms_validated = 0;
  *   and answer strings e.g. "xyz(cm/s) 10.7e3"
  **********************************************************/
 int
-get_question_name_length(question)
-  char question[];
+get_question_name_length (question)
+     char question[];
 {
   char *found_location;
 
   // strchr will return NULL if it can't find the character in the question string,
   // or a pointer to the memory location it finds the character in. The length of the
   // string is thus the difference in memory locations.
-  if((found_location = strchr(question, '('))) {
+  if ((found_location = strchr (question, '(')))
+  {
     return (int) (found_location - question);
 
-  } else if ((found_location = strchr(question, ' '))) {
+  }
+  else if ((found_location = strchr (question, ' ')))
+  {
     return (int) (found_location - question);
 
-  } else if ((found_location = strchr(question, '\t'))) {
+  }
+  else if ((found_location = strchr (question, '\t')))
+  {
     return (int) (found_location - question);
 
-  } else if ((found_location = strchr(question, '\n'))) {
+  }
+  else if ((found_location = strchr (question, '\n')))
+  {
     return (int) (found_location - question);
 
-  } else {
-    return strlen(question);
+  }
+  else
+  {
+    return strlen (question);
   }
 }
 
@@ -165,7 +174,7 @@ get_question_name_length(question)
  **********************************************************/
 
 int
-are_synonym_lists_valid()
+are_synonym_lists_valid ()
 {
   int i, n;
 
@@ -179,15 +188,17 @@ are_synonym_lists_valid()
   {                             /* do nothing */
   }
 
-  if (n_new_names != n_old_names || number_of_names != n_old_names) {
-    Error("check_synonyms: %d %d %d\n", number_of_names, n_old_names, n_new_names);
+  if (n_new_names != n_old_names || number_of_names != n_old_names)
+  {
+    Error ("check_synonyms: %d %d %d\n", number_of_names, n_old_names, n_new_names);
     n = MIN (n_new_names, n_old_names);
-    for (i = 0; i < n; i++) {
-      Log("%3d %40s %40s\n", i, old_names[i], new_names[i]);
+    for (i = 0; i < n; i++)
+    {
+      Log ("%3d %40s %40s\n", i, old_names[i], new_names[i]);
     }
-    Exit(0);
+    Exit (0);
   }
-  return(1);
+  return (1);
 }
 
 
@@ -213,31 +224,35 @@ are_synonym_lists_valid()
  **********************************************************/
 
 int
-is_input_line_synonym_for_question(question, input_line)
-  char question[];
-  char input_line[];
+is_input_line_synonym_for_question (question, input_line)
+     char question[];
+     char input_line[];
 {
   int synonym_index;
-  int question_name_length = get_question_name_length(question);
+  int question_name_length = get_question_name_length (question);
 
   // First, if we haven't already, let's see if the synonym lists are valid
-  if(!synonyms_validated) {
-    synonyms_validated = are_synonym_lists_valid();
+  if (!synonyms_validated)
+  {
+    synonyms_validated = are_synonym_lists_valid ();
   }
 
   // We want to know what the possible 'old names' are for the question we're trying to ask.
-  for(synonym_index=0; synonym_index<number_of_names; synonym_index++) {
+  for (synonym_index = 0; synonym_index < number_of_names; synonym_index++)
+  {
 
     // For each synonym, if the 'new name' refers to the question we're trying to ask...
-    if(!strncmp(new_names[synonym_index], question, question_name_length)) {
+    if (!strncmp (new_names[synonym_index], question, question_name_length))
+    {
 
       // Does the 'old name' match the question on the input line?
-      if(!strncmp(old_names[synonym_index], input_line, get_question_name_length(old_names[synonym_index]))) {
+      if (!strncmp (old_names[synonym_index], input_line, get_question_name_length (old_names[synonym_index])))
+      {
         // If the question on the input line matches the 'old name' for this question (i.e. the difference is 0)
-        return(1);
+        return (1);
       }
     }
   }
   // If we've not found a match, then this line *isn't* a synonym
-  return(0);
+  return (0);
 }
