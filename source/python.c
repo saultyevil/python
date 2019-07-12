@@ -74,7 +74,7 @@ main (argc, argv)
 
   double freqmin, freqmax;
   int n;
-  char answer[LINELENGTH];
+  char values[LINELENGTH], answer[LINELENGTH];
   int get_models ();            // Note: Needed because get_models cannot be included in templates.h
   int dummy_spectype;
 
@@ -217,7 +217,9 @@ main (argc, argv)
     geo.run_type = RUN_TYPE_NEW;
 
     strcpy (answer, "star");
-    geo.system_type = rdchoice ("System_type(star,binary,agn,previous)", "0,1,2,3", answer);
+    sprintf (values, "%d,%d,%d,%d,%d", SYSTEM_TYPE_STAR, SYSTEM_TYPE_CV, SYSTEM_TYPE_BH, SYSTEM_TYPE_AGN, SYSTEM_TYPE_PREVIOUS);
+    geo.system_type = rdchoice ("System_type(star,cv,bh,agn,previous)", values, answer);
+//OLD    geo.system_type = rdchoice ("System_type(star,cv,bh,agn,previous)", "0,1,2,3", answer);
 
 
     if (geo.system_type == SYSTEM_TYPE_PREVIOUS)
@@ -373,7 +375,7 @@ main (argc, argv)
 
   /* Calculate additional parameters associated with the binary star system */
 
-  if (geo.system_type == SYSTEM_TYPE_BINARY)
+  if (geo.system_type == SYSTEM_TYPE_CV)
     binary_basics ();
 
   /* Check that the parameters which have been supplied for the star, disk and boundary layer will

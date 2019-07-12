@@ -363,7 +363,7 @@ calculates the boundaries of the various disk annulae depending on f1 and f2 */
   }
   if (geo.agn_radiation)
   {
-    agn_init (geo.r_agn, geo.lum_agn, geo.alpha_agn, f1, f2, ioniz_or_final, &geo.f_agn);
+    agn_init (geo.rstar, geo.lum_agn, geo.alpha_agn, f1, f2, ioniz_or_final, &geo.f_agn);
   }
 
 /* The choices associated with iwind are
@@ -630,9 +630,9 @@ stellar photons */
 
 
       if (ioniz_or_final == 1)
-        photo_gen_agn (p, geo.r_agn, geo.alpha_agn, weight, agn_f1, f2, geo.agn_spectype, iphot_start, nphot);
+        photo_gen_agn (p, geo.rstar, geo.alpha_agn, weight, agn_f1, f2, geo.agn_spectype, iphot_start, nphot);
       else
-        photo_gen_agn (p, geo.r_agn, geo.alpha_agn, weight, agn_f1, f2, geo.agn_ion_spectype, iphot_start, nphot);
+        photo_gen_agn (p, geo.rstar, geo.alpha_agn, weight, agn_f1, f2, geo.agn_ion_spectype, iphot_start, nphot);
     }
     iphot_start += nphot;
   }

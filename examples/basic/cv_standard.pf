@@ -1,4 +1,4 @@
-System_type(star,binary,agn,previous)               binary
+System_type(star,binary,agn,previous)               cv
 
 ### Parameters for the Central Object
 Central_object.mass(msol)                  0.8

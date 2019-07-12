@@ -229,6 +229,12 @@ define_wind ()
       ("wind2d: For domain %d there are %3d cells of which %d are in inwind, %d partially in_wind, & %d with pos. vol\n",
        ndom, zdom[ndom].ndim2, n_inwind, n_part, n_vol);
 
+    if (n_inwind == 0)
+    {
+      Error ("wind2d: There are no wind cells in domain %d.  This seems unreasonble\n", ndom);
+      Exit (1);
+    }
+
 
     if (zdom[ndom].coord_type != SPHERICAL && zdom[ndom].wind_type != IMPORT)
     {

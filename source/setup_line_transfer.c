@@ -181,6 +181,14 @@ get_line_transfer_mode ()
     }
 
     get_atomic_data (geo.atomic_filename);
+
+    /* throw a fatal error if there are macro-atom levels but rt_mode is non macro */
+    if (nlevels_macro > 0 && geo.rt_mode != RT_MODE_MACRO)
+    {
+      Error ("Fatal error: you specified macro-atom data but standard line transfer. Not supported.\n");
+      Log ("Try changing either to a simple data set or to macro-atom line transfer\n");
+      Exit (1);
+    }
   }
 
   return (0);
@@ -203,18 +211,18 @@ line_transfer_help_message ()
 \n\
 Available line transfer modes and descriptions are: \n\
 \n\
-  0 Pure Absorption\n\
-  1 Pure Scattering\n\
-  2 Single Scattering\n\
-  3 Escape Probabilities, isotropic scattering\n\
-  5 Escape Probabilities, anisotropic scattering\n\
-  6 Indivisible energy packets / macro-atoms, isotropic scattering\n\
-  7 Indivisible energy packets / macro-atoms, anisotropic scattering\n\
-  8 Indivisible energy packets, force all simple-atoms, anisotropic scattering\n\
-  9 Indivisible energy packets, force all simple-atoms, anisotropic scattering\n\
+  pure_abs Pure Absorption\n\
+  pure_scat Pure Scattering\n\
+  sing_scat Single Scattering\n\
+  escape_prob Escape Probabilities, isotropic scattering\n\
+  thermal_trapping Escape Probabilities, anisotropic scattering\n\
+  macro_atoms Indivisible energy packets / macro-atoms, isotropic scattering\n\
+  macro_atoms_thermal_trapping Indivisible energy packets / macro-atoms, anisotropic scattering\n\
+  8(deprecated) Indivisible energy packets, force all simple-atoms, anisotropic scattering\n\
+  9(deprecated) Indivisible energy packets, force all simple-atoms, anisotropic scattering\n\
 \n\
-  Standard mode is 5 for runs involving weight reduction and no macro-atoms\n\
-  Standard macro-atom mode is 7\n\
+  Standard mode is thermal_trapping for runs involving weight reduction and no macro-atoms\n\
+  Standard macro-atom mode is macro_atoms_thermal_trapping\n\
 \n\
 See this web address for more information: https://github.com/agnwinds/python/wiki/Line-Transfer-and-Scattering\n\
 \n\

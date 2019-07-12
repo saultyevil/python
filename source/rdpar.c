@@ -512,8 +512,6 @@ string_process_from_command_line (question, dummy)
     rdpar_store_record (question, dummy);
     return (NORMAL);
   }
-
-  return (REISSUE);
 }
 
 
@@ -612,7 +610,7 @@ string_process_from_file (question, dummy)
      * that have been replaced by a new keyword
      */
 
-    if (check_synonyms (question, old_question) == 1 && strncmp (old_question, firstword, wordlength) == 0)
+    if (is_input_line_synonym_for_question(question, line))
     {
       strict = 1;
       Error ("Had to parse a synonym. Program will stop after writing out a new parameter file\n");

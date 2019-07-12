@@ -30,11 +30,29 @@ MAKE_SOURCE = cd $(PYTHON)/source; make CC=$(CMAKE) python; make CC=$(CMAKE) py_
 
 ifeq (True, $(LIBS))
 	INSTALL_GSL = cd $(GSL); ./configure --disable-shared --prefix=$(GSL) CC=gcc CCP=ccp; make -i; make check 2>&1; make -i install; make clean; 
+	INSTALL_GSL_NOCHECK = cd $(GSL); ./configure --disable-shared --prefix=$(GSL) CC=gcc CCP=ccp; make -i; make -i install; make clean;
 	MOVE_GSL = mkdir $(PYTHON)/include/gsl/; mv $(GSL)/include/gsl/* $(PYTHON)/include/gsl; mv $(GSL)/lib/lib* $(PYTHON)/lib/;
 else
 	INSTALL_GSL = 
 	MOVE_GSL =
 endif
+
+# install for travis 
+travis_install:
+	@echo 'Installing Python. the radiative transfer code'
+	@echo 'Installing in directory '$(PYTHON)
+	
+	# Then make GSL library
+	@echo 'Installing GSL library...'
+	$(INSTALL_GSL_NOCHECK)
+	$(MOVE_GSL)
+
+	
+	#finally, make the latest release
+	@echo 'Making source code...'
+	$(MAKE_SOURCE)
+	@echo 'all done'
+
 
 install:
 	@echo 'Installing Python. the radiative transfer code'
@@ -49,8 +67,6 @@ install:
 	#finally, make the latest release
 	@echo 'Making source code...'
 	$(MAKE_SOURCE)
-
-
 	@echo 'all done'
 
 clean: 

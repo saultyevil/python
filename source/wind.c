@@ -271,10 +271,10 @@ model_velocity (ndom, x, v)
   {
     speed = homologous_velocity (ndom, x, v);
   }
-  else if (zdom[ndom].wind_type == YSO)
-  {
-    speed = yso_velocity (ndom, x, v);
-  }
+//OLD  else if (zdom[ndom].wind_type == YSO)
+//OLD  {
+//OLD    speed = yso_velocity (ndom, x, v);
+//OLD  }
   else if (zdom[ndom].wind_type == SHELL)
   {
     speed = stellar_velocity (ndom, x, v);
@@ -413,10 +413,10 @@ model_rho (ndom, x)
   {
     rho = homologous_rho (ndom, x);
   }
-  else if (zdom[ndom].wind_type == YSO)
-  {
-    rho = yso_rho (ndom, x);
-  }
+//OLD  else if (zdom[ndom].wind_type == YSO)
+//OLD  {
+//OLD    rho = yso_rho (ndom, x);
+//OLD  }
   else if (zdom[ndom].wind_type == SHELL)
   {
     rho = stellar_rho (ndom, x);

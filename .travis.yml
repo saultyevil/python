@@ -47,7 +47,7 @@ install:
     - ./configure
 
     # do installation
-    - make install
+    - make travis_install
 
 
     #Then clone data

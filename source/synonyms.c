@@ -17,8 +17,6 @@
  ***********************************************************/
 
 
-
-
 #include <stdio.h>
 #include <strings.h>
 #include <math.h>
@@ -59,11 +57,11 @@ char *old_names[] = { "mstar", "rstar", "Disk.illumination.treatment", "disk.typ
   "kn.rmax", "kn.rmin", "kn.v_infinity", "kn.v_zero", "QSO_BH_radiation", "lum_agn", "AGN.power_law_index",
   "AGN.blackbody_temp", "@AGN.power_law_cutoff", "AGN.geometry_for_pl_source", "Rad_type_for_agn", "Rad_type_for_agn",
   "wind.mdot", "Wind_ionization", "Wind_radiation", "Wind_type", "Thermal_balance_options",
-  "wind.fixed_concentrations_file",
+  "wind.fixed_concentrations_file", "Disk-radiation",
   NULL
 };
 
-char *new_names[] = { "Central.object.mass", "Central.object.radius",
+char *new_names[] = { "Central_object.mass", "Central_object.radius",
   "Surface.reflection.or.absorption", "Disk.type", "Disk.radiation",
   "Disk.rad_type_to_make_wind",
   "Disk.mdot", "Disk.T_profile_file", "Disk.radmax",
@@ -97,66 +95,79 @@ char *new_names[] = { "Central.object.mass", "Central.object.radius",
   "BH.blackbody_temp", "@Bh.power_law_cutoff", "BH.geometry_for_pl_source",
   "BH.rad_type_in_final_spectrum", "BH.rad_type_to_make_wind",
   "Wind.mdot", "Wind.ionization", "Wind.radiation", "Wind.type", "Wind_heating.extra_processes",
-  "Wind.fixed_concentrations_file",
+  "Wind.fixed_concentrations_file", "Disk.radiation",
   NULL
 };
 
 
-
-int number_of_names = 103;
+int number_of_names = 104;
+int synonyms_validated = 0;
 
 #define MIN(a,b) ((a)<b ? a:b)
 
 
 /**********************************************************/
 /**
- * @brief      This is a routine which is intended to help with program updates that
- *   change the name of a keyword in a parameter file.  It is called from
- *   rdpar.string_process_from_file
+ * @brief  Given a question with variable name and info
+ *   prompt, determines the length of the actual question name.
  *
- * @param [in] char  new_question[]   The currnt keyword
- * @param [out] char  old_question[]   The keyword in an earlier version of Python
- * @return     0 if there was no match;
- * 	1 if there was a match of a name in the parameter file to
- * 	  one of the new_names, and in old_question the name of
- * 	  the old_value
+ * @param [in] char  question[]   The full question e.g. xyz(cm/s)
+ * @return number of characters in the string before (,
+ *   whitespace or EOL.
  *
- * The routine simply matches the string in new_question to a string in
- *   the array new_names, below.  If it finds a match, the old_name is
- *   returned in old_question.
+ * This simple helper function is intended to get string length
+ *   so that full lines can be easily compared on only the
+ *   subset that is actually the variable name. It can cope
+ *   with both question-only strings e.g. "xyz(cm/s)" or question
+ *   and answer strings e.g. "xyz(cm/s) 10.7e3"
+ **********************************************************/
+int
+get_question_name_length(question)
+  char question[];
+{
+  char *found_location;
+
+  // strchr will return NULL if it can't find the character in the question string,
+  // or a pointer to the memory location it finds the character in. The length of the
+  // string is thus the difference in memory locations.
+  if((found_location = strchr(question, '('))) {
+    return (int) (found_location - question);
+
+  } else if ((found_location = strchr(question, ' '))) {
+    return (int) (found_location - question);
+
+  } else if ((found_location = strchr(question, '\t'))) {
+    return (int) (found_location - question);
+
+  } else if ((found_location = strchr(question, '\n'))) {
+    return (int) (found_location - question);
+
+  } else {
+    return strlen(question);
+  }
+}
+
+
+/**********************************************************/
+/**
+ * @brief  Validates the hard-coded lists of synonyms
+ *
+ * @return  1 if they're valid, else throws an Error.
+ *
+ * Tries to match the lengths of the lists of new and old names
+ *   with the expected number of synonyms. On a failure, exits the
+ *   run.
  *
  * ###Notes###
  *
- * To add another variable to the list, just record the new_name and the
- *   old_name in the arrays below, and increase the number of names by 1
- *
- *   Do not include the material that is in paren, that is for
- *
- *   xxx(many_choices) -->  xxxx
- *
- *   The routine is completely hardwired as wrtten though clearly this
- *   could be changed, so that information was read from a file.
- *
- * Note that there can be multiple old names that are the same due
- * to some old input formats that were not syntaciticaly perfect
- * See #319
-
+ * Broken out from check_synonyms().
  *
  **********************************************************/
 
 int
-check_synonyms (new_question, old_question)
-     char new_question[], old_question[];
+are_synonym_lists_valid()
 {
   int i, n;
-  char *line;
-  char firstword[LINELEN];
-  int nwords, wordlength;
-  char *ccc, *index ();
-
-  /* First check that the synonyms list has the smae number of entries in both lists and that
-   * this agrees with the number that it is supposed to have
-   */
 
   int n_old_names = -1;
   while (old_names[++n_old_names] != NULL)
@@ -168,63 +179,65 @@ check_synonyms (new_question, old_question)
   {                             /* do nothing */
   }
 
-  if (n_new_names != n_old_names || number_of_names != n_old_names)
-  {
-    Error ("check_synonums: %d %d %d\n", number_of_names, n_old_names, n_new_names);
+  if (n_new_names != n_old_names || number_of_names != n_old_names) {
+    Error("check_synonyms: %d %d %d\n", number_of_names, n_old_names, n_new_names);
     n = MIN (n_new_names, n_old_names);
-    for (i = 0; i < n; i++)
-    {
-      Log ("%3d %40s %40s\n", i, old_names[i], new_names[i]);
+    for (i = 0; i < n; i++) {
+      Log("%3d %40s %40s\n", i, old_names[i], new_names[i]);
     }
-    Exit (0);
+    Exit(0);
+  }
+  return(1);
+}
+
+
+/**********************************************************/
+/**
+ * @brief  Checks to see if the question on an input line
+ *   is an old version of the question being asked
+ *
+ * @param [in] char  new_question[]   The currnt keyword
+ * @param [in] char  old_question[]   The keyword in an earlier version of Python
+ * @return  1 if the input line question is a synonym for
+ *   the question we're trying to ask, else 0.
+ *
+ * The routine scans through the list of synonyms for a given question,
+ * to check to see if the current line matches any of the possible old versions.
+ *
+ * ###Notes###
+ *
+ * It would be much more efficient to do this in file input
+ * rather than checking the synonym status of every line for
+ * every parameter.
+ *
+ **********************************************************/
+
+int
+is_input_line_synonym_for_question(question, input_line)
+  char question[];
+  char input_line[];
+{
+  int synonym_index;
+  int question_name_length = get_question_name_length(question);
+
+  // First, if we haven't already, let's see if the synonym lists are valid
+  if(!synonyms_validated) {
+    synonyms_validated = are_synonym_lists_valid();
   }
 
+  // We want to know what the possible 'old names' are for the question we're trying to ask.
+  for(synonym_index=0; synonym_index<number_of_names; synonym_index++) {
 
+    // For each synonym, if the 'new name' refers to the question we're trying to ask...
+    if(!strncmp(new_names[synonym_index], question, question_name_length)) {
 
-
-// Strip off any extra bits in the new question
-  line = new_question;
-  strcpy (firstword, "");
-  nwords = sscanf (line, "%s ", firstword);
-  wordlength = strlen (firstword);
-
-
-  if (nwords == 0)
-  {
-    return (0);
-  }
-
-
-/* Strip off everthing prior to open paren, leaving the bare parameter name that was passed as the new
- * question
- */
-
-  if ((ccc = index (firstword, '(')) != NULL)
-  {
-    wordlength = (int) (ccc - firstword);
-    if (wordlength == 0)
-      return (0);
-  }
-
-
-/* firstword is the bare parameter name for the current way the parameter is expressed elsewhere.
- * We must find this in the list of new_names
- */
-
-
-  for (n = 0; n < number_of_names; n++)
-  {
-    if (strncmp (new_names[n], firstword, wordlength) == 0)
-    {
-//OLD     Log
-//OLD       ("Matched keyword %s in .pf file to %s in current python version\n",
-//OLD     new_question, old_names[n]);
-      strcpy (old_question, old_names[n]);
-      return (1);
+      // Does the 'old name' match the question on the input line?
+      if(!strncmp(old_names[synonym_index], input_line, get_question_name_length(old_names[synonym_index]))) {
+        // If the question on the input line matches the 'old name' for this question (i.e. the difference is 0)
+        return(1);
+      }
     }
-
   }
-
-  return (0);
-
+  // If we've not found a match, then this line *isn't* a synonym
+  return(0);
 }

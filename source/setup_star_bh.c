@@ -51,18 +51,40 @@ get_stellar_params ()
   /* Describe the basic binary star system */
 
   geo.mstar /= MSOL;            // Convert to MSOL for ease of data entry
+
+  if (geo.system_type == SYSTEM_TYPE_STAR)
+  {
+    geo.mstar = 52.5;
+    geo.rstar = 1.32e12;
+    geo.tstar_init = 42000;
+  }
+  else if (geo.system_type == SYSTEM_TYPE_CV)
+  {
+    geo.mstar = 0.8;
+    geo.tstar_init = 40000;
+  }
+  else if (geo.system_type == SYSTEM_TYPE_BH)
+  {
+    geo.mstar = 10;
+  }
+  else if (geo.system_type == SYSTEM_TYPE_AGN)
+  {
+    geo.mstar = 1e9;
+  }
+
   rddoub ("Central_object.mass(msol)", &geo.mstar);
   geo.mstar *= MSOL;
+
 
   /* If a BH we want geo.rstar to be at least as large as the last stable orbit for
    * a non-rotating BH
    */
 
-  if (geo.system_type == SYSTEM_TYPE_AGN)
+  if (geo.system_type == SYSTEM_TYPE_AGN || geo.system_type == SYSTEM_TYPE_BH)
   {
-    geo.rstar = 6. * G * geo.mstar / (C * C);   //correction - ISCO is 6x Rg NSH 121025
+    geo.rstar = 6. * G * geo.mstar / (C * C);   //Set value to ISCO, namely 6 x Rg 
   }
-  else
+  else if (geo.system_type == SYSTEM_TYPE_CV)
   {
     geo.rstar = wdrad (geo.mstar);
   }
@@ -70,21 +92,17 @@ get_stellar_params ()
   rddoub ("Central_object.radius(cm)", &geo.rstar);
 
 
-  geo.r_agn = geo.rstar;        /* At present just set geo.r_agn to geo.rstar */
+//OLD  geo.r_agn = geo.rstar;        /* At present just set geo.r_agn to geo.rstar */
   geo.rstar_sq = geo.rstar * geo.rstar;
-  if (geo.system_type != SYSTEM_TYPE_AGN)
+  if (geo.system_type != SYSTEM_TYPE_AGN && geo.system_type != SYSTEM_TYPE_BH)
   {
     strcpy (answer, "yes");
     geo.star_radiation = rdchoice ("Central_object.radiation(yes,no)", "1,0", answer);
-    get_spectype (geo.star_radiation,
-                  //"Rad_type_for_star(0=bb,1=models)_to_make_wind",
-                  //"Central_object.rad_type_to_make_wind(0=bb,1=models)", &geo.star_ion_spectype);
-                  "Central_object.rad_type_to_make_wind(bb,models)", &geo.star_ion_spectype);
-
+    get_spectype (geo.star_radiation, "Central_object.rad_type_to_make_wind(bb,models)", &geo.star_ion_spectype);
 
     if (geo.star_radiation)
-      geo.tstar_init = 40000;
-    rddoub ("Central_object.temp", &geo.tstar_init);
+//OLD      geo.tstar_init = 40000;
+      rddoub ("Central_object.temp", &geo.tstar_init);
   }
   else
   {
@@ -101,7 +119,7 @@ get_stellar_params ()
 
   /* Describe the secondary if that is required */
 
-  if (geo.system_type == SYSTEM_TYPE_BINARY)    /* It's a binary system */
+  if (geo.system_type == SYSTEM_TYPE_CV || geo.system_type == SYSTEM_TYPE_BH)   /* It's a binary system */
   {
 
     geo.m_sec /= MSOL;          // Convert units for ease of data entry
@@ -159,7 +177,7 @@ get_bl_and_agn_params (lstar)
 
   rdpar_comment ("Parameters for BL or AGN");
 
-  if (geo.system_type == SYSTEM_TYPE_AGN)       /* If it is an AGN */
+  if (geo.system_type == SYSTEM_TYPE_AGN || geo.system_type == SYSTEM_TYPE_BH)  /* If it is an AGN */
   {
     geo.star_radiation = 0;     // 70b - AGN do not have a star at the center */
     geo.bl_radiation = 0;
@@ -231,7 +249,7 @@ get_bl_and_agn_params (lstar)
 
   if (geo.agn_radiation && geo.system_type == SYSTEM_TYPE_AGN)  /* This peculiar line is to enamble us to add a star with a power law component */
   {
-    xbl = geo.lum_agn = 0.5 * G * geo.mstar * geo.disk_mdot / geo.r_agn;
+    xbl = geo.lum_agn = 0.5 * G * geo.mstar * geo.disk_mdot / geo.rstar;
 
     /* If there is no disk, initilize geo.lum to the luminosity of a star */
     if (geo.disk_type == DISK_NONE)
@@ -283,7 +301,7 @@ get_bl_and_agn_params (lstar)
     {
       /* note that alpha_agn holds the temperature in the case of "blackbody agn" */
       rddoub ("BH.blackbody_temp(K)", &geo.alpha_agn);
-      geo.lum_agn = 4 * PI * geo.r_agn * geo.r_agn * STEFAN_BOLTZMANN * pow (geo.alpha_agn, 4.);
+      geo.lum_agn = 4 * PI * geo.rstar * geo.rstar * STEFAN_BOLTZMANN * pow (geo.alpha_agn, 4.);
       Log ("OK, the BH/agn lum will be about %.2e the disk lum\n", geo.lum_agn / xbl);
     }
 
@@ -330,11 +348,11 @@ get_bl_and_agn_params (lstar)
   }
   else if (geo.agn_radiation)   /* We want to add a power law to something other than an AGN */
   {
-    xbl = geo.lum_agn = 0.5 * G * geo.mstar * geo.disk_mdot / geo.r_agn;
+    xbl = geo.lum_agn = 0.5 * G * geo.mstar * geo.disk_mdot / geo.rstar;
 
-    // At present we have set geo.r_agn = geo.rstar, and encouraged the user
+    // At present we have set geo.rstar = geo.rstar, and encouraged the user
     // set the default for the radius of the BH to be 6 R_Schwartschild.
-    // rddoub("R_agn(cm)",&geo.r_agn);
+    // rddoub("R_agn(cm)",&geo.rstar);
 
     rddoub ("lum_agn(ergs/s)", &geo.lum_agn);
     Log ("OK, the agn lum will be about %.2e the disk lum\n", geo.lum_agn / xbl);
@@ -378,7 +396,7 @@ get_bl_and_agn_params (lstar)
 
   else
   {
-    geo.r_agn = 0.0;
+//OLD    geo.r_agn = 0.0;
     geo.lum_agn = 0.0;
     geo.alpha_agn = 0.0;
     geo.const_agn = 0.0;

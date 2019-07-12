@@ -153,7 +153,7 @@ enum coord_type_enum
 #define	CORONA 			4
 #define KNIGGE			5
 #define	HOMOLOGOUS 		6
-#define	YSO 			7
+//OLD #define   YSO                     7
 #define	SHELL 			9
 #define IMPORT          10      // Model that is read in from a file
 #define	DISK_ATMOS 		11
@@ -292,7 +292,8 @@ int current_domain;             // This integer is used by py_wind only
  */
 
 #define SYSTEM_TYPE_STAR   0
-#define SYSTEM_TYPE_BINARY 1
+#define SYSTEM_TYPE_CV     1
+#define SYSTEM_TYPE_BH     4
 #define SYSTEM_TYPE_AGN    2
 #define	SYSTEM_TYPE_PREVIOUS   	   3
 
@@ -394,7 +395,7 @@ struct geometry
 
 #define DISK_TPROFILE_STANDARD          0       // This is a standard Shakura-Sunyaev disk. The profile depends on mstar and mdot_disk
 #define DISK_TPROFILE_READIN            1       // Here the temperature profile for the disk is simply read in as a function of radius
-#define DISK_TPROFILE_YSO               2       // The so-called YSO option was created for the YSO case
+//OLD #define DISK_TPROFILE_YSO               2       // The so-called YSO option was created for the YSO case
   int disk_tprofile;            /* This is an variable used to specify a standard accretion disk (0) or
                                    one that has been read in and stored. */
   double disk_mdot;             /* mdot of  DISK */
@@ -573,8 +574,8 @@ struct geometry
                                    of the agn is elsewhere in the structure
                                  */
   double const_agn;             /*The constant for the Power law, there are lots of ways of defining the PL which is best? */
-  double r_agn;                 /* radius of the "photosphere" of the BH in the AGN.  */
-  double d_agn;                 /* the distance to the agn - only used in balance to calculate the ioinsation fraction */
+//OLD  double r_agn;                 /* radius of the "photosphere" of the BH in the AGN.  */
+  double d_agn;                 /* the distance to the agn - only used in balance to calculate the ionization fraction */
 
 
   int pl_geometry;              /* geometry of X-ray point source */
@@ -641,13 +642,17 @@ disk, qdisk;                    /* disk defines zones in the disk which in a spe
                                    is changed.  qdisk stores the amount of heating of the disk as a result of
                                    illumination by the star or wind. It's boundaries are fixed throughout a cycle */
 
-#define NBLMODEL 100
+/* the next structure is intended to store a non standard temperature
+   profile for the disk
+   */
+
+#define NBLMODEL 5000
 
 struct blmodel
 {
   int n_blpts;
-  float r[NBLMODEL];
-  float t[NBLMODEL];
+  double r[NBLMODEL];
+  double t[NBLMODEL];
 }
 blmod;
 
