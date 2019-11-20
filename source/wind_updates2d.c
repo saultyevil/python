@@ -16,14 +16,13 @@
 #include <string.h>
 #include <math.h>
 
-
 #include "atomic.h"
 #include "python.h"
+
 #define LINELEN 256
 
-
-
 int num_updates = 0;
+
 
 /**********************************************************/
 /**
@@ -62,7 +61,7 @@ int
 wind_update (w)
 WindPtr (w);
 {
-  int n, i, j;
+  int n, i, j, ii;
   double trad, nh;
 
   /*1108 NSH csum added to sum compton heating 1204 NSH icsum added to sum induced compton heating */
@@ -72,6 +71,7 @@ WindPtr (w);
   double c_rec, n_rec, o_rec, fe_rec;   //1701- NSH more outputs to show cooling from a few other elements
   double c_lum, n_lum, o_lum, fe_lum;   //1708- NSH and luminosities as well
   double cool_dr_metals;
+  double F_x_tot, F_y_tot, F_z_tot;
   int nn;                       //1701 - loop variable to compute recomb cooling
 
   double volume;
@@ -88,8 +88,10 @@ WindPtr (w);
   double h_dr, he_dr, c_dr, n_dr, o_dr, fe_dr;
   int my_nmin, my_nmax;         //Note that these variables are still used even without MPI on
   int ndom;
-  FILE *fptr, *fopen ();        /*This is the file to communicate with zeus */
-
+  FILE *fptr, *fptr2, *fptr3, *fptr4, *fptr5, *fopen ();        /*This is the file to communicate with zeus */
+  double t_opt, t_UV, t_Xray, v_th, fhat[3];    /*This is the dimensionless optical depth parameter computed for communication to rad-hydro. */
+  struct photon ptest;          //We need a test photon structure in order to compute t
+  double kappa_es;              //The electron scattering opacity used for t
 
 #ifdef MPI_ON
   int num_mpi_cells, num_mpi_extra, position, ndo, n_mpi, num_comm, n_mpi2;
@@ -106,7 +108,7 @@ WindPtr (w);
    * size must must be increased.
    */
 
-  size_of_commbuffer = 8 * (9 * nions + nlte_levels + 3 * nphot_total + 12 * NXBANDS + 126) * (floor (NPLASMA / np_mpi_global) + 1);
+  size_of_commbuffer = 8 * (9 * nions + nlte_levels + 3 * nphot_total + 15 * NXBANDS + 126) * (floor (NPLASMA / np_mpi_global) + 1);
   commbuffer = (char *) malloc (size_of_commbuffer * sizeof (char));
 
   /* JM 1409 -- Initialise parallel only variables */
@@ -200,7 +202,8 @@ WindPtr (w);
       plasmamain[n].j_direct /= (4. * PI * volume);
       plasmamain[n].j_scatt /= (4. * PI * volume);
 
-      trad = plasmamain[n].t_r = H * plasmamain[n].ave_freq / (BOLTZMANN * 3.832);
+      plasmamain[n].t_r_old = plasmamain[n].t_r;        // Store the previous t_r in t_r_old immediately before recalculating
+      trad = plasmamain[n].t_r = PLANCK * plasmamain[n].ave_freq / (BOLTZMANN * 3.832);
       plasmamain[n].w = PI * plasmamain[n].j / (STEFAN_BOLTZMANN * trad * trad * trad * trad);
 
 
@@ -259,20 +262,26 @@ WindPtr (w);
  * and number density of hydrogen in the cell
  * */
 
-    plasmamain[n].ip /= (C * volume * nh);
-    plasmamain[n].ip_direct /= (C * volume * nh);
-    plasmamain[n].ip_scatt /= (C * volume * nh);
+    plasmamain[n].ip /= (VLIGHT * volume * nh);
+    plasmamain[n].ip_direct /= (VLIGHT * volume * nh);
+    plasmamain[n].ip_scatt /= (VLIGHT * volume * nh);
 
 /* 1510 NSH Normalise xi, which at this point should be the luminosity of ionizing photons in a cell (just the sum of photon weights) */
 
     plasmamain[n].xi *= 4. * PI;
     plasmamain[n].xi /= (volume * nh);
     for (i = 0; i < 3; i++)
-      plasmamain[n].rad_force_es[i] = plasmamain[n].rad_force_es[i] * (volume * plasmamain[n].ne) / (volume * C);
+    {
+      plasmamain[n].rad_force_es[i] = plasmamain[n].rad_force_es[i] * (volume * plasmamain[n].ne) / (volume * VLIGHT);
+/* Normalise the computed flux in cells by band */
+      plasmamain[n].F_vis[i] = plasmamain[n].F_vis[i] / volume;
+      plasmamain[n].F_UV[i] = plasmamain[n].F_UV[i] / volume;
+      plasmamain[n].F_Xray[i] = plasmamain[n].F_Xray[i] / volume;
+    }
 
-    /* If geo.adiabatic is true, then alculate the adiabatic cooling using the current, i.e
-     * previous value of t_e.  Note that this may not be  best way to determien the cooling.
-     * Changes made here should also be reflected in wind2d.c.  At present, adiabatic colling
+    /* If geo.adiabatic is true, then calculate the adiabatic cooling using the current, i.e
+     * previous value of t_e.  Note that this may not be  best way to determine the cooling.
+     * Changes made here should also be reflected in wind2d.c.  At present, adiabatic cooling
      * is not included in updates to the temperature, even if the adiabatic cooling is calculated
      * here. 04nov -- ksl
      * 05apr -- ksl -- The index being used was incorrect.  This has been fixed now
@@ -392,6 +401,9 @@ WindPtr (w);
         MPI_Pack (plasmamain[n].xave_freq, NXBANDS, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (plasmamain[n].xsd_freq, NXBANDS, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (plasmamain[n].nxtot, NXBANDS, MPI_INT, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].F_vis, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].F_UV, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].F_Xray, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].max_freq, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].lum_lines, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].lum_ff, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
@@ -530,6 +542,9 @@ WindPtr (w);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].xave_freq, NXBANDS, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].xsd_freq, NXBANDS, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].nxtot, NXBANDS, MPI_INT, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_vis, 3, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_UV, 3, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_Xray, 3, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].max_freq, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].lum_lines, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].lum_ff, 1, MPI_DOUBLE, MPI_COMM_WORLD);
@@ -656,8 +671,29 @@ WindPtr (w);
   {
     Log ("Outputting heatcool file for connecting to zeus\n");
     fptr = fopen ("py_heatcool.dat", "w");
+    fptr2 = fopen ("py_flux.dat", "w");
+    fptr3 = fopen ("py_ion_data.dat", "w");
+    fptr4 = fopen ("py_spec_data.dat", "w");
+    fptr5 = fopen ("py_pcon_data.dat", "w");
+
     fprintf (fptr,
-             "i j rcen thetacen vol temp xi ne heat_xray heat_comp heat_lines heat_ff cool_comp cool_lines cool_ff rho n_h rad_f_w rad_f_phi rad_f_z\n");
+             "i j rcen thetacen vol temp xi ne heat_xray heat_comp heat_lines heat_ff cool_comp cool_lines cool_ff rho n_h rad_f_w rad_f_phi rad_f_z bf_f_w bf_f_phi bf_f_z\n");
+    fprintf (fptr2, "i j F_vis_x F_vis_y F_vis_z F_UV_x F_UV_y F_UV_z F_Xray_x F_Xray_y F_Xray_z\n");   //directional flux by band
+
+    fprintf (fptr3, "nions %i\n", nions);
+    for (i = 0; i < nions; i++)
+    {
+      fprintf (fptr3, "ion %i %s %i %i\n", i, ele[ion[i].nelem].name, ion[i].z, ion[i].istate);
+    }
+    fprintf (fptr3, "nplasma %i\n", NPLASMA);
+
+    fprintf (fptr4, "nbands %i\n", geo.nxfreq);
+    fprintf (fptr4, "nplasma %i\n", NPLASMA);
+    for (i = 0; i < geo.nxfreq + 1; i++)
+      fprintf (fptr4, "%e ", geo.xfreq[i]);     //hard wired band edges
+    fprintf (fptr4, "\n ");
+
+    fprintf (fptr5, "nplasma %i\n", NPLASMA);
 
   }
 
@@ -781,11 +817,81 @@ WindPtr (w);
         fprintf (fptr, "%e ", plasmamain[nplasma].rho * rho2nh);        //hydrogen number density
         fprintf (fptr, "%e ", plasmamain[nplasma].rad_force_es[0]);     //electron scattering radiation force in the w(x) direction
         fprintf (fptr, "%e ", plasmamain[nplasma].rad_force_es[1]);     //electron scattering radiation force in the phi(rotational) directionz direction
-        fprintf (fptr, "%e\n ", plasmamain[nplasma].rad_force_es[2]);   //electron scattering radiation force in the z direction
+        fprintf (fptr, "%e ", plasmamain[nplasma].rad_force_es[2]);     //electron scattering radiation force in the z direction
+        fprintf (fptr, "%e ", plasmamain[nplasma].rad_force_bf[0]);     //bound free scattering radiation force in the w(x) direction
+        fprintf (fptr, "%e ", plasmamain[nplasma].rad_force_bf[1]);     //bound free scattering radiation force in the phi(rotational) direction
+        fprintf (fptr, "%e \n", plasmamain[nplasma].rad_force_bf[2]);   //bound free scattering radiation force in the z direction
+        fprintf (fptr2, "%d %d ", i, j);        //output geometric things               
+        fprintf (fptr2, "%e %e %e ", plasmamain[nplasma].F_vis[0], plasmamain[nplasma].F_vis[1], plasmamain[nplasma].F_vis[2]); //directional flux by band
+        fprintf (fptr2, "%e %e %e ", plasmamain[nplasma].F_UV[0], plasmamain[nplasma].F_UV[1], plasmamain[nplasma].F_UV[2]);    //directional flux by band
+        fprintf (fptr2, "%e %e %e ", plasmamain[nplasma].F_Xray[0], plasmamain[nplasma].F_Xray[1], plasmamain[nplasma].F_Xray[2]);      //directional flux by band
 
+        fprintf (fptr2, "\n");
+        fprintf (fptr3, "%d %d ", i, j);        //output geometric things               
+        for (ii = 0; ii < nions; ii++)
+          fprintf (fptr3, "%e ", plasmamain[nplasma].density[ii]);
+        fprintf (fptr3, "\n");
+
+        fprintf (fptr4, "%d %d ", i, j);        //output geometric things       
+        for (ii = 0; ii < geo.nxfreq; ii++)
+          fprintf (fptr4, "%e %e %i %e %e %e %e ",
+                   plasmamain[nplasma].fmin_mod[ii], plasmamain[nplasma].fmax_mod[ii], plasmamain[nplasma].spec_mod_type[ii],
+                   plasmamain[nplasma].pl_log_w[ii], plasmamain[nplasma].pl_alpha[ii], plasmamain[nplasma].exp_w[ii],
+                   plasmamain[nplasma].exp_temp[ii]);
+        fprintf (fptr4, "\n ");
+
+
+        //We need to compute the g factor for this cell and output it.
+
+
+        v_th = pow ((2. * BOLTZMANN * plasmamain[nplasma].t_e / MPROT), 0.5);   //We need the thermal velocity for hydrogen
+        stuff_v (w[plasmamain[nplasma].nwind].xcen, ptest.x);   //place our test photon at the centre of the cell
+        ptest.grid = nwind;     //We need our test photon to know where it is 
+        kappa_es = THOMPSON * plasmamain[nplasma].ne / plasmamain[nplasma].rho;
+
+        //First for the optcial band (up to 4000AA)     
+        if (length (plasmamain[nplasma].F_vis) > 0.0)   //Only makes sense if flux in this band is non-zero
+        {
+          stuff_v (plasmamain[nplasma].F_vis, fhat);
+          renorm (fhat, 1.);    //A unit vector in the direction of the flux - this can be treated as the lmn vector of a pretend photon
+          stuff_v (fhat, ptest.lmn);    //place our test photon at the centre of the cell            
+          t_opt = kappa_es * plasmamain[nplasma].rho * v_th / fabs (dvwind_ds (&ptest));
+        }
+        else
+          t_opt = 0.0;          //Essentually a flag that there is no way of computing t (and hence M) in this cell.
+
+        //Now for the UV band (up to 4000AA->100AA)                                             
+        if (length (plasmamain[nplasma].F_UV) > 0.0)    //Only makes sense if flux in this band is non-zero
+        {
+          stuff_v (plasmamain[nplasma].F_UV, fhat);
+          renorm (fhat, 1.);    //A unit vector in the direction of the flux - this can be treated as the lmn vector of a pretend photon
+          stuff_v (fhat, ptest.lmn);    //place our test photon at the centre of the cell            
+          t_UV = kappa_es * plasmamain[nplasma].rho * v_th / fabs (dvwind_ds (&ptest));
+        }
+        else
+          t_UV = 0.0;           //Essentually a flag that there is no way of computing t (and hence M) in this cell.
+
+
+        //And finally for the Xray band (up to 100AA and up)
+        if (length (plasmamain[nplasma].F_Xray) > 0.0)  //Only makes sense if flux in this band is non-zero
+        {
+          stuff_v (plasmamain[nplasma].F_Xray, fhat);
+          renorm (fhat, 1.);    //A unit vector in the direction of the flux - this can be treated as the lmn vector of a pretend photon
+          stuff_v (fhat, ptest.lmn);    //place our test photon at the centre of the cell            
+          t_Xray = kappa_es * plasmamain[nplasma].rho * v_th / fabs (dvwind_ds (&ptest));
+        }
+        else
+          t_Xray = 0.0;         //Essentually a flag that there is no way of computing t (and hence M) in this cell.                
+
+        fprintf (fptr5, "%i %i %e %e %e %e %e %e %e\n", i, j, plasmamain[nplasma].t_e, plasmamain[nplasma].rho,
+                 plasmamain[nplasma].rho * rho2nh, plasmamain[nplasma].ne, t_opt, t_UV, t_Xray);
       }
     }
     fclose (fptr);
+    fclose (fptr2);
+    fclose (fptr3);
+    fclose (fptr4);
+    fclose (fptr5);
   }
   else if (modes.zeus_connect == 1 && geo.hydro_domain_number < 0)
   {
@@ -1011,6 +1117,21 @@ WindPtr (w);
         }
         Log ("\n");
       }
+      Log ("F_es %i %e %e %e\n", nshell, plasmamain[nshell].rad_force_es[0], plasmamain[nshell].rad_force_es[1],
+           plasmamain[nshell].rad_force_es[2]);
+
+      F_x_tot = F_y_tot = F_z_tot = 0.0;
+
+      Log ("Visible flux %e %e %e\n", plasmamain[nshell].F_vis[0], plasmamain[nshell].F_vis[1], plasmamain[nshell].F_vis[2]);
+      Log ("UV.     flux %e %e %e\n", plasmamain[nshell].F_UV[0], plasmamain[nshell].F_UV[1], plasmamain[nshell].F_UV[2]);
+      Log ("X-ray   flux %e %e %e\n", plasmamain[nshell].F_Xray[0], plasmamain[nshell].F_Xray[1], plasmamain[nshell].F_Xray[2]);
+
+      F_x_tot = plasmamain[nshell].F_vis[0] + plasmamain[nshell].F_UV[0] + plasmamain[nshell].F_Xray[0];
+      F_y_tot = plasmamain[nshell].F_vis[1] + plasmamain[nshell].F_UV[1] + plasmamain[nshell].F_Xray[1];
+      F_z_tot = plasmamain[nshell].F_vis[2] + plasmamain[nshell].F_UV[2] + plasmamain[nshell].F_Xray[2];
+
+      Log ("Flux_tot %e %e %e\n", F_x_tot, F_y_tot, F_z_tot);
+
     }
   }
 
@@ -1101,6 +1222,8 @@ wind_rad_init ()
       plasmamain[n].fmax[i] = geo.xfreq[i];     /* Set the maximum frequency to the min frequency in the band */
     }
 
+    for (i = 0; i < 3; i++)
+      plasmamain[n].F_vis[i] = plasmamain[n].F_UV[i] = plasmamain[n].F_Xray[i] = 0.0;
 
 
 

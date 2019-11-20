@@ -10,14 +10,13 @@
  *
  * v(r)=V_o + (V_infinity-V_o) (1-R/r)**beta
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
 #include "atomic.h"
 #include "python.h"
-
-
 
 
 /**********************************************************/

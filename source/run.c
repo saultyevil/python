@@ -19,17 +19,13 @@
  *
  ***********************************************************/
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "atomic.h"
-
-
 #include "python.h"
-
 
 
 /**********************************************************/
@@ -105,7 +101,6 @@ calculate_ionization (restart_stat)
   //1 simply implies we are in the ionization section of the code
   //and allows routines to act accordinaly.
 
-/* 67 -ksl- geo.wycle will start at zero unless we are completing an old run */
 
 /* BEGINNING OF CYCLE TO CALCULATE THE IONIZATION OF THE WIND */
 
@@ -130,7 +125,7 @@ calculate_ionization (restart_stat)
   while (geo.wcycle < geo.wcycles)
   {                             /* This allows you to build up photons in bunches */
 
-    xsignal (files.root, "%-20s Starting %3d of %3d ionization cycle \n", "NOK", geo.wcycle + 1, geo.wcycles);
+    xsignal (files.root, "%-20s Starting %3d of %3d ionization cycles \n", "NOK", geo.wcycle + 1, geo.wcycles);
 
     Log ("!!Python: Beginning cycle %d of %d for defining wind\n", geo.wcycle + 1, geo.wcycles);
     Log_flush ();               /* Flush the log file (so that we know where are if there are problems */
@@ -306,14 +301,14 @@ calculate_ionization (restart_stat)
 
 
     /* Calculate and store the amount of heating of the disk due to radiation impinging on the disk */
-    /* We only want one process to write to the file */
+    /* We only want one process to write to the file, and we only do this if there is a disk */
 
 #ifdef MPI_ON
     if (rank_global == 0)
     {
 #endif
-      qdisk_save (files.disk, ztot);
-
+      if (geo.disk_type != DISK_NONE)
+        qdisk_save (files.disk, ztot);
 #ifdef MPI_ON
     }
     MPI_Barrier (MPI_COMM_WORLD);
@@ -323,7 +318,7 @@ calculate_ionization (restart_stat)
 
     Log ("!!python: Number of ionizing photons %g lum of ionizing photons %g\n", geo.n_ioniz, geo.cool_tot_ioniz);
 
-/* This step should be MPI_parallelised too - EP: It looks like this is, infact, parallelised */
+/* Note that this step is parallelized */
 
     wind_update (w);
 
@@ -366,7 +361,7 @@ calculate_ionization (restart_stat)
     /* NSH1306 - moved geo.wcycle++ back, but moved the log and xsignal statements */
 
 
-    xsignal (files.root, "%-20s Finished %3d of %3d ionization cycle \n", "OK", geo.wcycle + 1, geo.wcycles);
+    xsignal (files.root, "%-20s Finished %3d of %3d ionization cycles \n", "OK", geo.wcycle + 1, geo.wcycles);
     geo.wcycle++;               //Increment ionisation cycles
 
 
@@ -392,7 +387,7 @@ calculate_ionization (restart_stat)
       if (modes.make_tables)
       {
         strcpy (dummy, "");
-        sprintf (dummy, "diag_%s/%s%02d", files.root, files.root, geo.wcycle);
+        sprintf (dummy, "diag_%s/%s.%02d", files.root, files.root, geo.wcycle);
         do_windsave2table (dummy, 0);
       }
 
@@ -461,8 +456,8 @@ make_spectra (restart_stat)
   p = photmain;
   w = wmain;
 
-  freqmax = C / (geo.swavemin * 1.e-8);
-  freqmin = C / (geo.swavemax * 1.e-8);
+  freqmax = VLIGHT / (geo.swavemin * 1.e-8);
+  freqmin = VLIGHT / (geo.swavemax * 1.e-8);
 
 #ifdef MPI_ON
   /* the length of the big arrays to help with the MPI reductions of the spectra
@@ -552,7 +547,7 @@ make_spectra (restart_stat)
   while (geo.pcycle < geo.pcycles)
   {                             /* This allows you to build up photons in bunches */
 
-    xsignal (files.root, "%-20s Starting %3d of %3d spectral cycle \n", "NOK", geo.pcycle + 1, geo.pcycles);
+    xsignal (files.root, "%-20s Starting %3d of %3d spectrum cycles \n", "NOK", geo.pcycle + 1, geo.pcycles);
 
 
 
@@ -688,6 +683,11 @@ make_spectra (restart_stat)
 
 
   xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
-  Log ("Completed entire program.  The elapsed TIME was %f\n", timer ());
+  Log ("\nBrief Run Summary\nAt program comppletion, the elapsed TIME was %f\n", timer ());
+  Log ("There were %d of %d ionization cycles and %d of %d spectral cycles run\n", geo.wcycle, geo.wcycles, geo.pcycle, geo.pcycles);
+  Log ("Convergence statistics for the wind after the ionization calculation:\n");
+  check_convergence ();
+  Log ("Information about luminosities and apparent fluxes due to various portions of the system:\n");
+  phot_status ();
   return EXIT_SUCCESS;
 }

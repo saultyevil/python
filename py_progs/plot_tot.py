@@ -77,10 +77,10 @@ def doit(rootname='sphere',smooth=21,fig_no=2):
     try:
         data=ascii.read(filename)
     except IOError:
-        print('Errro: Could not find %s' % filename)
+        print('Error: Could not find %s' % filename)
         return
 
-    print(data.colnames)
+    # print(data.colnames)
 
     
     pylab.figure(fig_no,(6,6))

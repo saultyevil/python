@@ -138,19 +138,20 @@
  *  	a pointer to rdxxx.
  *  	
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <ctype.h>
+
 #include "log.h"
 #include "strict.h"
+
 #define LINELEN		256
 #define	OLD		100
 #define	NORMAL		1
 #define REISSUE		-199
-
-
 
 FILE *rdin_ptr, *rdout_ptr;     /* Pointers to the input and output files */
 int rdpar_stat = 0;             /*rdpar_stat=0 initially, 
@@ -561,7 +562,7 @@ string_process_from_file (question, dummy)
   char *ccc, *index (), *fgets ();
   int nwords = 0;               // Initialise to avoid warning
   int wordlength;
-  char old_question[LINELEN];
+//OLD  char old_question[LINELEN];
   char xfirstword[LINELEN], xquestion[LINELEN];
   int i;
 

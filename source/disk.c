@@ -17,7 +17,6 @@
 #include "python.h"
 
 
-
 /**********************************************************/
 /** 
  * @brief      Calculate the reference temperarure for a standard Shakura-Sunyaeev disk
@@ -42,7 +41,7 @@ tdisk (m, mdot, r)
      double m, mdot, r;
 {
   double t;
-  t = 3. * G / (8. * PI * STEFAN_BOLTZMANN) * m * mdot / (r * r * r);
+  t = 3. * GRAV / (8. * PI * STEFAN_BOLTZMANN) * m * mdot / (r * r * r);
   t = pow (t, 0.25);
   return (t);
 }
@@ -90,7 +89,6 @@ teff (t, x)
   double temp;
   double pow ();
   int kkk;
-  int n;
 
 
 
@@ -379,7 +377,8 @@ ds_to_disk (p, allow_negative)
   double r, r_top, r_bottom;
   double smin, smax;
   struct photon phit;
-  void disk_deriv ();
+
+
 
 
   if (geo.disk_type == DISK_NONE)
@@ -612,7 +611,13 @@ ds_to_disk (p, allow_negative)
   stuff_phot (p, &ds_to_disk_photon);
   move_phot (&ds_to_disk_photon, smin);
 
-  s_disk = rtsafe (disk_deriv, 0.0, smax - smin, fabs (smax - smin) / 1000.);
+  if ((smax - smin) > 0.)
+    s_disk = zero_find (disk_height, 0.0, smax - smin, 1e-8);
+  else
+    s_disk = zero_find (disk_height, smax - smin, 0.0, 1e-8);
+
+
+
   s_disk += smin;
 
   /* Note that s_disk can still be negative */
@@ -628,11 +633,12 @@ ds_to_disk (p, allow_negative)
  * @brief      Calculate the change in disk height as s function of s
  *
  * @param [in] double  s  A distance along the path of a photon
+ *           void params  unused variable required to present the correct function to gsl
+
  * @param [out] double *  value   the disk height at s
- * @param [out] double *  derivative   the derivative of the disk heith at s
  * @return     N/A
  *
- * Used in ds_to_disk by rtsafe as part of the procedure to locate
+ * Used in ds_to_disk by zero_find
  * the place a photon hits a vertically extended disk
  *
  * ###Notes###
@@ -640,38 +646,25 @@ ds_to_disk (p, allow_negative)
  *
  *  The function we are trying to zero is the
  *  difference between the height of the disk and the z height of the photon.
+ *  Modified 2019 to allow use of gsl rather than old numerical recipies
  *
  **********************************************************/
 
-void
-disk_deriv (s, value, derivative)
-     double s, *value, *derivative;
+
+double
+disk_height (double s, void *params)
 {
   struct photon phit;
-  double z1, z2, r1, r2;
-  double ds;
+  double z1, r1;
 
   stuff_phot (&ds_to_disk_photon, &phit);
   move_phot (&phit, s);
   r1 = sqrt (phit.x[0] * phit.x[0] + phit.x[1] * phit.x[1]);
   z1 = zdisk (r1) - fabs (phit.x[2]);   // this is the function
 
-  /* OK now calculate the derivative */
-
-  ds = (z1) / 100.;
-  ds += 1;                      // We must move it a little bit (in case z1 = 0) SS Aug 2004
-  move_phot (&phit, ds);        // Move the photon a bit more
-  r2 = sqrt (phit.x[0] * phit.x[0] + phit.x[1] * phit.x[1]);
-  z2 = zdisk (r2) - fabs (phit.x[2]);   // this is the function
-
-  *value = z1;
-  *derivative = (z2 - z1) / ds;
+  return (z1);
 
 }
-
-
-
-
 
 
 
@@ -757,7 +750,7 @@ qdisk_save (diskfile, ztot)
     {
 
       qdisk.ave_freq[n] /= qdisk.heat[n];
-      qdisk.t_hit[n] = H * qdisk.ave_freq[n] / (BOLTZMANN * 3.832);     // Basic conversion from freq to T
+      qdisk.t_hit[n] = PLANCK * qdisk.ave_freq[n] / (BOLTZMANN * 3.832);        // Basic conversion from freq to T
       qdisk.w[n] = qdisk.heat[n] / (4. * PI * STEFAN_BOLTZMANN * area * qdisk.t_hit[n] * qdisk.t_hit[n] * qdisk.t_hit[n] * qdisk.t_hit[n]);
     }
 

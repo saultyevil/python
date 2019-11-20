@@ -38,6 +38,7 @@
 #include "atomic.h"
 #include "python.h"
 
+
 /**********************************************************/
 /**
  * @brief      a steering routine that either calls _in_space or _in_wind  depending upon the
@@ -151,7 +152,7 @@ translate_in_space (pp)
     stuff_phot (pp, &ptest);
     move_phot (&ptest, ds + DFUDGE);    /* So now ptest is at the edge of the wind as defined by the boundary
                                            From here on we should be in the grid  */
-
+    ds += DFUDGE;               //Fix for Bug #592 - we need to keep track of the little DFUDGE we moved the test photon
     /* XXX this is a test.  We check at the start whether we are in the grid */
 
     if ((ifail = where_in_grid (ndom, ptest.x)) < 0)
@@ -172,7 +173,6 @@ translate_in_space (pp)
     {
 
       smax = ds_to_wind (&ptest, &ndom_next);   // This is the maximum distance can go in this domain
-
       s = 0;
       while (s < smax && where_in_wind (ptest.x, &ndom_next) < 0)
       {
@@ -193,14 +193,11 @@ translate_in_space (pp)
 
       if (s > 0)
       {
-
         ds += s - DFUDGE;       /* We are going to add DFUDGE back later */
       }
     }
 
   }
-
-
   move_phot (pp, ds + DFUDGE);
 
 
@@ -596,7 +593,6 @@ return and record an error */
     one = &w[p->grid];
     nplasma = one->nplasma;
     xplasma = &plasmamain[nplasma];
-    xplasma->ntot++;
 
 
     if (geo.ioniz_or_extract == 1)
@@ -610,6 +606,7 @@ return and record an error */
       /* frequency weighted by the weights and distance in the shell.  See eqn 2 ML93 */
       xplasma->ave_freq += p->freq * p->w * ds_current;
 
+      xplasma->ntot++;
     }
 
   }
@@ -679,7 +676,6 @@ return and record an error */
 /* Assign the pointers for the cell containing the photon */
 
   one = &wmain[n];              /* one is the grid cell where the photon is */
-
 
 /* Calculate the maximum distance the photon can travel in the cell */
 
@@ -775,21 +771,34 @@ walls (p, pold, normal)
   double xxx[3];
   double s, z;
   double theta, phi;
+  int hit_star = FALSE;
 
   /* Check to see if the photon has hit the star. If so
    * put the photon at the star surface and use that position
    * to determine the normal to the surface, the assumption
    * being that the star is located at the center of the
-   * coordiante grid.
+   * coordinate grid.
    */
+
+  s = ds_to_sphere (geo.rstar, pold);
 
   if ((r = dot (p->x, p->x)) < geo.rstar_sq)
   {
-    s = ds_to_sphere (geo.rstar, pold);
+    /* Then the photon is inside the star */
+    hit_star = TRUE;
+  }
+
+  else if (s < VERY_BIG && ds_to_sphere (geo.rstar, p) == VERY_BIG)
+  {
+    /* then we hit the star somewhere in between */
+    hit_star = TRUE;
+  }
+
+  if (hit_star == TRUE)
+  {
     stuff_phot (pold, p);
     move_phot (p, s);
     stuff_v (p->x, normal);
-
     return (p->istat = P_HIT_STAR);
   }
 
@@ -847,11 +856,16 @@ walls (p, pold, normal)
   else if (geo.disk_type == DISK_FLAT && p->x[2] * pold->x[2] < 0.0)
   {                             /* Then the photon crossed the xy plane and probably hit the disk */
     s = (-(pold->x[2])) / (pold->lmn[2]);
+
+    if (s < 0 && fabs (pold->x[2]) < wmain[pold->grid].dfudge && pold->lmn[2] * p->lmn[2] < 0.0)
+      return (p->istat = P_REPOSITION_ERROR);
+
     if (s < 0)
     {
       Error ("walls: distance %g<0. Position %g %g %g \n", s, p->x[0], p->x[1], p->x[2]);
       return (-1);
     }
+
     /* Check whether it hit the disk plane beyond the geo.diskrad**2 */
     vmove (pold->x, pold->lmn, s, xxx);
 

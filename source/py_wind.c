@@ -71,11 +71,12 @@ as calculated by python.  This is the main routine.
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
 
-
 //char *choice_options;
+
 
 /**********************************************************/
 /** 111125 - ksl - Replaced print statements giving choices with a string. The point is to be able to include
@@ -415,6 +416,9 @@ one_choice (choice, root, ochoice)
   case 'B':
     plasma_cell (wmain, root, ochoice);
     break;
+  case 'c':
+    flux_summary (wmain, root, ochoice);
+    break;
   case 'C':                    /*the ratio cooling to heating */
     coolheat_summary (wmain, root, ochoice);
     break;
@@ -474,7 +478,7 @@ one_choice (choice, root, ochoice)
     lambda = 1550;
 
     rddoub ("wavelength", &lambda);
-    freq = C / (lambda * 1.e-8);
+    freq = VLIGHT / (lambda * 1.e-8);
 
     while (rdint ("element(0=return)", &n) != EOF)
     {

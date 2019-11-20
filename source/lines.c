@@ -9,7 +9,6 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -17,8 +16,6 @@
 #include "atomic.h"
 #include "python.h"
 #include "recipes.h"
-
-
 
 
 /**********************************************************/
@@ -137,7 +134,7 @@ lum_lines (one, nmin, nmax)
 
       x *= foo2 = q * a21 (lin_ptr[n]) * z / (1. - z);
 
-      x *= foo3 = H * lin_ptr[n]->freq * xplasma->vol;
+      x *= foo3 = PLANCK * lin_ptr[n]->freq * xplasma->vol;
       if (geo.line_mode == 3)
         x *= foo4 = p_escape (lin_ptr[n], xplasma);     // Include effects of line trapping
       else
@@ -313,7 +310,7 @@ in the configuration structure. 01dec ksl */
       c12 = c21 * g2_over_g1 * exp (-H_OVER_K * freq / te);
 
 
-      z = (C * C) / (2. * H * freq * freq * freq);      //This is the factor which relates the A coefficient to the b coefficient
+      z = (VLIGHT * VLIGHT) / (2. * PLANCK * freq * freq * freq);       //This is the factor which relates the A coefficient to the b coefficient
 
 
       /* we call mean intensity with mode 1 - this means we are happy to use the

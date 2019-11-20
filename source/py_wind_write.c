@@ -11,17 +11,15 @@
  *
  ***********************************************************/
 
-
-#include        <math.h>
-#include        <stdio.h>
-#include        <strings.h>
+#include    <math.h>
+#include    <stdio.h>
+#include    <strings.h>
 #include	<string.h>
 #include	<stdlib.h>
+
 #include	"atomic.h"
 #include	"python.h"
-#include        "templates.h"
-
-
+#include    "templates.h"
 
 #define ODIM 256
 int init_write_array = 1;

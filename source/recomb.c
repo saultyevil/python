@@ -24,7 +24,6 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -33,8 +32,6 @@
 #include "atomic.h"
 #include "python.h"
 #include "recipes.h"
-
-
 
 
 /** Next line is required for proper initialization
@@ -88,9 +85,8 @@ int fbfr;
  *
  * ### Notes ###
  *
- * Generally speaiking this routine is integrated over frequency using a NR reciepes
- * routine for that purpsoe.  For that reason, much of the information has to be
- * passed externally
+ * This routine used to be used for integrations, the wrapper routine fb_topbase_partial2 is
+ * now used for that purpose - this is only used directly now.
  *
  *
  *
@@ -137,12 +133,54 @@ fb_topbase_partial (freq)
   if (fbfr == FB_REDUCED)
     partial *= (freq - fthresh) / freq;
   else if (fbfr == FB_RATE)
-    partial /= (H * freq);
+    partial /= (PLANCK * freq);
 
 
 
   return (partial);
 }
+
+
+/**********************************************************/
+/**
+ * @brief      This is a wrapper for fb_topbase_partial to allow it to be used for integrations
+ *
+ * @param [in] double  freq   The freqeuncy of interest
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
+
+ * @return     An emissivity or a recombination rate
+ *
+ * What the routine returns depends on the external variable fbfr. The
+ * choices are:
+ *
+ * * FB_FULL         Calculate fb emissivity including energy associated with the threshold
+ * * FB_REDUCED      Calculate the fb emissivity without the threshold energy
+ * * FB_RATE         Calulate the fb recombinarion rate
+ *
+ * @details
+ *
+ *
+ * ### Notes ###
+ *
+ * This routine is integrated over frequency using a gsl routine wrapped in the num_int
+ * routine for that purpsoe.  Much of the information is passed externally for historical reasons
+ * In Princible the extranl information could be contrained in the parameters.
+ *
+ *
+ *
+ **********************************************************/
+
+
+double
+fb_topbase_partial2 (double freq, void *params)
+{
+  double partial;
+
+  partial = fb_topbase_partial (freq);
+
+  return (partial);
+}
+
 
 
 
@@ -530,10 +568,10 @@ use that instead if possible --  57h */
       freq = f1 + dfreq * n;    //The frequency of the array element we would make in the normal run of things
       if (freq > fb_jumps[nn] && nn < fb_njumps)        //The element we were going to make has a frequency abouve the jump
       {
-        fb_x[nnn] = fb_jumps[nn] * (1. - DELTA_V / (2. * C));   //We make one frequency point DELTA_V cm/s below the jump
+        fb_x[nnn] = fb_jumps[nn] * (1. - DELTA_V / (2. * VLIGHT));      //We make one frequency point DELTA_V cm/s below the jump
         fb_y[nnn] = fb (xplasma, xplasma->t_e, fb_x[nnn], nions, FB_FULL);      //And the flux for that point
         nnn = nnn + 1;          //increase the index of the created array
-        fb_x[nnn] = fb_jumps[nn] * (1. + DELTA_V / (2 * C));    //And one frequency point just above the jump
+        fb_x[nnn] = fb_jumps[nn] * (1. + DELTA_V / (2 * VLIGHT));       //And one frequency point just above the jump
         fb_y[nnn] = fb (xplasma, xplasma->t_e, fb_x[nnn], nions, FB_FULL);      //And the flux for that point
         nn = nn + 1;            //We heave dealt with this jump - on to the next one
         nnn = nnn + 1;          //And we will be filling the next array element next time
@@ -850,6 +888,8 @@ init_freebound (t1, t2, f1, f2)
   double xinteg_fb ();
   int nput;
 
+//OLD  Log ("init_freebound %10.3e %10.3e %10.3e %10.3e\n", t1, t2, f1, f2);
+
 
   if (nfb == 0)
   {
@@ -892,7 +932,11 @@ been calculated for these conditions, and if so simply return.
 */
   i = 0;
   while ((freebound[i].f1 != f1 || freebound[i].f2 != f2) && i < nfb)
+  {
+
+//OLD    Log ("init_freebound: test: %d %10.3e %10.3e Want  %10.3e %10.3e\n", i, freebound[i].f1, freebound[i].f2, f1, f2);
     i++;
+  }
 
   if (i < nfb)
   {
@@ -900,7 +944,7 @@ been calculated for these conditions, and if so simply return.
   }
 
 /* We have to calculate a new set of freebound data */
-  if (i == NFB - 1)
+  if (i == NFB)
   {
     /* We've filled all the available space in freebound so we start recycling elements, assuming that the latest
      * ones are still likelyt to be needed
@@ -925,7 +969,7 @@ on the assumption that the fb information will be reused.
 */
 
 
-  Log ("init_freebound: Creating recombination emissivites between %e and %e\n", f1, f2);
+  Log ("init_freebound: Creating recombination emissivites between %e and %e in stucture element %d\n", f1, f2, nput);
 
 
   freebound[nput].f1 = f1;
@@ -1165,7 +1209,9 @@ xinteg_fb (t, f1, f2, nion, fb_choice)
         {
           fmax = fthresh + dnu;
         }
-        fnu += qromb (fb_topbase_partial, fthresh, fmax, 1.e-4);
+//        fnu += qromb (fb_topbase_partial, fthresh, fmax, 1.e-4);
+        fnu += num_int (fb_topbase_partial2, fthresh, fmax, 1.e-4);
+
       }
     }
   }
@@ -1223,7 +1269,6 @@ xinteg_inner_fb (t, f1, f2, nion, fb_choice)
   double dnu;                   // a parameter to allow one to restrict the integration limits.
   double fthresh, fmax;
   double den_config ();
-  double qromb ();
 
 
   dnu = 0.0;                    //Avoid compilation errors.
@@ -1273,7 +1318,7 @@ xinteg_inner_fb (t, f1, f2, nion, fb_choice)
           {
             fmax = fthresh + dnu;
           }
-          fnu += qromb (fb_topbase_partial, fthresh, fmax, 1.e-4);
+          fnu += num_int (fb_topbase_partial2, fthresh, fmax, 1.e-4);
         }
 
       }
@@ -1498,7 +1543,8 @@ gs_rrate (nion, T)
       fmax = fthresh + dnu;
     }
 
-    rate = qromb (fb_topbase_partial, fthresh, fmax, 1e-5);
+    rate = num_int (fb_topbase_partial2, fthresh, fmax, 1e-5);
+
   }
 
   return (rate);
@@ -1531,13 +1577,10 @@ gs_rrate (nion, T)
  **********************************************************/
 
 int
-sort_and_compress (array_in, array_out, npts)
-     double *array_in, *array_out;
-     int npts;
+sort_and_compress (double *array_in, double *array_out, int npts)
 {
   double *values;
   int n, nfinal;
-  int compare_doubles ();
 
   values = calloc (sizeof (double), npts);
   for (n = 0; n < npts; n++)
@@ -1561,7 +1604,7 @@ sort_and_compress (array_in, array_out, npts)
     }
   }
 
-
+  free (values);
 
   return (nfinal);
 }

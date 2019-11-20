@@ -125,7 +125,9 @@ def doit(root, diagfolder_name=''):
 
     try:
         x=Table([error_count,thread_count,error_log],names=['ErrorCount','ThreadCount','Error'])
-        x.write('%s_error_sum.txt' % root, format='ascii.fixed_width_two_line') 
+        x.sort('ErrorCount')
+        x.reverse()
+        x.write('%s_error_sum.txt' % root, format='ascii.fixed_width_two_line',overwrite=True) 
         x.sort(keys=['ErrorCount'])
         x.reverse()  # put in order of the most errors first
     except:

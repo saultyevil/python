@@ -18,8 +18,6 @@
 #include "python.h"
 
 
-
-
 /**********************************************************/
 /** 
  * @brief      finds the density of a specific ion designated by nion at a position 

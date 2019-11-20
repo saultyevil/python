@@ -4,6 +4,11 @@
 
 #endif
 
+#define UV_low 7.4e14 //The lower frequency bound of the UV band as defined in IOS 21348
+#define UV_hi 3e16 //The lower frequency bound of the UV band as defined in IOS 21348
+
+int q_test_count;
+
 int np_mpi_global;              /// Global variable which holds the number of MPI processes
 
 int rank_global;
@@ -64,7 +69,6 @@ double DENSITY_PHOT_MIN;        /* This constant is a minimum density for the pu
                                    to this parameter, at the 10% level if raised from 1e-3 to 1.  There is a 
                                    trade-off since lower minima may give better results, especially for macro atoms. */
 
-//#define SMAX_FRAC     0.1  
 #define LDEN_MIN        1e-3    /* The minimum density required for a line to be conidered for scattering
                                    or emission in calculate_ds and lum_lines */
 
@@ -530,8 +534,11 @@ struct geometry
   double heat_adiabatic;        /*1307 NSH The heating of the wind due to adiabatic heating - split out from cool_adiabatic to get an accurate idea of whether it is important */
   double heat_shock;            /*1806 - ksl - The amount of extra heating going into the wind due to shock heating. Added for FU Ori project */
 
+  double f1, f2;                /* The freguency minimum and maximum for which the band limted luminosities have been calculated */
   double f_tot, f_star, f_disk, f_bl, f_agn, f_wind;    /* The integrated specific L between a freq min and max which are
-                                                           used to establish the fraction of photons of various types */
+                                                           used to establish the band limited luminosity  of photons of various types.
+                                                           For detailed spectra cycles, this will the band limed luminosity between
+                                                           the minimum and maximum wavelength of the detailed spectrum */
 
 /* These variables are copies of the lum variables above, and are only calculated during ionization cycles
    This is a bugfix for JM130621, windsave bug */
@@ -617,6 +624,24 @@ struct geometry
 }
 geo;
 
+/*
+ * EP: 27/09/19
+ * Added enumerator to define different banding modes to make the banding
+ * code more self-documenting
+ */
+
+enum band_definition_enum
+{
+  T_STAR_BAND = 0,
+  MIN_MAX_FREQ_BAND = 1,
+  CV_BAND = 2,
+  YSO_BAND = 3,
+  USER_DEF_BAND = 4,
+  CLOUDY_TEST_BAND = 5,
+  WIDE_BAND = 6,
+  AGN_BAND = 7,
+  LOG_USER_DEF_BAND = 8
+};
 
 /* xdisk is a structure that is used to store information about the disk in a system */
 #define NRINGS	3001            /* The actual number of rings completely defined
@@ -800,7 +825,8 @@ typedef struct plasma
                                                    and heat_photo. SS June 04. */
   double heat_photo, heat_z;    /*photoionization heating total and of metals */
   double heat_auger;            /* photoionization heating due to inner shell ionizations */
-  double abs_photo, abs_auger;  /* this is the energy absorbed from the photon filed by these processes - different to the heating rate because of the binding energy */
+  double abs_photo, abs_auger;  /* this is the energy absorbed from the photon due to these processes - different from 
+                                   the heating rate because of the binding energy */
   double w;                     /*The dilution factor of the wind */
 
   int ntot;                     /*Total number of photon passages */
@@ -817,10 +843,10 @@ typedef struct plasma
   int nscat_es;                 /* The number of electrons scatters in the cell */
   int nscat_res;                /* The number of resonant line scatters in the cell */
 
-  double mean_ds;               /* NSH 6/9/12 Added to allow a check that a thin shell is really optcially thin */
+  double mean_ds;               /* NSH 6/9/12 Added to allow a check that a thin shell is really optically thin */
   int n_ds;                     /* NSH 6/9/12 Added to allow the mean dsto be computed */
   int nrad;                     /* Total number of photons created within the cell */
-  int nioniz;                   /* Total number of photons capable of ionizing H */
+  int nioniz;                   /* Total number of photon passages by photons capable of ionizing H */
   double *ioniz, *recomb;       /* Number of ionizations and recombinations for each ion.
                                    The sense is ionization from ion[n], and recombinations 
                                    to each ion[n] . 78 - changed to dynamic allocation */
@@ -838,16 +864,19 @@ typedef struct plasma
   double j, ave_freq;           /*Respectively mean intensity, intensity_averaged frequency, 
                                    luminosity and absorbed luminosity of shell */
   double xj[NXBANDS], xave_freq[NXBANDS];       /* 1108 NSH frequency limited versions of j and ave_freq */
-  double fmin[NXBANDS];         /* the minimum freqneucy photon seen in a band - this is incremented during photon flight */
+  double fmin[NXBANDS];         /* the minimum frequency photon seen in a band - this is incremented during photon flight */
   double fmax[NXBANDS];         /* the maximum frequency photon seen in a band - this is incremented during photon flight */
   double fmin_mod[NXBANDS];     /* the minimum freqneucy that the model should be applied for */
   double fmax_mod[NXBANDS];     /* the maximum frequency that the model should be applied for */
 
-
+  /* banded, directional fluxes */  
+  double F_vis[3];
+  double F_UV[3];
+  double F_Xray[3];
 
   double j_direct, j_scatt;     /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double ip_direct, ip_scatt;   /* 1309 NSH mean intensity due to direct photons and scattered photons */
-  double xsd_freq[NXBANDS];     /*1208 NSH the standard deviation of the frequency in the band */
+  double xsd_freq[NXBANDS];     /* 1208 NSH the standard deviation of the frequency in the band */
   int nxtot[NXBANDS];           /* 1108 NSH the total number of photon passages in frequency bands */
   double max_freq;              /*1208 NSH The maximum frequency photon seen in this cell */
   double cool_tot;              /*The total cooling in a cell */
@@ -879,7 +908,7 @@ typedef struct plasma
      ionization pool */
   double bf_simple_ionpool_in, bf_simple_ionpool_out;
 
-  double comp_nujnu;            /* 1701 NSH The integral of alpha(nu)nuj(nu) used to computecompton cooling-  only needs computing once per cycle */
+  double comp_nujnu;            /* 1701 NSH The integral of alpha(nu)nuj(nu) used to compute compton cooling-  only needs computing once per cycle */
 
   double dmo_dt[3];             /*Radiative force of wind */
   double rad_force_es[3];       /*Radiative force of wind */
@@ -888,7 +917,7 @@ typedef struct plasma
 
 
 
-  double gain;                  /* The gain being used in interations of the structure */
+  double gain;                  /* The gain being used in iterations of the structure */
   double converge_t_r, converge_t_e, converge_hc;       /* Three measures of whether the program believes the grid is converged.
                                                            The first two are the fractional changes in t_r, t_e between this and the last cycle. The third
                                                            number is the fraction between heating and cooling divided by the sum of the 2       */
@@ -896,12 +925,15 @@ typedef struct plasma
                                            is 0 if the fractional change or in the case of the last check error is less than a value, currently
                                            set to 0.05.  ksl 111126   
                                            NSH 130725 - this number is now also used to say if the cell is over temperature - it is set to 2 in this case   */
-  int converge_whole, converging;       /* converge_whole is the sum of the indvidual convergence checks.  It is 0 if all of the
-                                           convergence checks indicated convergence. 
-                                           converging is an
-                                           indicator of whether the program thought the cell is on the way to convergence 0 implies converging */
+  int converge_whole, converging;       /* converge_whole is the sum of the individual convergence checks.  It is 0 if all of the convergence checks indicated
+                                           convergence. converging is an indicator of whether the program thought the cell is on the way to convergence 0
+                                           implies converging */
 
-
+#define CELL_CONVERGING 0               /* Indicator for a cell which is considered converging - temperature is oscillating and decreasing */
+#define CELL_NOT_CONVERGING 1           /* Indicator for a cell which is considered not converging (temperature is shooting off in one direction) */
+#define CONVERGENCE_CHECK_PASS 0        /* Indicator for that the cell has passed a convergence check */
+#define CONVERGENCE_CHECK_FAIL 1        /* Indicator for that the cell has failed a convergence check */
+#define CONVERGENCE_CHECK_OVER_TEMP 2   /* Indicator for a cell that its electron temperature is more than TMAX */
 
   /* 1108 Increase sim estimators to cover all of the bands */
   /* 1208 Add parameters for an exponential representation, and a switch to say which we prefer. */
@@ -917,7 +949,7 @@ typedef struct plasma
 
 
   double exp_temp[NXBANDS];     /*NSH 120817 - The effective temperature of an exponential representation of the radiation field in a cell */
-  double exp_w[NXBANDS];        /*NSH 120817 - The prefector of an exponential representation of the radiation field in a cell */
+  double exp_w[NXBANDS];        /*NSH 120817 - The prefactor of an exponential representation of the radiation field in a cell */
   double ip;                    /*NSH 111004 Ionization parameter calculated as number of photons over the lyman limit entering a cell, divided by the number density of hydrogen for the cell */
   double xi;                    /*NSH 151109 Ionization parameter as defined by Tartar et al 1969 and described in Hazy. Its the ionizing flux over the number of hydrogen atoms */
 } plasma_dummy, *PlasmaPtr;
@@ -1077,7 +1109,8 @@ typedef struct photon
     P_SEC = 8,                  //Photon hit secondary
     P_ADIABATIC = 9,            //records that a photon created a kpkt which was destroyed by adiabatic cooling
     P_ERROR_MATOM = 10,         //Some kind of error in processing of a photon which excited a macroattom
-    P_LOFREQ_FF = 11            //records a photon that had too low a frequency  
+    P_LOFREQ_FF = 11,           //records a photon that had too low a frequency
+    P_REPOSITION_ERROR = 12     //A photon passed through the disk due to dfudge pushing it through incorrectly
   } istat;                      /*status of photon. */
 
   int nscat;                    /*number of scatterings */
@@ -1317,7 +1350,7 @@ xband;
 #define NTEMPS	60              // The number of temperatures which are stored in each fbstruct
                                 /* NSH this was increased from 30 to 60 to take account of 3 extra OOM 
                                    intemperature we wanted to have in fb */
-#define NFB	10              // The maximum number of frequency intervals for which the fb emission is calculated
+#define NFB	20              // The maximum number of frequency intervals for which the fb emission is calculated
 
 struct fbstruc
 {

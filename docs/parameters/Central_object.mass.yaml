@@ -1,6 +1,6 @@
 name: Central_object.mass
 description: |
-  Mass of the central object
+  Mass of the central object. This is very important, affecting wind speeds, gravitational heating and such.
 type: Double
 unit: M☉
 values: Greater than 0

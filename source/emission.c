@@ -17,15 +17,12 @@
 #include "python.h"
 
 
-
-
-
 /**********************************************************/
 /**
  * @brief      calculate the luminosity of the entire
  * wind between freqencies f1 and f2
  *
- * @param [in out] double  f1   The minimum frequency for the calculation
+ * @param [in out] double  f1   The minimum frequency 
  * @param [in out] double  f2   The maximum frequency
  * @return     The luminosity of the entire wind
  *
@@ -35,7 +32,7 @@
  *
  * The routine also populates several luminosity related variables in
  * geo, which give the luminosity for separate processes, e.g free-free
- * and free_ound emission.
+ * and free-bound emission.
  *
  * ### Notes ###
  * @bug The do loop might be simpler if made over the plasma cells
@@ -44,7 +41,7 @@
  * 
  * CK20180801: 
  * 
- *           in non-macro atom mode, the only continuum process treates as scattering is 
+ *           in non-macro atom mode, the only continuum process treated as scattering is 
  *           electron scattering, and this is assigned nres = -1. The only valid values 
  *           of nres in non-macro-atom mode are therefore nres = -1 and 0 <= nres <= nlines-1
  *           (with the lattter range covering the lines).
@@ -286,7 +283,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
 
     nplasma = wmain[icell].nplasma;
     ndom = wmain[icell].ndom;
-    plasmamain[nplasma].nrad += 1;      /* Increment the counter for the number of photons generatd in the cell */
+    plasmamain[nplasma].nrad += 1;      /* Increment the counter for the number of photons generated in the cell */
 
 
 
@@ -403,7 +400,7 @@ was a resonant scatter but we want isotropic scattering anyway.  */
       /* The next two lines correct the frequency to first order, but do not result in
          forward scattering of the distribution */
       vwind_xyz (ndom, &p[np], v);
-      p[np].freq *= (1. + dot (v, p[np].lmn) / C);
+      p[np].freq *= (1. + dot (v, p[np].lmn) / VLIGHT);
       p[np].istat = 0;
       p[np].tau = p[np].nscat = p[np].nrscat = 0;
       p[np].origin = PTYPE_WIND;        // A wind photon

@@ -8,7 +8,6 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -17,13 +16,12 @@
 #include "python.h"
 
 
-
 /**********************************************************/
 /**
  * @brief      ionization routines for the wind one cell at a time
  *
  * @param [in,out] PlasmaPtr  xplasma   The cell in which the ioniztion is to be calculated
- * @param [in] int  mode   A parameter descibing how to calculate the ioniztion
+ * @param [in] int  mode   A parameter describing how to calculate the ionization
  * @return     The routine returns status messages dereived from the individual routines
  * used to calculate the abundances.
  *
@@ -36,9 +34,7 @@
  **********************************************************/
 
 int
-ion_abundances (xplasma, mode)
-     PlasmaPtr xplasma;
-     int mode;
+ion_abundances (PlasmaPtr xplasma, int mode)
 {
   int ireturn;
 
@@ -77,8 +73,9 @@ to match heating and cooling in the wind element! */
     xplasma->dt_e_old = xplasma->dt_e;
     xplasma->dt_e = xplasma->t_e - xplasma->t_e_old;
     xplasma->t_e_old = xplasma->t_e;
-    xplasma->t_r_old = xplasma->t_r;
+    //OLD xplasma->t_r_old = xplasma->t_r;
     xplasma->lum_tot_old = xplasma->lum_tot;
+    xplasma->heat_tot_old = xplasma->heat_tot;
 
     ireturn = one_shot (xplasma, mode);
 
@@ -95,8 +92,9 @@ to match heating and cooling in the wind element! */
     xplasma->dt_e_old = xplasma->dt_e;
     xplasma->dt_e = xplasma->t_e - xplasma->t_e_old;
     xplasma->t_e_old = xplasma->t_e;
-    xplasma->t_r_old = xplasma->t_r;
+    //OLD xplasma->t_r_old = xplasma->t_r;
     xplasma->lum_tot_old = xplasma->lum_tot;
+    xplasma->heat_tot_old = xplasma->heat_tot;
 
     ireturn = one_shot (xplasma, mode);
 
@@ -113,8 +111,9 @@ to match heating and cooling in the wind element! */
     xplasma->dt_e_old = xplasma->dt_e;
     xplasma->dt_e = xplasma->t_e - xplasma->t_e_old;
     xplasma->t_e_old = xplasma->t_e;
-    xplasma->t_r_old = xplasma->t_r;
+    //OLD xplasma->t_r_old = xplasma->t_r;
     xplasma->lum_tot_old = xplasma->lum_tot;
+    xplasma->heat_tot_old = xplasma->heat_tot;
 
 
     ireturn = one_shot (xplasma, mode);
@@ -176,26 +175,33 @@ to match heating and cooling in the wind element! */
  **********************************************************/
 
 int
-convergence (xplasma)
-     PlasmaPtr xplasma;
+convergence (PlasmaPtr xplasma)
 {
   int trcheck, techeck, hccheck, whole_check;
-  double min_gain = 0.1, gain_damp = 0.7, max_gain, gain_amp, cyc_frac;
+  double min_gain, gain_damp, max_gain, gain_amp, cyc_frac;
   double epsilon;
 
-  trcheck = techeck = hccheck = 0;
-  xplasma->trcheck = xplasma->techeck = xplasma->hccheck = 0;   //NSH 70g - zero the global variables
+  // TODO: are these values optimal?
+  min_gain = 0.1;
+  gain_damp = 0.7;
   epsilon = 0.05;
 
-  /* Check the fractional change in temperature and if is less than
-   * epsilon, increment trcheck and techeck
+  trcheck = techeck = hccheck = CONVERGENCE_CHECK_PASS;
+  xplasma->trcheck = xplasma->techeck = xplasma->hccheck = CONVERGENCE_CHECK_PASS;      // NSH 70g - zero the global variables
+
+  /*
+   * Check the convergence of the radiation temperature
    */
 
-  if ((xplasma->converge_t_r =  // Radiation temperature
-       fabs (xplasma->t_r_old - xplasma->t_r) / (xplasma->t_r_old + xplasma->t_r)) > epsilon)
-    xplasma->trcheck = trcheck = 1;
+  xplasma->converge_t_r =       // Radiation temperature check
+    fabs (xplasma->t_r_old - xplasma->t_r) / (xplasma->t_r_old + xplasma->t_r);
+  if (xplasma->converge_t_r > epsilon)
+    xplasma->trcheck = trcheck = CONVERGENCE_CHECK_FAIL;
 
-  /* Check whether the heating and cooling balance to within epsilon and if so set hccheck to 1
+  /*
+   * Check the convergence for electron temperature and heat + cooling rates
+   * CHANGES:
+   * --------
    * - 110919 nsh modified line below to include the adiabatic cooling in the check that heating equals cooling
    * - 111004 nsh further modification to include DR and compton cooling, now moved out of lum_tot
    * - 130722 added a fabs to the bottom, since it is now conceivable that this could be negative if
@@ -205,42 +211,55 @@ convergence (xplasma)
    *   converge if we are hitting the maximum temperature
    */
 
-  if (xplasma->t_e < TMAX)      // Electron temperature and heat/cooling
+  if (xplasma->t_e < TMAX)
   {
-    if ((xplasma->converge_t_e = fabs (xplasma->t_e_old - xplasma->t_e) / (xplasma->t_e_old + xplasma->t_e)) > epsilon)
-      xplasma->techeck = techeck = 1;
+    xplasma->converge_t_e =     // Electron temperature check
+      fabs (xplasma->t_e_old - xplasma->t_e) / (xplasma->t_e_old + xplasma->t_e);
+    if (xplasma->converge_t_e > epsilon)
+      xplasma->techeck = techeck = CONVERGENCE_CHECK_FAIL;
 
-    if ((xplasma->converge_hc =
-         fabs (xplasma->heat_tot + xplasma->heat_shock - xplasma->cool_tot) / fabs (xplasma->heat_tot + xplasma->heat_shock +
-                                                                                    xplasma->cool_tot)) > epsilon)
-      xplasma->hccheck = hccheck = 1;
+    xplasma->converge_hc =      // Heating and cooling rates check
+      fabs (xplasma->heat_tot + xplasma->heat_shock - xplasma->cool_tot) / fabs (xplasma->heat_tot + xplasma->heat_shock +
+                                                                                 xplasma->cool_tot);
+    if (xplasma->converge_hc > epsilon)
+      xplasma->hccheck = hccheck = CONVERGENCE_CHECK_FAIL;
   }
   else                          // If the cell has reached the maximum temperature we mark it as over-limit
-    xplasma->techeck = techeck = xplasma->hccheck = hccheck = 2;
+  {
+    xplasma->techeck = techeck = xplasma->hccheck = hccheck = CONVERGENCE_CHECK_OVER_TEMP;
+  }
 
-  /* whole_check is the sum of the temperature checks and the heating check */
+  /*
+   * whole_check is the sum of the temperature checks and the heating check - the higher this is, the more convergence checks have failed.
+   */
 
   xplasma->converge_whole = whole_check = trcheck + techeck + hccheck;
 
-  /* Converging is a situation where the change in electron
-   * temperature is dropping with time and the cell is oscillating
-   * around a temperature.  If that is the case, we drop the
-   * amount by which the temperature can change in this cycle. Else if the cell
-   * is not converging, we increase the amount by which the temperature can
-   * change in this cycle.
+  /*
+   * Now we check to see if a cell is converging:
+   * Converging is a situation where the change in electron temperature is dropping with time and the cell is
+   * oscillating around a temperature. If that is the case, we drop the amount by which the temperature can change in
+   * this cycle. Else if the cell is not converging, we increase the amount by which the temperature can change in this
+   * cycle.
    */
 
-  if (xplasma->dt_e_old * xplasma->dt_e < 0 && fabs (xplasma->dt_e) > fabs (xplasma->dt_e_old)) // The cell is converging
+  /*
+   * The cell is converging as the electron temperature is oscillating and the change in temperature is decreasing
+   */
+  if (xplasma->dt_e_old * xplasma->dt_e < 0 && fabs (xplasma->dt_e) < fabs (xplasma->dt_e_old))
   {
-    xplasma->converging = 1;
+    xplasma->converging = CELL_CONVERGING;
 
+    // TODO: is this optimal for converging cells? See discussion on Bug #631
     xplasma->gain *= gain_damp;
     if (xplasma->gain < min_gain)
       xplasma->gain = min_gain;
   }
-  else                          /* The cell is not converging, which means either that the temperature is consistently moving in one direction
-                                   or that the oscillations of the temperature have increased in the past two cycles
-                                 */
+  /*
+   * The cell is not converging, which means either that the temperature is consistently moving in one direction or
+   * that the oscillations of the temperature have increased in the past two cycles.
+   */
+  else
   {
     /*
      * EP: allow the gain to increase more for the first cyc_frac * cycles to
@@ -248,6 +267,8 @@ convergence (xplasma)
      * is controlled by some magic numbers and should probably be fine tuned
      * to find the best numbers
      */
+
+    xplasma->converging = CELL_NOT_CONVERGING;
 
     cyc_frac = 0.5;
 
@@ -294,7 +315,7 @@ convergence (xplasma)
  **********************************************************/
 
 int
-check_convergence ()
+check_convergence (void)
 {
   int n;
   int nconverge, nconverging, ntot;
@@ -308,32 +329,29 @@ check_convergence ()
   for (n = 0; n < NPLASMA; n++)
   {
     ntot++;
-    if (plasmamain[n].converge_whole == 0)
+    if (plasmamain[n].converge_whole == CONVERGENCE_CHECK_PASS)
       nconverge++;
-    if (plasmamain[n].trcheck == 0)
+    if (plasmamain[n].trcheck == CONVERGENCE_CHECK_PASS)
       ntr++;
-    if (plasmamain[n].techeck == 0)
+    if (plasmamain[n].techeck == CONVERGENCE_CHECK_PASS)
       nte++;
-    if (plasmamain[n].hccheck == 0)
+    if (plasmamain[n].hccheck == CONVERGENCE_CHECK_PASS)
       nhc++;
-    if (plasmamain[n].techeck == 2)
+    if (plasmamain[n].techeck == CONVERGENCE_CHECK_OVER_TEMP)
       nmax++;
-    if (plasmamain[n].converging == 0)
+    if (plasmamain[n].converging == CELL_CONVERGING)
       nconverging++;
-
   }
 
   xconverge = ((double) nconverge) / ntot;
   xconverging = ((double) nconverging) / ntot;
   geo.fraction_converged = xconverge;
-  Log
-    ("!!Check_converging: %4d (%.3f) converged and %4d (%.3f) converging of %d cells\n",
-     nconverge, xconverge, nconverging, xconverging, ntot);
-  Log ("!!Check_convergence_breakdown: t_r %4d t_e(real) %4d t_e(maxed) %4d hc(real) %4d\n", ntr, nte, nmax, nhc);
-  Log
-    ("Summary  convergence %4d %.3f  %4d  %.3f  %d  #  n_converged fraction_converged  converging fraction_converging total cells\n",
-     nconverge, xconverge, nconverging, xconverging, ntot);
+
+  Log ("!!Check_convergence: %4d (%.3f) converged and %4d (%.3f) converging of %d the cells actually in the wind\n",
+       nconverge, xconverge, nconverging, xconverging, ntot);
+  Log ("!!Check_convergence: t_r %4d t_e(real) %4d t_e(maxed) %4d hc(real) %4d\n", ntr, nte, nmax, nhc);
   Log_flush ();
+
   return (0);
 }
 
@@ -369,10 +387,7 @@ PlasmaPtr xxxplasma;
  **********************************************************/
 
 int
-one_shot (xplasma, mode)
-     PlasmaPtr xplasma;
-     int mode;
-
+one_shot (PlasmaPtr xplasma, int mode)
 {
   double te_old, te_new;
   double gain;
@@ -477,12 +492,9 @@ meaning in nebular concentrations.
  **********************************************************/
 
 double
-calc_te (xplasma, tmin, tmax)
-     PlasmaPtr xplasma;
-     double tmin, tmax;
+calc_te (PlasmaPtr xplasma, double tmin, double tmax)
 {
   double z1, z2;
-  int macro_pops ();
 
 
   /* we assign a plasma pointer here to a fixed structure because
@@ -504,7 +516,8 @@ calc_te (xplasma, tmin, tmax)
 
   if ((z1 * z2 < 0.0))
   {                             // Then the interval is bracketed
-    xplasma->t_e = zbrent (zero_emit, tmin, tmax, 50.);
+    xplasma->t_e = zero_find (zero_emit2, tmin, tmax, 50.);
+
   }
   else if (fabs (z1) < fabs (z2))
   {
@@ -582,13 +595,15 @@ calc_te (xplasma, tmin, tmax)
  **********************************************************/
 
 double
-zero_emit (t)
-     double t;
+zero_emit2 (double t, void *params)
+{
+  return (zero_emit (t));
+}
+
+double
+zero_emit (double t)
 {
   double difference;
-  double total_emission ();
-  int macro_pops ();
-  double macro_bb_heating (), macro_bf_heating ();
 
   /*Original method */
   xxxplasma->t_e = t;

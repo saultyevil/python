@@ -9,17 +9,13 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "atomic.h"
 #include "python.h"
-
 #include "models.h"
-
-
 
 double old_t, old_g, old_freqmin, old_freqmax;
 double jump[] = { 913.8 };
@@ -95,8 +91,8 @@ one_continuum (spectype, t, g, freqmin, freqmax)
       old_g = g;
     }
 
-    lambdamin = C * 1e8 / freqmax;
-    lambdamax = C * 1e8 / freqmin;
+    lambdamin = VLIGHT * 1e8 / freqmax;
+    lambdamax = VLIGHT * 1e8 / freqmin;
     nwave = 0;
 
     /* Create the first element of the array, precisely at lambdamin if that is possible
@@ -146,7 +142,7 @@ one_continuum (spectype, t, g, freqmin, freqmax)
       nwave++;
       w_local[nwave - 1] = w_local[nwave - 2];
       f_local[nwave - 1] = f_local[nwave - 2];
-      w_local[nwave - 2] = w_local[nwave - 3] / (1. - DELTA_V / (2. * C));
+      w_local[nwave - 2] = w_local[nwave - 3] / (1. - DELTA_V / (2. * VLIGHT));
       linterp (w_local[nwave - 2], comp[spectype].xmod.w, comp[spectype].xmod.f, comp[spectype].nwaves, &y, 0);
       f_local[nwave - 2] = y;
     }
@@ -165,7 +161,7 @@ one_continuum (spectype, t, g, freqmin, freqmax)
 
   /* generate the frequency from the CDF that has been built up from the model fluxes */
 
-  f = (C * 1.e8 / cdf_get_rand (&comp[spectype].xcdf));
+  f = (VLIGHT * 1.e8 / cdf_get_rand (&comp[spectype].xcdf));
 
   /* check if the frequency is too small or too large, and default to simulation limits */
   if (f > freqmax)
@@ -228,14 +224,14 @@ emittance_continuum (spectype, freqmin, freqmax, t, g)
      int spectype;
      double freqmin, freqmax, t, g;
 {
-  int nwav;
-  double x, lambdamin, lambdamax;
+  int nwav, n;
+  double x, lambdamin, lambdamax, w1, w2, f_interp;
 
   double par[2];
   int model ();
 
-  lambdamin = C / (freqmax * ANGSTROM);
-  lambdamax = C / (freqmin * ANGSTROM);
+  lambdamin = VLIGHT / (freqmax * ANGSTROM);
+  lambdamax = VLIGHT / (freqmin * ANGSTROM);
 
   if (comp[spectype].nmods == 1)        //We only have one model - there is no way of interpolating
   {
@@ -257,36 +253,74 @@ emittance_continuum (spectype, freqmin, freqmax, t, g)
 
     Error ("emittance_continum: Requested wavelengths extend beyond models wavelengths for list %s\n", comp[spectype].name);
     Error ("lambda %f %f  model %f %f\n", lambdamin, lambdamax, comp[spectype].xmod.w[0], comp[spectype].xmod.w[nwav - 1]);
-
   }
 
-  //The following lines are the original integration scheme - this is very wrong if only a bit of a model is in a band. 
-  //Using Qromb is more transparent..
-  /*
-     x = 0;
-     for (n = 0; n < nwav; n++)
-     {
-     w = comp[spectype].xmod.w[n];
-     if (n == 0)
-     {
-     dlambda = comp[spectype].xmod.w[1] - comp[spectype].xmod.w[0];
-     }
-     else if (n == nwav - 1)
-     {
-     dlambda = comp[spectype].xmod.w[n] - comp[spectype].xmod.w[n - 1];
-     }
-     else
-     {
-     dlambda = 0.5 * (comp[spectype].xmod.w[n + 1] - comp[spectype].xmod.w[n - 1]);
-     }
-     if (lambdamin < w && w < lambdamax)
-     {
-     x += comp[spectype].xmod.f[n] * dlambda;
-     }
-     }
-   */
-  integ_spectype = spectype;
-  x = qromb (model_int, lambdamin, lambdamax, 1e-4);
+
+//  if (comp[spectype].xmod.w[0]<lambdamin && lambdamax<comp[spectype].xmod.w[nwav-1])
+//  {
+  x = 0.0;                      //zero the integral
+  for (n = 0; n < nwav - 1; n++)        //loop over all the wavelengths in the model
+  {
+    w1 = comp[spectype].xmod.w[n];      //get the wavelength of the current point
+    w2 = comp[spectype].xmod.w[n + 1];
+    if (w2 < lambdamin || w1 > lambdamax)       //This band is outside the required band
+    {
+      x += 0.0;
+    }
+    else if (w1 < lambdamin && w2 > lambdamin)  //The bin bracckets the lower band boundary
+    {
+      linterp (lambdamin, comp[integ_spectype].xmod.w, comp[integ_spectype].xmod.f, comp[integ_spectype].nwaves, &f_interp, 1); //Obtain the interpolated flux at lambdamin
+      x += (w2 - lambdamin) * (f_interp + comp[spectype].xmod.f[n + 1]) / 2.0;  //Add the mean flux in the bin x the wavelength range
+    }
+    else if (w1 > lambdamin && w2 > lambdamin && w1 < lambdamax && w2 < lambdamax)      //The whole interval in in the requested band
+    {
+      x += (w2 - w1) * (comp[spectype].xmod.f[n] + comp[spectype].xmod.f[n + 1]) / 2.0; //Add the mean flux in the bin x the wavelength range
+    }
+    else if (w1 < lambdamax && w2 > lambdamax)  //The upper wavelength is outside the requested range
+    {
+      linterp (lambdamax, comp[integ_spectype].xmod.w, comp[integ_spectype].xmod.f, comp[integ_spectype].nwaves, &f_interp, 1); //Obtain the interpolated flux at lambdamin
+      x += (lambdamax - w1) * (comp[spectype].xmod.f[n + 1] + f_interp) / 2.0;  //Add the mean flux in the bin x the wavelength range
+    }
+    else
+    {
+      x += 0.0;
+    }
+  }
+//       x1=x;
+//       x=0;
+
+//  /   for (n = 0; n < nwav; n++)   //loop over all the wavelengths in the model
+//     {           
+//         w = comp[spectype].xmod.w[n];
+//          if (n == 0)
+//                       {
+//               dlambda = comp[spectype].xmod.w[1] - comp[spectype].xmod.w[0];
+//             }
+//       else if (n == nwav - 1)
+//       {
+//         dlambda = comp[spectype].xmod.w[n] - comp[spectype].xmod.w[n - 1];
+//       }
+//       else
+//                {
+//              dlambda = 0.5 * (comp[spectype].xmod.w[n + 1] - comp[spectype].xmod.w[n - 1]);
+//             }
+//                       if (lambdamin < w && w < lambdamax)
+//             {
+//               x += comp[spectype].xmod.f[n] * dlambda;
+//            }
+//    }
+//       x2=x;
+
+
+// else
+// {
+//  integ_spectype = spectype;
+//  x = qromb (model_int, lambdamin, lambdamax, 1e-4);
+//  printf ("Calling num_int %i %e %e %e %e\n",spectype, freqmin, freqmax, t, g);
+//    x = num_int (model_int, lambdamin, lambdamax, 1e-6);
+//      x3=x;
+  //}
+//      printf ("New %e (%i) Old %e num_int %e\n",x1,count,x2,x3);
 
   x *= 4. * PI;
 
@@ -300,6 +334,7 @@ emittance_continuum (spectype, freqmin, freqmax, t, g)
  * @brief      Compute f_lambda from a model for a given wavelength
  *
  * @param [in] double  ;ambda - the wavelength of interest
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     The flux for a model for a given wavelength
  *
  * @details
@@ -317,8 +352,7 @@ emittance_continuum (spectype, freqmin, freqmax, t, g)
 
 
 double
-model_int (lambda)
-     double lambda;
+model_int (double lambda, void *params)
 {
   double answer;                //The interpolated answer
   if (lambda < comp[integ_spectype].xmod.w[0])  //Our wavelength is below where we have a model

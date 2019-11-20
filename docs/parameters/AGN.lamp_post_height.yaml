@@ -1,9 +1,0 @@
-name: AGN.lamp_post_height
-description: |
-  Multi-line description, must keep indentation.
-type: Double
-unit: :ref:`Central_object.radius`
-values: Greater than 0
-parent:
-  BH.geometry_for_pl_source: lamp_post
-file: setup_star_bh.c

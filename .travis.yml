@@ -59,8 +59,8 @@ script:
     - echo $PWD
     - cd source/
     - make clean
-    - make CC=gcc py_wind
-    - make CC=gcc windsave2table
+    - make CC=gcc INDENT=no py_wind
+    - make CC=gcc INDENT=no windsave2table
     - make clean
     - cd ../examples/travis/
     - Setup_Py_Dir

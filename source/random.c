@@ -12,15 +12,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-
-
-#include "atomic.h"
-#include "python.h"
-
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
-
+#include "atomic.h"
+#include "python.h"
 
 /* A basis is defined such that if x is a 3 vector as expressed an unprimed cartesian coordinate
    frame, and if y is the same vector in some rotated frame, then
@@ -28,8 +24,8 @@
    Basis is defined in python.h
  */
 
-
 gsl_rng *rng;                   // pointer to a global random number generator
+
 
 /**********************************************************/
 /** @name      randvec

@@ -9,17 +9,12 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
 #include "atomic.h"
-
 #include "python.h"
-
-
-
 
 
 /**********************************************************/
@@ -755,7 +750,7 @@ cylind_is_cell_in_wind (n)
   wind_n_to_ij (ndom, n, &i, &j);
 
   /* First check if the cell is in the boundary */
-  if (i >= (one_dom->ndim - 2) && j >= (one_dom->mdim - 2))
+  if (i >= (one_dom->ndim - 2) || j >= (one_dom->mdim - 2))
   {
     return (W_NOT_INWIND);
   }

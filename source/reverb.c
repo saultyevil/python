@@ -6,11 +6,13 @@
  *
  * File containing reverberation mapping functions.
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <errno.h>
+
 #include "atomic.h"
 #include "python.h"
 
@@ -18,6 +20,7 @@ char delay_dump_file[LINELENGTH];
 int delay_dump_bank_size = 65535, delay_dump_bank_curr = 0;
 int *delay_dump_spec;
 PhotPtr delay_dump_bank;
+
 
 /**********************************************************/
 /** 
@@ -242,13 +245,13 @@ delay_dump (PhotPtr p, int np)
          p[nphot].nscat == mscat ||
          (mscat < 0 && p[nphot].nscat >= (-mscat))) && ((mtopbot = xxspec[i].top_bot) == 0 || (mtopbot * p[nphot].x[2]) > 0))
     {
-      delay = (delay_to_observer (&p[nphot]) - geo.rmax) / C;
+      delay = (delay_to_observer (&p[nphot]) - geo.rmax) / VLIGHT;
       if (delay < 0)
         subzero++;
 
       fprintf (fptr,
                "%10.5g %12.7g %10.5g %+10.5g %+10.5g %+10.5g %3d     %3d     %10.5g %5d %5d %5d\n",
-               p[nphot].freq, C * 1e8 / p[nphot].freq, p[nphot].w,
+               p[nphot].freq, VLIGHT * 1e8 / p[nphot].freq, p[nphot].w,
                p[nphot].x[0], p[nphot].x[1], p[nphot].x[2],
                p[nphot].nscat, p[nphot].nrscat, delay, i - MSPEC, p[nphot].origin, p[nphot].nres);
     }

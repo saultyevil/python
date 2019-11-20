@@ -13,7 +13,6 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -41,8 +40,7 @@
  **********************************************************/
 
 int
-reposition (p)
-     PhotPtr p;
+reposition (PhotPtr p)
 {
   int n;
 
@@ -55,11 +53,47 @@ reposition (p)
     return (n);                 /* Photon was not in wind */
   }
 
-  /*
-   * EP 0818: the cell specific dfudge is now used as previously the global
-   * value of DFUDGE was being used
-   */
   move_phot (p, wmain[p->grid].dfudge);
 
   return (0);
+}
+
+/* ************************************************************************* */
+/**
+ * @brief           Reposition a photon which was lost due to dfudge pushing
+ *                  the photon into the disk
+ *
+ * @param[in,out]   PhotPtr   p     The photon to be repositioned
+ *
+ * @return          void
+ *
+ * @details
+ *
+ * For resonant scatters, this function will push the photon a distance away
+ * from the location where it previously interacted to assure that the photon
+ * does not interact with the same resonance twice.
+ *
+ * Created in response to issue #584 on the GitHub repository. The purpose of
+ * this function is to calculate the distance to the surface of the accretion
+ * disc and to make it some distance towards the disc instead of dfudge, which
+ * previously pushed the photon through the disc plane accidentally.
+ *
+ * ************************************************************************** */
+
+void
+reposition_lost_disk_photon (PhotPtr p)
+{
+  double smax;
+
+  if (p->nres < 0)
+    return;                     /* Do nothing for non-resonant scatters */
+
+  if ((p->grid = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
+  {
+    Error ("%s:%s(%i): Photon not in grid\n", __FILE__, __func__, __LINE__);
+    return;                     /* Photon was not in wind */
+  }
+
+  smax = -p->x[2] / p->lmn[2] * 0.999;  // Move some distance toward the disc
+  move_phot (p, smax);
 }

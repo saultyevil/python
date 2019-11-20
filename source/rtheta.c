@@ -9,15 +9,12 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
-
-
-
 
 
 /**********************************************************/
@@ -53,7 +50,6 @@ rtheta_ds_in_cell (ndom, p)
   int n, ix, iz;
   double s, smax;
 
-
   /* Check that that the photon is in the domain it is supposed to be
    * in.  */
 
@@ -64,7 +60,6 @@ rtheta_ds_in_cell (ndom, p)
   }
 
   wind_n_to_ij (ndom, n, &ix, &iz);     /*Convert the index n to two dimensions */
-
 
   /* Set up the quadratic equations in the radial  direction */
 
@@ -114,13 +109,13 @@ rtheta_ds_in_cell (ndom, p)
  * 	For spherical polar, components we have defined the grid so that
  * 	i corresponds to a radial distance, and j corresponds to an angle,
  * 	e.g r theta.  increasing i corresponds to increasing distance,
- * 	and increasing theta corresponds to increasing angle measured from
+ * 	and increasing j corresponds to increasing theta measured from
  * 	the z axis. (This it should be fairly easy to implement true
  * 	spherical coordinates in the future.
  *
  * 	There are two basic options:
  *
- * 	The r-sapcing can be linear, or logarithmic.
+ * 	The r-spacing can be linear, or logarithmic.
  *
  * 	The theta spacing is always linear
  *
@@ -128,7 +123,7 @@ rtheta_ds_in_cell (ndom, p)
  * ### Notes ###
  *
  * The parameters for describing the grid to be created must
- * have to have been intialized and are part of the domain structure
+ * have to have been initialized and are part of the domain structure
  *
  *
  **********************************************************/
@@ -159,7 +154,8 @@ rtheta_make_grid (w, ndom)
      to propagate. */
 
 /* Next two lines for linear intervals */
-  dtheta = 90. / (mdim - 3);
+//OLD  dtheta = 90. / (mdim - 3);
+  dtheta = 90. / (mdim - 2);
 
 
   /* First calculate parameters that are to be calculated at the edge of the grid cell.  This is
@@ -183,7 +179,7 @@ rtheta_make_grid (w, ndom)
       else
       {                         //logarithmic intervals
 
-        dlogr = (log10 (zdom[ndom].rmax / geo.rstar)) / (mdim - 3);
+        dlogr = (log10 (zdom[ndom].rmax / geo.rstar)) / (ndim - 3);
         w[n].r = geo.rstar * pow (10., dlogr * (i - 1));
         w[n].rcen = 0.5 * geo.rstar * (pow (10., dlogr * (i)) + pow (10., dlogr * (i - 1)));
       }
@@ -439,6 +435,7 @@ rtheta_volumes (ndom, w)
         w[n].vol = cell_volume;
 
         n_inwind = rtheta_is_cell_in_wind (n);
+
         if (n_inwind == W_NOT_INWIND)
         {
           fraction = 0.0;       /* Force outside edge volues to zero */
@@ -570,7 +567,7 @@ rtheta_where_in_grid (ndom, x)
 /**
  * @brief  generate a position in cell that is in the wind.
  *
- * @param [in] int  n   Cell in which random poition is to be generated
+ * @param [in] int  n   Cell in which random position is to be generated
  * @param [out] double  x[]   The position that was randomly genrated in the cell
  * @return     An integer indicated whether 
  * whether this position is above or below the midplane
@@ -645,7 +642,7 @@ rtheta_get_random_location (n, x)
 /**********************************************************/
 /**
  * @brief      extends the density to
- * 	regions just outside the wind regiions so that
+ * 	regions just outside the wind regions so that
  * 	extrapolations of density can be made there
  *
  * @param [in] int  ndom   The domain for which the density needs to be extraplaoted
@@ -653,21 +650,27 @@ rtheta_get_random_location (n, x)
  * @return     Always return zero
  *
  * @details
- * For a specific domain, this routine extrapolates denisties just outside the wind in the x and z directions.
+ * For a specific domain, this routine assigns densities to cells just outside the wind.
  *
  * ### Notes ###
  *
- * Aall that is done here is to assign a plasma cell to wind cells that lie just outside the boundary of the
- * wind.   This is needed in order to ease the interpolation of  densities at positions close to the 
+ * All that is done here is to assign a plasma cell to a wind cell that lies just outside the boundary of the
+ * wind.   This is needed in order to ease the interpolation of densities at positions close to the 
  * edge of the wind.
  *
  * In principle, therefore all of the variables are accessible.  In practice, the only variables that are 
- * used are ion densites 
+ * used are ion densities. 
  *
  * Note that problems could arise if one incremented something in the Plasma Ptr
- * based on a windcell that is not in the wind for a specific domain
+ * based on a windcell that is not in the wind for a specific domain.
  *
- *      
+ * For an rtheta grid, looks for a cell i,j that is not in the wind.  It
+ * then checks in the radial direction whether the cell outside this one,
+ * namely i+1,j is in the wind.  If so it assigns the plasma cell associated
+ * with i+1,j to cell i,j.  If not, it looks at plasma cell i-1,j to see
+ * if it is in the wind. This would be the case where cell i,j has drifted
+ * outside the wind in the radial direction.  
+ *
  *
  **********************************************************/
 
@@ -721,15 +724,15 @@ rtheta_extend_density (ndom, w)
 
 /**********************************************************/
 /**
- * @brief      Check whether a cell in an rtheta coordiante system
- * is in the wind
+ * @brief      Check whether a cell in an rtheta coordinate system
+ * is completely or partially in the wind or not
  *
  * @param [in] int  n   The a cell number
- * @return     An integer indicate whether the cell is in the wind, pratially in the
+ * @return     An integer indicating whether the cell is in the wind, partially in the
  * wind, or not in the wind at all.
  *
  * @details
- * This routine performes is a robust check of whether a cell is
+ * This routine performs a robust check of whether a cell is
  * in the wind or not.
  *
  * ### Notes ###
@@ -765,7 +768,9 @@ rtheta_is_cell_in_wind (n)
   ndim = zdom[ndom].ndim;
   mdim = zdom[ndom].mdim;
 
-  if (i >= (ndim - 2) && j >= (mdim - 2))
+//OLD  if (i >= (ndim - 2) && j >= (mdim - 2))
+//OLD  if (i >= (ndim - 2) || j >= (mdim - 3))
+  if (i >= (ndim - 2) || j >= (mdim - 2))
   {
     return (W_NOT_INWIND);
   }

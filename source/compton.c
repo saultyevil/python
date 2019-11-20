@@ -9,14 +9,15 @@
  * ???
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
+
 #include "atomic.h"
 #include "python.h"
 
 PlasmaPtr xplasma;              /// Pointer to current plasma cell
+
 
 /**********************************************************/
 /** 
@@ -55,7 +56,7 @@ kappa_comp (xplasma, freq)
 
   sigma = alpha (freq) * THOMPSON;      //obtain the energy exchange cross section
 
-  x = (sigma * H) / (MELEC * C * C);    //Calculate the constant
+  x = (sigma * PLANCK) / (MELEC * VLIGHT * VLIGHT);     //Calculate the constant
   x *= xplasma->ne * freq;      //Multiply by cell electron density and frequency of the packet.
 
   x *= zdom[ndom].fill;         // multiply by the filling factor- should cancel with density enhancement
@@ -183,7 +184,9 @@ total_comp (one, t_e)
           f1 = xplasma->fmin_mod[j];    //NSH 131114 - Set the low frequency limit to the lowest frequency that the model applies to
           f2 = xplasma->fmax_mod[j];    //NSH 131114 - Set the high frequency limit to the highest frequency that the model applies to
           if (f1 > 1e18)        //If all the frequencies are lower than 1e18, then the cross section is constant at sigmaT
-            x += qromb (comp_cool_integrand, f1, f2, 1e-6);
+//            x += qromb (comp_cool_integrand, f1, f2, 1e-6);
+            x += num_int (comp_cool_integrand, f1, f2, 1e-6);
+
           else
             x += THOMPSON * xplasma->xj[j];     //In the case where we are in the thompson limit, we just multiply the band limited frequency integrated mean intensity by the Thompson cross section
         }
@@ -199,7 +202,7 @@ total_comp (one, t_e)
   else
     x = xplasma->comp_nujnu;    //We already have an integral, retrieve it
 
-  x *= (16. * PI * BOLTZMANN * t_e * xplasma->ne) / (MELEC * C * C) * xplasma->vol;     //Multply by the other terms - including temperature - this gives the temperature dependance of this cooling term.
+  x *= (16. * PI * BOLTZMANN * t_e * xplasma->ne) / (MELEC * VLIGHT * VLIGHT) * xplasma->vol;   //Multply by the other terms - including temperature - this gives the temperature dependance of this cooling term.
 
 
   return (x);
@@ -236,7 +239,7 @@ klein_nishina (nu)
 
   kn = THOMPSON;                /* NSH 130605 to remove o3 compile error */
   x1 = x2 = x3 = x4 = 0.0;      /* NSH 130605 to remove o3 compile error */
-  x = (H * nu) / (MELEC * C * C);       //The photon energy relative to the rest mass energy of an electron
+  x = (PLANCK * nu) / (MELEC * VLIGHT * VLIGHT);        //The photon energy relative to the rest mass energy of an electron
   if (x > 0.0001)               //If the photon energy is high enough - then we need to compute the cross section - otherwise it is just the Thmopson cross section
   {
     x1 = 1. + x;
@@ -298,7 +301,7 @@ compton_dir (p, xplasma)
   double x[3];                  /*photon direction in the frame of reference of the original photon */
   double dummy[3], c[3];
 
-  x1 = H * p->freq / MELEC / C / C;     //compute the ratio of photon energy to electron energy. In the electron rest frame this is just the electron rest mass energy
+  x1 = PLANCK * p->freq / MELEC / VLIGHT / VLIGHT;      //compute the ratio of photon energy to electron energy. In the electron rest frame this is just the electron rest mass energy
 
   n = l = m = 0.0;              //initialise some variables to avoid warnings
 
@@ -315,7 +318,8 @@ compton_dir (p, xplasma)
     f_min = 1.;                 //The minimum energy change - i.e. no energy loss - the scattering angle is zero - the photon does not chage direction
     f_max = 1. + (2. * x1);     //The maximum energy change - this occurs if the scattering angle is 180 degrees (i.e. the photon bounces straight back.) f=e_old/e_new
     sigma_max = sigma_compton_partial (f_max, x1);      //Communicated externally to the integrand function in the zbrent call below, this is the maximum cross section, used to scale the K_N function to lie between 0 and 1. This is essentually the chance of a photon scattering through 180 degrees - or the angle giving the maximum energy loss
-    f = zbrent (compton_func, f_min, f_max, 1e-8);      //Find the zero point of the function compton_func - this finds the point in the KN function that represents our randomised fractional energy loss z_rand.
+//    f = zbrent (compton_func, f_min, f_max, 1e-8);      //Find the zero point of the function compton_func - this finds the point in the KN function that represents our randomised fractional energy loss z_rand.
+    f = zero_find (compton_func, f_min, f_max, 1e-8);   //Find the zero point of the function compton_func - this finds the point in the KN function that represents our randomised fractional energy loss z_rand.
 
 /*We now have the fractional energy change f - we use the 'normal' equation for compton scattering to obtain the angle cosine n=cos(\theta)	for the scattering direction*/
 
@@ -370,8 +374,7 @@ compton_dir (p, xplasma)
  **********************************************************/
 
 double
-compton_func (f)
-     double f;
+compton_func (double f, void *params)
 {
   double ans;
   ans = (sigma_compton_partial (f, x1) / sigma_max) - sigma_rand;
@@ -487,6 +490,7 @@ beta (nu)
  * @brief      The integrand in the integral to obtain the total cooling rate due to inverse compton scattering.
  *
  * @param [in] double  nu   - frequency
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     frequwncy dependant cross section multiplied by the mean intensity at frequency nu
  *
  * @details
@@ -505,8 +509,7 @@ beta (nu)
  **********************************************************/
 
 double
-comp_cool_integrand (nu)
-     double nu;
+comp_cool_integrand (double nu, void *params)
 {
   double value;
   value = THOMPSON * beta (nu) * mean_intensity (xplasma, nu, 2);

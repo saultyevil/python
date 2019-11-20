@@ -9,7 +9,6 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,9 +18,6 @@
 #include "log.h"
 // If routines are added cproto > atomic_proto.h should be run
 #include "atomic_proto.h"
-
-
-
 
 #define LINELENGTH 400
 #define MAXWORDS    20
@@ -1285,7 +1281,7 @@ described as macro-levels. */
 
             for (n = 0; n < np; n++)
             {
-              phot_top[ntop_phot].freq[n] = xe[n] * EV2ERGS / H;        // convert from eV to freqency
+              phot_top[ntop_phot].freq[n] = xe[n] * EV2ERGS / PLANCK;   // convert from eV to freqency
               phot_top[ntop_phot].x[n] = xx[n]; // leave cross sections in  CGS
             }
             if (phot_freq_min > phot_top[ntop_phot].freq[0])
@@ -1376,7 +1372,7 @@ described as macro-levels. */
               ion[config[n].nion].ntop++;
               for (n = 0; n < np; n++)
               {
-                phot_top[ntop_phot].freq[n] = xe[n] * EV2ERGS / H;      // convert from eV to freqency
+                phot_top[ntop_phot].freq[n] = xe[n] * EV2ERGS / PLANCK; // convert from eV to freqency
 
                 phot_top[ntop_phot].x[n] = xx[n];       // leave cross sections in  CGS
               }
@@ -1447,7 +1443,7 @@ described as macro-levels. */
 
                   for (n = 0; n < np; n++)
                   {
-                    phot_top[nphot_total].freq[n] = xe[n] * EV2ERGS / H;        // convert from eV to freqency
+                    phot_top[nphot_total].freq[n] = xe[n] * EV2ERGS / PLANCK;   // convert from eV to freqency
                     phot_top[nphot_total].x[n] = xx[n]; // leave cross sections in  CGS
                   }
                   if (phot_freq_min > phot_top[ntop_phot].freq[0])
@@ -1471,7 +1467,7 @@ described as macro-levels. */
                   ion[nion].phot_info = 2;      //We mark this as having hybrid data - VFKY ground, TB excited, potentially VFKY innershell
                   for (n = 0; n < np; n++)
                   {
-                    phot_top[ion[nion].ntop_ground].freq[n] = xe[n] * EV2ERGS / H;      // convert from eV to freqency
+                    phot_top[ion[nion].ntop_ground].freq[n] = xe[n] * EV2ERGS / PLANCK; // convert from eV to freqency
                     phot_top[ion[nion].ntop_ground].x[n] = xx[n];       // leave cross sections in  CGS
                   }
                   if (phot_freq_min > phot_top[ion[nion].ntop_ground].freq[0])
@@ -1544,7 +1540,7 @@ described as macro-levels. */
               ion[nion].nxinner[ion[nion].n_inner] = n_inner_tot;
               for (n = 0; n < np; n++)
               {
-                inner_cross[n_inner_tot].freq[n] = xe[n] * EV2ERGS / H; // convert from eV to freqency
+                inner_cross[n_inner_tot].freq[n] = xe[n] * EV2ERGS / PLANCK;    // convert from eV to freqency
                 inner_cross[n_inner_tot].x[n] = xx[n];  // leave cross sections in  CGS
               }
               if (inner_freq_min > inner_cross[n_inner_tot].freq[0])
@@ -1820,7 +1816,7 @@ described as macro-levels. */
             if (nwords == 6)
             {
               el = 0.0;
-              eu = H * C / (freq * 1e-8);       // Convert Angstroms to ergs
+              eu = PLANCK * VLIGHT / (freq * 1e-8);     // Convert Angstroms to ergs
               levl = -1;
               levu = -1;
 
@@ -1878,7 +1874,7 @@ would like to have simple lines for macro-ions */
               line[nlines].nion = n;
               line[nlines].z = z;
               line[nlines].istate = istate;
-              line[nlines].freq = C / (freq * 1e-8);    /* convert Angstroms to frequency */
+              line[nlines].freq = VLIGHT / (freq * 1e-8);       /* convert Angstroms to frequency */
               line[nlines].f = f;
               line[nlines].gl = gl;
               line[nlines].gu = gu;
@@ -3383,7 +3379,7 @@ q21 (line_ptr, t)
   {
 
 
-    u0 = (BOLTZMANN * t) / (H * line_ptr->freq);
+    u0 = (BOLTZMANN * t) / (PLANCK * line_ptr->freq);
 
     if (line_ptr->istate == 1 && u0 < 2)        // neutrals at low energy. Used 2 to give continuous function.
       gaunt = u0 / 10.0;

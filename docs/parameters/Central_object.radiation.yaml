@@ -1,8 +1,6 @@
 name: Central_object.radiation
 description: |
-  A booliean variable stating whether of not the central object should radiate from its
-  survace as a star would.
+  A booliean variable stating whether of not the central object should radiate.
+  This will enable different follow-up questions depending on the system type.
 type: Boolean (yes/no)
-parent:
-  System_type: [star, binary, previous]
 file: setup_star_bh.c

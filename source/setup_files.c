@@ -7,6 +7,7 @@
  * files needed by Python
  *
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,8 +15,6 @@
 
 #include "atomic.h"
 #include "python.h"
-
-
 
 
 /**********************************************************/

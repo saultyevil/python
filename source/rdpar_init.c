@@ -1,5 +1,4 @@
 
-
 /***********************************************************/
 /** @file   rdpar_init.c
  * @author  ksl
@@ -16,20 +15,15 @@
  * sure that a rdchoice command was set up properly.  
 ***********************************************************/
 
-
 #include <stdio.h>
 #include <strings.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
 
-
 #include "log.h"
 #include "atomic.h"
 #include "python.h"
-
-
-
 
 /* the form of the structure which contains
  * the map from words to values

@@ -14,9 +14,6 @@
  *
  ***********************************************************/
 
-
-
-
 #define MAXHYDRO 1000
 #define IGHOST 0
 
@@ -45,15 +42,12 @@ hydro_dummy, *HydroPtr;
 HydroPtr hydro_ptr;
 */
 
-
-
-
-
 #include  <stdio.h>
 #include  <stdlib.h>
 #include  <strings.h>
 #include  <string.h>
 #include  <math.h>
+
 #include  "log.h"
 #include  "atomic.h"
 #include  "python.h"
@@ -624,7 +618,7 @@ rtheta_make_hydro_grid (w, ndom)
     }
   }
 
-  /* Now set up the wind cones that are needed for calclating ds in a cell */
+  /* Now set up the wind cones that are needed for calculating ds in a cell */
 
   rtheta_make_cones (ndom, w);
 

@@ -17,18 +17,16 @@
  *
  ***********************************************************/
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include "log.h"
 #include "atomic.h"
 #include "python.h"
 
-
-
 int ierr_coord_fraction = 0;
+
 
 /**********************************************************/
 /**
@@ -63,12 +61,12 @@ int ierr_coord_fraction = 0;
  *
  * ### Notes ###
  * There are numerous times when one wants the value
- * 	of an interpoalted  variable in the wind.  There
+ * 	of an interpolated  variable in the wind.  There
  * 	is no easy way to interpolate the variable easily.
  * 	What this routine does is calculate the fractional
  * 	contributions of elements in the array to that
- * 	position.  Then one must sum up the actual variable
- * 	else where
+ * 	position.  Then one must sum up the actual values  
+ * 	elsewhere
  *
  * 	If positions are outside the grid, coord_fraction
  * 	attempts to give you the value at the edge of the
@@ -365,17 +363,22 @@ wind_n_to_ij (ndom, n, i, j)
  * @brief      Translate from the 2d element for an individual domain to the wind
  * element number
  *
- * @param [in, out] int  ndom   The domain of interest
- * @param [in, out] int  i   The element number for the first (x) dimension
- * @param [in, out] int  j   The element number fro the second (z or theta) dimension
+ * @param [in] int  ndom   The domain of interest
+ * @param [in] int  i   The element number for the first (x) dimension
+ * @param [in] int  j   The element number for the second (z or theta) dimension
  * @param [in, out] int *  n   The element number in the wind
- * @return     The element number is returned
+ * @return     
+ * * 0 normally
+ * * 1 if i or j are out of bounds, or if
+ *      wind_ij_to_n is called for a SPHERICAL coordinate 
  *
  * @details
  * This is just a simple translation to find the wind domain element
  * number
  *
  * ### Notes ###
+ * If i or j are out of bounds (high), then an element that is
+ * in the grid is returned, but this is a serious error
  *
  **********************************************************/
 
@@ -383,14 +386,37 @@ int
 wind_ij_to_n (ndom, i, j, n)
      int *n, i, j, ndom;
 {
+  int ierror = 0;
+  int ii, jj;
+
   if (zdom[ndom].coord_type == SPHERICAL)
   {
-    Error ("Warning: wind_ij_to_n being called for spherical coordinates %d %d\n", i, j);
+    Error ("wind_ij_to_n: wind_ij_to_n being called for spherical coordinates %d %d\n", i, j);
     *n = i;
-    return (*n);
+    return (1);
   }
-  *n = zdom[ndom].nstart + i * zdom[ndom].mdim + j;     // MDIM because the array is in z order
-  return (*n);
+
+  ii = i;
+  jj = j;
+
+  if (ii >= zdom[ndom].ndim)
+  {
+    ii = zdom[ndom].ndim - 1;
+    ierror = 1;
+  }
+  if (jj >= zdom[ndom].mdim)
+  {
+    jj = zdom[ndom].mdim - 1;
+    ierror = 1;
+  }
+
+  if (ierror)
+  {
+    Error ("wind_ij_to_n: i %d >= %d j %d >= %d being requested\n", i, zdom[ndom].ndim, j, zdom[ndom].mdim);
+  }
+
+  *n = zdom[ndom].nstart + ii * zdom[ndom].mdim + jj;   // MDIM because the array is in z order
+  return (ierror);
 }
 
 

@@ -13,6 +13,7 @@
  *         alt="DOI"></a>
  *         \endhtmlonly
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -27,6 +28,7 @@ double temp_ext2;               //temperature passed externally
 double temp_ext_rad;            //radiation temperature passed externally 
 
 #define ALPHA_SP_CONSTANT 5.79618e-36   //
+
 
 /**********************************************************/
 /**
@@ -269,7 +271,7 @@ bf_estimators_increment (one, p, ds)
   //     x = sigma_phot_verner (&augerion[n], freq_av);    //this is the cross section
   //     y = weight_of_packet * x * ds;
 
-  //     xplasma->gamma_inshl[n] += y / freq_av / H / xplasma->vol;
+  //     xplasma->gamma_inshl[n] += y / freq_av / PLANCK / xplasma->vol;
   //   }
   // }
 
@@ -429,7 +431,7 @@ mc_estimator_normalise (n)
 
 {
   double volume;
-  int i, j;
+  int i, j, nlev_upper;
   double stimfac, line_freq, stat_weight_ratio;
   double heat_contribution, lower_density, upper_density;
   WindPtr one;
@@ -461,16 +463,16 @@ mc_estimator_normalise (n)
      dependent factor which is almost, but not quite, given by
      the LTE population ratio. The muliplicative factor
      is given by: */
-  stimfac = 0.5 * pow (H * H / 2. / PI / MELEC / BOLTZMANN / xplasma->t_e, 3. / 2.);
+  stimfac = 0.5 * pow (PLANCK * PLANCK / 2. / PI / MELEC / BOLTZMANN / xplasma->t_e, 3. / 2.);
 
   for (i = 0; i < nlte_levels; i++)
   {
     for (j = 0; j < config[i].n_bfu_jump; j++)
     {
 
-      mplasma->gamma_old[config[i].bfu_indx_first + j] = mplasma->gamma[config[i].bfu_indx_first + j] / H / volume;     //normalise
+      mplasma->gamma_old[config[i].bfu_indx_first + j] = mplasma->gamma[config[i].bfu_indx_first + j] / PLANCK / volume;        //normalise
       mplasma->gamma[config[i].bfu_indx_first + j] = 0.0;       //re-initialise for next iteration
-      mplasma->gamma_e_old[config[i].bfu_indx_first + j] = mplasma->gamma_e[config[i].bfu_indx_first + j] / H / volume; //normalise
+      mplasma->gamma_e_old[config[i].bfu_indx_first + j] = mplasma->gamma_e[config[i].bfu_indx_first + j] / PLANCK / volume;    //normalise
       mplasma->gamma_e[config[i].bfu_indx_first + j] = 0.0;     //re-initialise for next iteration
 
       /* For the stimulated recombination parts we need the the
@@ -481,11 +483,11 @@ mc_estimator_normalise (n)
       stat_weight_ratio = config[phot_top[config[i].bfu_jump[j]].uplev].g / config[i].g;
 
       mplasma->alpha_st_old[config[i].bfu_indx_first + j] =
-        mplasma->alpha_st[config[i].bfu_indx_first + j] * stimfac * stat_weight_ratio / H / volume;
+        mplasma->alpha_st[config[i].bfu_indx_first + j] * stimfac * stat_weight_ratio / PLANCK / volume;
       mplasma->alpha_st[config[i].bfu_indx_first + j] = 0.0;
 
       mplasma->alpha_st_e_old[config[i].bfu_indx_first + j] =
-        mplasma->alpha_st_e[config[i].bfu_indx_first + j] * stimfac * stat_weight_ratio / H / volume;
+        mplasma->alpha_st_e[config[i].bfu_indx_first + j] * stimfac * stat_weight_ratio / PLANCK / volume;
       mplasma->alpha_st_e[config[i].bfu_indx_first + j] = 0.0;
 
       /* For continuua whose edges lie beyond freqmin assume that gamma
@@ -523,15 +525,21 @@ mc_estimator_normalise (n)
     {
 
       /* The correction for stimulated emission is (1 - n_lower * g_upper / n_upper / g_lower) */
+      nlev_upper = line[config[i].bbu_jump[j]].nconfigu;
       lower_density = den_config (xplasma, i);
-      upper_density = den_config (xplasma, line[config[i].bbu_jump[j]].nconfigu);
+      upper_density = den_config (xplasma, nlev_upper);
       stimfac = upper_density / lower_density;
       stimfac = stimfac * config[i].g / config[line[config[i].bbu_jump[j]].nconfigu].g;
       if (stimfac < 1.0 && stimfac >= 0.0)
       {
         stimfac = 1. - stimfac; //all's well
       }
-      else if (upper_density > DENSITY_PHOT_MIN && lower_density > DENSITY_PHOT_MIN)
+
+      /* check for population inversions. We don't worry about this if the densities are extremely low or if the
+         upper level has hit the density floor - the lower level is still allowed to hit this floor because it 
+         should never cause an inversion */
+      else if (upper_density > DENSITY_PHOT_MIN && lower_density > DENSITY_PHOT_MIN
+               && xplasma->levden[config[nlev_upper].nden] > DENSITY_MIN)
       {
         Error ("mc_estimator_normalise: bb stimulated correction factor is out of bound. Abort.\n");
         Error ("stimfac %g, i %d, line[config[i].bbu_jump[j]].nconfigu %d\n", stimfac, i, line[config[i].bbu_jump[j]].nconfigu);
@@ -551,7 +559,7 @@ mc_estimator_normalise (n)
 
       /* normalise jbar. Note that this uses the cell volume rather than the filled volume */
       mplasma->jbar_old[config[i].bbu_indx_first + j] =
-        mplasma->jbar[config[i].bbu_indx_first + j] * C * stimfac / 4. / PI / volume / line_freq;
+        mplasma->jbar[config[i].bbu_indx_first + j] * VLIGHT * stimfac / 4. / PI / volume / line_freq;
 
       mplasma->jbar[config[i].bbu_indx_first + j] = 0.0;
     }
@@ -649,11 +657,12 @@ total_fb_matoms (xplasma, t_e, f1, f2)
           (mplasma->alpha_st_e_old[config[i].bfu_indx_first + j] +
            alpha_sp (cont_ptr, xplasma, 1)
            - mplasma->alpha_st_old[config[i].bfu_indx_first + j]
-           - alpha_sp (cont_ptr, xplasma, 0)) * H * phot_top[config[i].bfu_jump[j]].freq[0] * density * xplasma->ne * xplasma->vol;
+           - alpha_sp (cont_ptr, xplasma, 0)) * PLANCK * phot_top[config[i].bfu_jump[j]].freq[0] * density * xplasma->ne * xplasma->vol;
 
         /* Now add the collisional ionization term. */
         density = den_config (xplasma, cont_ptr->nlev);
-        cool_contribution += q_ioniz (cont_ptr, t_e) * density * xplasma->ne * H * phot_top[config[i].bfu_jump[j]].freq[0] * xplasma->vol;
+        cool_contribution +=
+          q_ioniz (cont_ptr, t_e) * density * xplasma->ne * PLANCK * phot_top[config[i].bfu_jump[j]].freq[0] * xplasma->vol;
 
         /* That's the bf cooling contribution. */
         total += cool_contribution;
@@ -702,7 +711,7 @@ total_bb_cooling (xplasma, t_e)
     {                           //This is a line from a macro atom for which we know
       //the upper and lower level populations
       lower_density = den_config (xplasma, line_ptr->nconfigl);
-      cool_contribution = (lower_density * q12 (line_ptr, t_e)) * xplasma->ne * xplasma->vol * line_ptr->freq * H;
+      cool_contribution = (lower_density * q12 (line_ptr, t_e)) * xplasma->ne * xplasma->vol * line_ptr->freq * PLANCK;
     }
     else
     {                           //It's a simple line - don't know the level populations
@@ -715,7 +724,7 @@ total_bb_cooling (xplasma, t_e)
 
       cool_contribution =
         (lower_density * line_ptr->gu / line_ptr->gl -
-         upper_density) * coll_rate / (exp (H_OVER_K * line_ptr->freq / t_e) - 1.) * xplasma->vol * line_ptr->freq * H;
+         upper_density) * coll_rate / (exp (H_OVER_K * line_ptr->freq / t_e) - 1.) * xplasma->vol * line_ptr->freq * PLANCK;
 
 
       rad_rate = a21 (line_ptr) * p_escape (line_ptr, xplasma);
@@ -767,7 +776,7 @@ macro_bb_heating (xplasma, t_e)
     {                           //This is a line from a macro atom for which we know
       //the upper and lower level populations
       upper_density = den_config (xplasma, line_ptr->nconfigu);
-      heat_contribution = upper_density * q21 (line_ptr, t_e) * xplasma->ne * xplasma->vol * line_ptr->freq * H;
+      heat_contribution = upper_density * q21 (line_ptr, t_e) * xplasma->ne * xplasma->vol * line_ptr->freq * PLANCK;
       total += heat_contribution;
     }
   }
@@ -816,13 +825,14 @@ macro_bf_heating (xplasma, t_e)
       lower_density = den_config (xplasma, phot_top[config[i].bfu_jump[j]].nlev);
       heat_contribution =
         (mplasma->gamma_e_old[config[i].bfu_indx_first + j] -
-         mplasma->gamma_old[config[i].bfu_indx_first + j]) * H * phot_top[config[i].bfu_jump[j]].freq[0] * lower_density * xplasma->vol;
+         mplasma->gamma_old[config[i].bfu_indx_first +
+                            j]) * PLANCK * phot_top[config[i].bfu_jump[j]].freq[0] * lower_density * xplasma->vol;
 
       /* Three body recombination part. */
       upper_density = den_config (xplasma, phot_top[config[i].bfu_jump[j]].uplev);
       heat_contribution +=
         q_recomb (&phot_top[config[i].bfu_jump[j]],
-                  t_e) * xplasma->ne * xplasma->ne * H * upper_density * xplasma->vol * phot_top[config[i].bfu_jump[j]].freq[0];
+                  t_e) * xplasma->ne * xplasma->ne * PLANCK * upper_density * xplasma->vol * phot_top[config[i].bfu_jump[j]].freq[0];
 
       total += heat_contribution;
 
@@ -1029,9 +1039,10 @@ get_gamma (cont_ptr, xplasma)
   }
 
 
-  gamma_value = qromb (gamma_integrand, fthresh, flast, 1e-4);
+  // gamma_value = qromb (gamma_integrand, fthresh, flast, 1e-4);
+  gamma_value = num_int (gamma_integrand, fthresh, flast, 1e-4);
 
-  gamma_value *= 8 * PI / C / C * xplasma->w;
+  gamma_value *= 8 * PI / VLIGHT / VLIGHT * xplasma->w;
 
   return (gamma_value);
 
@@ -1042,6 +1053,7 @@ get_gamma (cont_ptr, xplasma)
  * @brief integrand for the dilute photoionization rate estimator
  *
  * @param [in] double freq
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return integrand
  *
  * @details
@@ -1052,8 +1064,7 @@ get_gamma (cont_ptr, xplasma)
  **********************************************************/
 
 double
-gamma_integrand (freq)
-     double freq;
+gamma_integrand (double freq, void *params)
 {
   double fthresh;
   double x;
@@ -1108,9 +1119,10 @@ get_gamma_e (cont_ptr, xplasma)
   }
 
 
-  gamma_e_value = qromb (gamma_e_integrand, fthresh, flast, 1e-4);
+//  gamma_e_value = qromb (gamma_e_integrand, fthresh, flast, 1e-4);
+  gamma_e_value = num_int (gamma_e_integrand, fthresh, flast, 1e-4);
 
-  gamma_e_value *= 8 * PI / C / C * xplasma->w;
+  gamma_e_value *= 8 * PI / VLIGHT / VLIGHT * xplasma->w;
 
   return (gamma_e_value);
 
@@ -1121,6 +1133,7 @@ get_gamma_e (cont_ptr, xplasma)
  * @brief the integrand for the energy-weighted photoionization rate estimator, 
  *
  * @param [in] double  freq 
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return integrand 
  *
  * @details
@@ -1130,8 +1143,7 @@ get_gamma_e (cont_ptr, xplasma)
  **********************************************************/
 
 double
-gamma_e_integrand (freq)
-     double freq;
+gamma_e_integrand (double freq, void *params)
 {
   double fthresh;
   double x;
@@ -1189,7 +1201,8 @@ get_alpha_st (cont_ptr, xplasma)
   }
 
 
-  alpha_st_value = qromb (alpha_st_integrand, fthresh, flast, 1e-4);
+//  alpha_st_value = qromb (alpha_st_integrand, fthresh, flast, 1e-4);
+  alpha_st_value = num_int (alpha_st_integrand, fthresh, flast, 1e-4);
 
 
   /* The lines above evaluate the integral in alpha_sp. Now we just want to multiply 
@@ -1213,6 +1226,7 @@ get_alpha_st (cont_ptr, xplasma)
  * @brief returns the integrand for alpha_st at a chosen frequency
  *
  * @param [in] double  freq 
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return integrand 
  *
  * @details
@@ -1222,8 +1236,7 @@ get_alpha_st (cont_ptr, xplasma)
  **********************************************************/
 
 double
-alpha_st_integrand (freq)
-     double freq;               //frequency 
+alpha_st_integrand (double freq, void *params)
 {
   double fthresh;
   double x;
@@ -1285,7 +1298,8 @@ get_alpha_st_e (cont_ptr, xplasma)
   }
 
 
-  alpha_st_e_value = qromb (alpha_st_e_integrand, fthresh, flast, 1e-4);
+//  alpha_st_e_value = qromb (alpha_st_e_integrand, fthresh, flast, 1e-4);
+  alpha_st_e_value = num_int (alpha_st_e_integrand, fthresh, flast, 1e-4);
 
   /* The lines above evaluate the integral in alpha_sp. Now we just want to multiply 
      through by the appropriate constant. */
@@ -1309,6 +1323,7 @@ get_alpha_st_e (cont_ptr, xplasma)
  * @brief the integrand for alpha_st_e at a chosen frequency
  *
  * @param [in, out] double freq 
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return integrand 
  *
  * @details
@@ -1318,8 +1333,7 @@ get_alpha_st_e (cont_ptr, xplasma)
  **********************************************************/
 
 double
-alpha_st_e_integrand (freq)
-     double freq;               //frequency 
+alpha_st_e_integrand (double freq, void *params)
 {
   double fthresh;
   double x;

@@ -29,11 +29,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include "atomic.h"
-#include "python.h"
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
+#include "atomic.h"
+#include "python.h"
 
 #define ALPHAMIN 0.4            // Region below which we will use a low frequency approximation
 #define ALPHAMAX 30.            // Region above which we will use a high frequency approximation
@@ -50,6 +50,7 @@ double alphamin, alphamax;
 double cdf_bb_lo, cdf_bb_hi, cdf_bb_tot;        // The precise boundaries in the the bb cdf
 double cdf_bb_ylo, cdf_bb_yhi;  // The places in the CDF defined by freqmin & freqmax
 double lo_freq_alphamin, lo_freq_alphamax, hi_freq_alphamin, hi_freq_alphamax;  //  the limits to use for the low and high frequency values
+
 
 /**********************************************************/
 /**
@@ -122,7 +123,7 @@ planck (t, freqmin, freqmax)
 
   if (ninit_planck == 0)
   {                             /* First time through p_alpha must be initialized */
-    if ((echeck = cdf_gen_from_func (&cdf_bb, &planck_d, ALPHAMIN, ALPHAMAX, 20, bb_set)) != 0)
+    if ((echeck = cdf_gen_from_func (&cdf_bb, &planck_d_2, ALPHAMIN, ALPHAMAX, 20, bb_set)) != 0)
     {
       Error ("Planck: on return from cdf_gen_from_func %d\n", echeck);
     }
@@ -133,9 +134,14 @@ planck (t, freqmin, freqmax)
      * */
 
 
-    cdf_bb_tot = qromb (planck_d, 0, ALPHABIG, 1e-8);
-    cdf_bb_lo = qromb (planck_d, 0, ALPHAMIN, 1e-8) / cdf_bb_tot;
-    cdf_bb_hi = 1. - qromb (planck_d, ALPHAMAX, ALPHABIG, 1e-8) / cdf_bb_tot;
+//    cdf_bb_tot = qromb (planck_d, 0, ALPHABIG, 1e-8);
+//    cdf_bb_lo = qromb (planck_d, 0, ALPHAMIN, 1e-8) / cdf_bb_tot;
+//    cdf_bb_hi = 1. - qromb (planck_d, ALPHAMAX, ALPHABIG, 1e-8) / cdf_bb_tot;
+
+    cdf_bb_tot = num_int (planck_d, 0, ALPHABIG, 1e-8);
+    cdf_bb_lo = num_int (planck_d, 0, ALPHAMIN, 1e-8) / cdf_bb_tot;
+    cdf_bb_hi = 1. - num_int (planck_d, ALPHAMAX, ALPHABIG, 1e-8) / cdf_bb_tot;
+
 
     ninit_planck++;
 
@@ -149,8 +155,8 @@ planck (t, freqmin, freqmax)
   if (t != old_t || freqmin != old_freqmin || freqmax != old_freqmax)
   {
 
-    alphamin = H * freqmin / (BOLTZMANN * t);
-    alphamax = H * freqmax / (BOLTZMANN * t);
+    alphamin = PLANCK * freqmin / (BOLTZMANN * t);
+    alphamax = PLANCK * freqmax / (BOLTZMANN * t);
 
     old_t = t;
     old_freqmin = freqmin;
@@ -160,13 +166,17 @@ planck (t, freqmin, freqmax)
 
     if (alphamin < ALPHABIG)    //check to make sure we get a sensible number - planck_d(ALPHAMAX is too small to sensibly integrate)
     {
-      cdf_bb_ylo = qromb (planck_d, 0, alphamin, 1e-8) / cdf_bb_tot;    //position in the full cdf of current low frequency boundary
+//      cdf_bb_ylo = qromb (planck_d, 0, alphamin, 1e-8) / cdf_bb_tot;    //position in the full cdf of current low frequency boundary
+      cdf_bb_ylo = num_int (planck_d, 0, alphamin, 1e-8) / cdf_bb_tot;  //position in the full cdf of current low frequency boundary
+
       if (cdf_bb_ylo > 1.0)
         cdf_bb_ylo = 1.0;
     }
     if (alphamax < ALPHABIG)    //again, check to see that the integral will be sensible
     {
-      cdf_bb_yhi = qromb (planck_d, 0, alphamax, 1e-8) / cdf_bb_tot;    //position in the full cdf of currnet hi frequency boundary
+//      cdf_bb_yhi = qromb (planck_d, 0, alphamax, 1e-8) / cdf_bb_tot;    //position in the full cdf of currnet hi frequency boundary
+      cdf_bb_yhi = num_int (planck_d, 0, alphamax, 1e-8) / cdf_bb_tot;  //position in the full cdf of currnet hi frequency boundary
+
       if (cdf_bb_yhi > 1.0)
         cdf_bb_yhi = 1.0;
     }
@@ -225,7 +235,7 @@ planck (t, freqmin, freqmax)
     alpha = cdf_get_rand_limit (&cdf_bb);       //We are in the region where we use the BB function
   }
 
-  freq = BOLTZMANN * t / H * alpha;
+  freq = BOLTZMANN * t / PLANCK * alpha;
   if (freq < freqmin || freqmax < freq)
   {
     Error ("planck: freq %g out of range %g %g\n", freq, freqmin, freqmax);
@@ -496,7 +506,7 @@ init_integ_planck_d ()
   for (n = 0; n < NMAX + 1; n++)
   {
     x = ALPHAMIN + n * (ALPHAMAX - ALPHAMIN) / NMAX;
-    integ_planck[n] = qromb (planck_d, 0.0, x, 1e-7);
+    integ_planck[n] = num_int (planck_d, 0.0, x, 1e-7);
   }
 
   return (0);
@@ -512,6 +522,8 @@ init_integ_planck_d ()
  * @brief      The value of the dimensioless BB function at alpha
  *
  * @param [in] double  alpha
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
+
  * @return   The value of the dimensionless BB function at x
  *
  * @details
@@ -527,8 +539,14 @@ init_integ_planck_d ()
  **********************************************************/
 
 double
-planck_d (alpha)
-     double alpha;
+planck_d (double alpha, void *params)
+{
+  return (planck_d_2 (alpha));
+}
+
+
+double
+planck_d_2 (double alpha)
 {
   double x;
   if (alpha < EPSILON || alpha > ALPHABIG)
@@ -536,7 +554,6 @@ planck_d (alpha)
   x = (alpha * alpha * alpha) / (exp (alpha) - 1);
   return (x);
 }
-
 
 
 /**********************************************************/
@@ -562,10 +579,10 @@ emittance_bb (freqmin, freqmax, t)
 {
   double alphamin, alphamax, q1;
   double integ_planck_d ();
-  q1 = 2. * PI * (BOLTZMANN * BOLTZMANN * BOLTZMANN * BOLTZMANN) / (H * H * H * C * C);
+  q1 = 2. * PI * (BOLTZMANN * BOLTZMANN * BOLTZMANN * BOLTZMANN) / (PLANCK * PLANCK * PLANCK * VLIGHT * VLIGHT);
 
-  alphamin = H * freqmin / (BOLTZMANN * t);
-  alphamax = H * freqmax / (BOLTZMANN * t);
+  alphamin = PLANCK * freqmin / (BOLTZMANN * t);
+  alphamax = PLANCK * freqmax / (BOLTZMANN * t);
 
 
   if (alphamin > ALPHAMIN && alphamax < ALPHAMAX)       //We are within the tabulated range
@@ -577,11 +594,15 @@ emittance_bb (freqmin, freqmax, t)
     if (alphamin > ALPHABIG)    //The whole band is above the point where we can sensibly integrate the BB function
       return (0);
     else                        //only the upper part of the band is above ALPHABIG
-      return (q1 * t * t * t * t * qromb (planck_d, alphamin, ALPHABIG, 1e-7));
+//      return (q1 * t * t * t * t * qromb (planck_d, alphamin, ALPHABIG, 1e-7));
+      return (q1 * t * t * t * t * num_int (planck_d, alphamin, ALPHABIG, 1e-7));
+
   }
   else                          //We are outside the tabulated range and must integrate
   {
-    return (q1 * t * t * t * t * qromb (planck_d, alphamin, alphamax, 1e-7));
+//    return (q1 * t * t * t * t * qromb (planck_d, alphamin, alphamax, 1e-7));
+    return (q1 * t * t * t * t * num_int (planck_d, alphamin, alphamax, 1e-7));
+
   }
 }
 

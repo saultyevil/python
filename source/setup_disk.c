@@ -9,7 +9,6 @@
  * File containing reverberation mapping functions.
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,18 +17,19 @@
 #include "atomic.h"
 #include "python.h"
 
+
 /***********************************************************
              University of Southampton
 
-Synopsis: 
-  get_disk_params sets up the disk parameters according to user inputs, 
+Synopsis:
+  get_disk_params sets up the disk parameters according to user inputs,
   e.g. the temperature profile, accretion rate etc.
-   
-Arguments:		
+
+Arguments:
 
 Returns:
- 
-Description:	
+
+Description:
 
 Notes:
 
@@ -44,15 +44,15 @@ History:
 **************************************************************/
 
 /**********************************************************/
-/**    
- * @brief       get the parameters need to define a disk  
+/**
+ * @brief       get the parameters need to define a disk
  *
- * @param [in] None                     
- * @return    
+ * @param [in] None
+ * @return
  *
- * Read the parameters, such as the type of disk, the 
+ * Read the parameters, such as the type of disk, the
  * temperature profile, that define a disk
- * 
+ *
  * The parameters fill variables defined in the geo
  * data structure.
  *
@@ -90,9 +90,10 @@ get_disk_params ()
   strcpy (answer, "yes");
   geo.disk_radiation = rdchoice ("Disk.radiation(yes,no)", "1,0", answer);
 
-  get_spectype (geo.disk_radiation,
-                //"Disk.rad_type_to_make_wind(0=bb,1=models)", &geo.disk_ion_spectype);
-                "Disk.rad_type_to_make_wind(bb,models)", &geo.disk_ion_spectype);
+  if (geo.disk_radiation)
+    get_spectype (geo.disk_radiation,
+                  //"Disk.rad_type_to_make_wind(0=bb,1=models)", &geo.disk_ion_spectype);
+                  "Disk.rad_type_to_make_wind(bb,models)", &geo.disk_ion_spectype);
 
 
   geo.disk_tprofile = DISK_TPROFILE_STANDARD;

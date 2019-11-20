@@ -20,14 +20,13 @@
  * Most of the mapping is one-to-one, but Python wants the densities
  * to be a the cell centers and not at the corners.
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
 #include "atomic.h"
 #include "python.h"
-
-
 
 #define LINELEN 512
 #define NCELLS  512

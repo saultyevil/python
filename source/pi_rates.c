@@ -8,11 +8,11 @@
  *
  * ???
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-
 
 #include "atomic.h"
 #include "python.h"
@@ -25,7 +25,6 @@ double qromb_temp;              //Temperature used in integrations - has to be a
 
 double xpl_alpha, xpl_w, xpl_logw;
 double xexp_temp, xexp_w;
-
 
 
 /**********************************************************/
@@ -154,44 +153,45 @@ calc_pi_rate (nion, xplasma, mode, type)
         {
           if (xplasma->spec_mod_type[j] == SPEC_MOD_PL)
           {
-            pi_rate += qromb (tb_logpow1, fthresh, fmax, pl_qromb);
+            pi_rate += num_int (tb_logpow, fthresh, fmax, pl_qromb);
+
           }
           else
           {
-            pi_rate += qromb (tb_exp1, fthresh, fmax, exp_qromb);
+            pi_rate += num_int (tb_exp, fthresh, fmax, exp_qromb);
           }
         }
         else if (f1 < fthresh && fthresh < f2 && f2 < fmax)     //case 2
         {
           if (xplasma->spec_mod_type[j] == SPEC_MOD_PL)
           {
-            pi_rate += qromb (tb_logpow1, fthresh, f2, pl_qromb);
+            pi_rate += num_int (tb_logpow, fthresh, f2, pl_qromb);
           }
           else
           {
-            pi_rate += qromb (tb_exp1, fthresh, f2, exp_qromb);
+            pi_rate += num_int (tb_exp, fthresh, f2, exp_qromb);
           }
         }
         else if (f1 > fthresh && f1 < fmax && fmax < f2)        //case 3
         {
           if (xplasma->spec_mod_type[j] == SPEC_MOD_PL)
           {
-            pi_rate += qromb (tb_logpow1, f1, fmax, pl_qromb);
+            pi_rate += num_int (tb_logpow, f1, fmax, pl_qromb);
           }
           else
           {
-            pi_rate += qromb (tb_exp1, f1, fmax, exp_qromb);
+            pi_rate += num_int (tb_exp, f1, fmax, exp_qromb);
           }
         }
         else if (f1 > fthresh && f2 < fmax)     // case 4
         {
           if (xplasma->spec_mod_type[j] == SPEC_MOD_PL)
           {
-            pi_rate += qromb (tb_logpow1, f1, f2, pl_qromb);
+            pi_rate += num_int (tb_logpow, f1, f2, pl_qromb);
           }
           else
           {
-            pi_rate += qromb (tb_exp1, f1, f2, exp_qromb);
+            pi_rate += num_int (tb_exp, f1, f2, exp_qromb);
           }
         }
         else                    //case 5 - should only be the case where the band is outside the range for the integral.
@@ -214,11 +214,11 @@ calc_pi_rate (nion, xplasma, mode, type)
     else                        //We are OK - do the integral
     {
       qromb_temp = xplasma->t_r;
-      pi_rate = xplasma->w * qromb (tb_planck1, fthresh, fmax, 1.e-4);
+      pi_rate = xplasma->w * num_int (tb_planck, fthresh, fmax, 1.e-4);
     }
   }
 
-  pi_rate = (4 * PI * pi_rate) / H;     //We multiply by 4pi and divide by photon energy - the division by nu is done in the integrands
+  pi_rate = (4 * PI * pi_rate) / PLANCK;        //We multiply by 4pi and divide by photon energy - the division by nu is done in the integrands
 
 
 
@@ -232,6 +232,7 @@ calc_pi_rate (nion, xplasma, mode, type)
  * @brief      The integrand for working out the PI rate in a BB radiation field
  *
  * @param [in] double  freq   the frequency
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     value of sigma B_nu/nu at nu
  *
  * @details
@@ -243,12 +244,11 @@ calc_pi_rate (nion, xplasma, mode, type)
  **********************************************************/
 
 double
-tb_planck1 (freq)
-     double freq;
+tb_planck (double freq, void *params)
 {
   double answer, bbe;
-  bbe = exp ((H * freq) / (BOLTZMANN * qromb_temp));
-  answer = (2. * H * pow (freq, 3.)) / (pow (C, 2));
+  bbe = exp ((PLANCK * freq) / (BOLTZMANN * qromb_temp));
+  answer = (2. * PLANCK * pow (freq, 3.)) / (pow (VLIGHT, 2));
   answer *= (1 / (bbe - 1));
 //      answer*=weight;
   answer *= sigma_phot (xtop, freq);
@@ -263,6 +263,7 @@ tb_planck1 (freq)
  * @brief      The integrand for working out the PI rate in a radiation field modelled by a power law
  *
  * @param [in] double  freq   the frequency
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     value of sigma J_nu/nu at nu
  *
  * @details
@@ -275,8 +276,7 @@ tb_planck1 (freq)
  **********************************************************/
 
 double
-tb_logpow1 (freq)
-     double freq;
+tb_logpow (double freq, void *params)
 {
   double answer;
   answer = pow (10, xpl_logw + (xpl_alpha - 1.0) * log10 (freq));       //NB - the alpha-1.0 appears because we divide by nu
@@ -291,6 +291,7 @@ tb_logpow1 (freq)
  * @brief      The integrand for working out the PI rate in a radiation field modelled by an exponential
  *
  * @param [in] double  freq   the frequency
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     value of sigma J_nu/nu at nu
  *
  * @details
@@ -302,12 +303,11 @@ tb_logpow1 (freq)
  **********************************************************/
 
 double
-tb_exp1 (freq)
-     double freq;
+tb_exp (double freq, void *params)
 {
   double answer;
 
-  answer = xexp_w * exp ((-1.0 * H * freq) / (BOLTZMANN * xexp_temp));
+  answer = xexp_w * exp ((-1.0 * PLANCK * freq) / (BOLTZMANN * xexp_temp));
   answer *= sigma_phot (xtop, freq);    // and finally multiply by the cross section.
   answer /= freq;               //then finally finally divide by the frequency
   return (answer);

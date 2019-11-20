@@ -169,7 +169,8 @@ in units of WD radii */
   }
 
   kn_lambda = zdom[ndom].kn_lambda;
-  zdom[ndom].mdot_norm = qromb (kn_wind_mdot_integral, test, geo.diskrad, 1e-6);
+//  zdom[ndom].mdot_norm = qromb (kn_wind_mdot_integral, test, geo.diskrad, 1e-6);
+  zdom[ndom].mdot_norm = num_int (kn_wind_mdot_integral, test, geo.diskrad, 1e-6);
 
   return (0);
 }
@@ -264,9 +265,9 @@ kn_velocity (ndom, x, v)
 the poloidal velocity at the inner edge of the wind. It is there for continuity reasons */
 
   if (rzero < geo.rstar)
-    v_escape = sqrt (2. * G * geo.mstar / geo.rstar);
+    v_escape = sqrt (2. * GRAV * geo.mstar / geo.rstar);
   else
-    v_escape = sqrt (2. * G * geo.mstar / rzero);
+    v_escape = sqrt (2. * GRAV * geo.mstar / rzero);
 
 /* Note that vzero for kwd the sound speed dos not depend on any of the kwd parameters */
 
@@ -298,9 +299,9 @@ velocity law if kn_v_infinity is less than 0 */
 
 
   if (rzero > geo.rstar)
-    v[1] = sqrt (G * geo.mstar * rzero) / r;    // Eqn 8 KWD
+    v[1] = sqrt (GRAV * geo.mstar * rzero) / r; // Eqn 8 KWD
   else if (r > 0)
-    v[1] = sqrt (G * geo.mstar * geo.rstar) / r;
+    v[1] = sqrt (GRAV * geo.mstar * geo.rstar) / r;
   else
     v[1] = 0;
   v[2] = vl * cos (theta);
@@ -442,6 +443,7 @@ kn_vzero (r)
  * 	for mdot as a function of radius
  *
  * @param [in] double  r   A position (radius) in the disk
+ * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     The value of the integrand
  *
  * The mass loss rate is proportional to T(r)**(4*kn_lambda)
@@ -459,8 +461,7 @@ kn_vzero (r)
  **********************************************************/
 
 double
-kn_wind_mdot_integral (r)
-     double r;
+kn_wind_mdot_integral (double r, void *params)
 {
   double t;
   double x, ratio;

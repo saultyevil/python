@@ -367,6 +367,11 @@ def py_hydro(version,pf_dir,outputfile):
               than previously.  Special regression tests need to
               be isolated from the internal logic of doit so they
               can be added/removed easily.
+    2908 kdl  Eliminated the checks for a difference in heating and
+              and cooling rates.  If this is important, a check of
+              these should be done in regression_checks, and the 
+              check should be made between this run and a previous
+              run, not one against a file made in the distant past.
     '''
 
     out_dir=os.getcwd()
@@ -386,42 +391,46 @@ def py_hydro(version,pf_dir,outputfile):
             shutil.copy(one,out_dir)
 
     root_name=['py_hydro']
-    hydro_command=['%s -z %s  >%s.stdout.txt' % (version,root_name[0]+'.pf',root_name[0])]
+    hydro_command=['%s %s  >%s.stdout.txt' % (version,root_name[0]+'.pf',root_name[0])]
     run_cmds(hydro_command,root_name,outputfile)
 	
     cmd='cp py_hydro.wind_save py_hydro_restart.wind_save'
     subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+
+    cmd='cp py_hydro.spec_save py_hydro_restart.spec_save'
+    subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 	
-    cmd='diff py_heatcool.dat model_heatcool.dat'
-    proc=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    stdout,stderr=proc.communicate()
+#OLD    cmd='diff py_heatcool.dat model_heatcool.dat'
+#OLD    proc=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+#OLD    stdout,stderr=proc.communicate()
 	
-    if len(stdout):
-        string="py_heatcool.dat has changed from model - important to investigate"
-    else:
-        string="py_heatcool.dat is unchanged - test passed"
-    print(string)
-    f1=open('Summary.txt','a')
-    f1.write('%s\n'% string)
-    f1.close()
+#OLD    if len(stdout):
+#OLD        string="py_heatcool.dat has changed from model - important to investigate"
+#OLD    else:
+#OLD        string="py_heatcool.dat is unchanged - test passed"
+#OLD    print(string)
+#OLD    f1=open('Summary.txt','a')
+#OLD    f1.write('%s\n'% string)
+#OLD    f1.close()
 	
 		
     root_name=['py_hydro_restart']
-    hydro_command=['%s -z -r %s  >%s.stdout.txt' % (version,root_name[0]+'.pf',root_name[0])]
+    # hydro_command=['%s -z -r %s  >%s.stdout.txt' % (version,root_name[0]+'.pf',root_name[0])]
+    hydro_command=['%s -r %s  >%s.stdout.txt' % (version,root_name[0]+'.pf',root_name[0])]
     run_cmds(hydro_command,root_name,outputfile)
 	
-    cmd='diff py_heatcool.dat model_restart_heatcool.dat'
-    proc=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    stdout,stderr=proc.communicate()
+#OLD    cmd='diff py_heatcool.dat model_restart_heatcool.dat'
+#OLD    proc=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+#OLD    stdout,stderr=proc.communicate()
 	
-    if len(stdout):
-        string="restart py_heatcool.dat has changed from model - important to investigate"
-    else:
-        string="restart py_heatcool.dat is unchanged - test passed"
-    print(string)
-    f1=open('Summary.txt','a')
-    f1.write('%s\n'% string)
-    f1.close()
+#OLD    if len(stdout):
+#OLD        string="restart py_heatcool.dat has changed from model - important to investigate"
+#OLD    else:
+#OLD        string="restart py_heatcool.dat is unchanged - test passed"
+#OLD    print(string)
+#OLD    f1=open('Summary.txt','a')
+#OLD    f1.write('%s\n'% string)
+#OLD    f1.close()
 
 
     return

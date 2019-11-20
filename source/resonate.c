@@ -16,8 +16,6 @@
  *
  ***********************************************************/
 
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -25,10 +23,9 @@
 #include "atomic.h"
 #include "python.h"
 
-
-
 struct photon cds_phot_old;
 double cds_v2_old, cds_dvds2_old;
+
 
 /**********************************************************/
 /**
@@ -158,7 +155,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    *
    * If it is not monitocinc, then reduce smax
    */
-  vc = C;
+  vc = VLIGHT;
   while (vc > VCHECK && smax > DFUDGE)
   {
     stuff_phot (p, &p_now);
@@ -184,8 +181,8 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * then the photon frequency will be less. */
 
 
-  freq_inner = p->freq * (1. - v1 / C);
-  freq_outer = phot.freq * (1. - v2 / C);
+  freq_inner = p->freq * (1. - v1 / VLIGHT);
+  freq_outer = phot.freq * (1. - v2 / VLIGHT);
   dfreq = freq_outer - freq_inner;
 
 
@@ -510,7 +507,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * photonionization is passed remotely via the PlasmaPtr.
  *
  * In a program running in the two level approxiamtion, electron scattering
- * and ff emsision are treated as scattering processes, but photionionization
+ * and ff emission are treated as scattering processes, but photionionization
  * is not.  In macro-atom mode, photoionization is treated as a scattering 
  * process.
  *
@@ -743,8 +740,7 @@ kbf_need (fmin, fmax)
   return (0);
 }
 
-
-
+int sobolev_error_counter = 0;
 /**********************************************************/
 /**
  * @brief      calculates tau in the sobolev approxmation for a resonance, given the
@@ -772,7 +768,6 @@ kbf_need (fmin, fmax)
  * reduces tau
  *
  **********************************************************/
-
 double
 sobolev (one, x, den_ion, lptr, dvds)
      WindPtr one;               // This is a single cell in the wind
@@ -781,7 +776,7 @@ sobolev (one, x, den_ion, lptr, dvds)
      struct lines *lptr;
      double dvds;
 {
-  double tau, xden_ion, tau_x_dvds;
+  double tau, xden_ion, tau_x_dvds, levden_upper;
   double two_level_atom (), d1, d2;
   int nion;
   double d_hold;
@@ -792,6 +787,7 @@ sobolev (one, x, den_ion, lptr, dvds)
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
   ndom = wmain[plasmamain->nwind].ndom;
+  nion = lptr->nion;
 
   if ((dvds = fabs (dvds)) == 0.0)      // This forces dvds to be positive -- a good thing!
   {
@@ -805,12 +801,11 @@ sobolev (one, x, den_ion, lptr, dvds)
     // macro atom case SS
     d1 = den_config (xplasma, lptr->nconfigl);
     d2 = den_config (xplasma, lptr->nconfigu);
+    levden_upper = xplasma->levden[config[lptr->nconfigu].nden];
   }
 
   else
   {
-    nion = lptr->nion;
-
 /* Next few steps to allow used of better calculation of density of this particular
 ion which was done above in calculate ds.  It was made necessary by a change in the
 calls to two_level atom
@@ -827,6 +822,7 @@ calls to two_level atom
     }
     two_level_atom (lptr, xplasma, &d1, &d2);   // Calculate d1 & d2
     xplasma->density[nion] = d_hold;    // Restore w
+    levden_upper = d2 / xplasma->density[nion];
   }
 
 /* At this point d1 and d2 are known for all of the various ways sobolev can be called, and whether
@@ -836,9 +832,11 @@ calls to two_level atom
   /* Check whether both d1 and d2 are below a minium value where we expect tau to be zero and where 
    * we can be subject to the effects of roundoff errors in terms of the determination of densities.
    * If densities are this low we expect the sobolev optical depth to be extremely small in any event
+   * JM -- I've added something that checks if the fractional population for the upper level is below 
+   * or equal to the minimum too.
    */
 
-  if (d1 < DENSITY_PHOT_MIN && d2 < DENSITY_PHOT_MIN)
+  if ((d1 < DENSITY_PHOT_MIN && d2 < DENSITY_PHOT_MIN) || (levden_upper <= DENSITY_MIN))
   {
     return (0);
   }
@@ -848,15 +846,24 @@ calls to two_level atom
 
   if (xden_ion < 0)
   {
-    Error ("sobolev: VERY BAD den_ion has negative density %g %g %g %g %g %g\n", d1, d2, lptr->gl, lptr->gu, lptr->freq, lptr->f);
+    sobolev_error_counter++;
+    if (sobolev_error_counter < 100)
+    {
+      Error ("sobolev: VERY BAD population inversion in cell %d: d1 %g d2 %g g1 %g g2  %g freq %g f %g frac_upper %g\n",
+             xplasma->nplasma, d1, d2, lptr->gl, lptr->gu, lptr->freq, lptr->f, levden_upper);
+    }
+    else if (sobolev_error_counter == 100)
+    {
+      Error ("sobolev: suppressing population inversion errors\n");
+    }
 
-    /* With the changesabove to limit the denisties the above error should not be happening, and if this does occur then 
+    /* With the changes above to limit the densities the above error should not be happening, and if this does occur then 
      * we should determine why.  When we become convinced this problem has been dealt with effectively we can simplify this
      * code and just quit if the error occurs
      * ksl 181127
      */
 
-    /*SS July 08: With macro atoms, the population solver can default to d2 = gu/gl * d1 which should
+    /* SS July 08: With macro atoms, the population solver can default to d2 = gu/gl * d1 which should
        give exactly zero here but can be negative, numerically.
        So I'm modyfying this to set tau to zero in such cases, when the populations are vanishingly small anyway. */
     tau_x_dvds = PI_E2_OVER_M * d1 * lptr->f / (lptr->freq);
@@ -866,12 +873,15 @@ calls to two_level atom
 
     if (tau > 1.e-3)
     {
+      /* JM -- I'm not sure why this particular value of tau is chosen, but I've added 
+         an error message to give more information and make sure no ambiguity for code exit */
+      Error ("sobolev: tau is >1e-3 and nu < gu/gl * nl. Exiting.\n");
       Exit (0);
     }
 
     else
     {
-      Error ("sobolev: continuing by setting tau to zero\n");
+      //  Error ("sobolev: continuing by setting tau to zero\n");
       return (0.0);
     }
   }
@@ -925,13 +935,13 @@ doppler (pin, pout, v, nres)
 
   if (nres == -1)               //Electron scattering (SS)
   {                             /*It was a non-resonant scatter */
-    pout->freq = pin->freq * (1 - dot (v, pin->lmn) / C) / (1 - dot (v, pout->lmn) / C);
+    pout->freq = pin->freq * (1 - dot (v, pin->lmn) / VLIGHT) / (1 - dot (v, pout->lmn) / VLIGHT);
 
 
   }
   else if (nres > -1 && nres < nlines)
   {                             /* It was a resonant scatter. */
-    pout->freq = lin_ptr[nres]->freq / (1. - dot (v, pout->lmn) / C);
+    pout->freq = lin_ptr[nres]->freq / (1. - dot (v, pout->lmn) / VLIGHT);
   }
   else if ((nres > NLINES && nres < NLINES + nphot_total + 1) || nres == -2)
     /* It was continuum emission - new comoving frequency has been chosen by
@@ -947,7 +957,7 @@ doppler (pin, pout, v, nres)
       Error ("doppler: Not using macro atoms but trying to deexcite one? Abort.\n");
       Exit (0);
     }
-    pout->freq = pout->freq / (1. - dot (v, pout->lmn) / C);
+    pout->freq = pout->freq / (1. - dot (v, pout->lmn) / VLIGHT);
   }
 /* Now do one final check that nothing is awry.  This is another
  * check added by SS that should probably be deleted or done before this point.
@@ -1029,7 +1039,7 @@ scatter (p, nres, nnscat)
 
   vwind_xyz (ndom, p, v);       //get the local velocity at the location of the photon
   v_dop = dot (p->lmn, v);      //get the dot product of the photon direction with the wind, to get the doppler velocity
-  freq_comoving = p->freq * (1. - v_dop / C);   //This is the photon frequency in the comoving frame
+  freq_comoving = p->freq * (1. - v_dop / VLIGHT);      //This is the photon frequency in the comoving frame
 
   if (n < 0)
   {
@@ -1039,7 +1049,7 @@ scatter (p, nres, nnscat)
 
   vwind_xyz (ndom, p, v);       //get the local velocity at the location of the photon
   v_dop = dot (p->lmn, v);      //get the dot product of the photon direction with the wind, to get the doppler velocity
-  freq_comoving = p->freq * (1. - v_dop / C);   //This is the photon frequency in the comoving frame
+  freq_comoving = p->freq * (1. - v_dop / VLIGHT);      //This is the photon frequency in the comoving frame
 
 
   /* On entering this subroutine we know that a photon packet has been
@@ -1251,7 +1261,7 @@ scatter (p, nres, nnscat)
     p->freq = freq_comoving;    //This is the photon frequency in the electron rest frame calculated earlier in the routine
     compton_dir (p, xplasma);   //Get a new direction using the KN formula
     v_dop = dot (p->lmn, v);    //Find the dot product of the new velocity with the wind
-    p->freq = p->freq / (1. - v_dop / C);       //Transform back to the observers frame
+    p->freq = p->freq / (1. - v_dop / VLIGHT);  //Transform back to the observers frame
 
   }
 
@@ -1302,9 +1312,9 @@ detailed spectrum calculation ??
 */
 
   stuff_v (pold.lmn, p_init);
-  renorm (p_init, pold.w / C);
+  renorm (p_init, pold.w / VLIGHT);
   stuff_v (p->lmn, p_final);
-  renorm (p_final, p->w / C);
+  renorm (p_final, p->w / VLIGHT);
   vsub (p_final, p_init, dp);
 
   project_from_xyz_cyl (pold.x, dp, dp_cyl);

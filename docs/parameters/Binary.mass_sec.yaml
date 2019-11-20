@@ -7,5 +7,5 @@ type: Double
 unit: M☉/year
 values: Greater than 0
 parent:
-  System_type: binary           
+  System_type: [cv, bh]           
 file: setup_star_bh.c

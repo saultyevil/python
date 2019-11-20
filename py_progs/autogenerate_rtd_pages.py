@@ -17,6 +17,36 @@ from subprocess import call
 import yaml
 
 
+def image_from_latex(equation: str) -> str:
+    """
+    Converts a LaTeX equation into an image
+
+    Arguments:
+        equation: The string to convert into an image link
+
+    Returns:
+        A markdown image link to codecogs
+    """
+    return '![{}](https://latex.codecogs.com/gif.latex?{})'.format(equation, equation)
+
+
+def link_from_name(name: str) -> str:
+    """
+    Converts a name into a mediawiki link
+
+    Arguments:
+        name: The name to link to
+
+    Returns:
+        A mediawiki format link [[display name|link path]]
+    """
+    return '[[{}|{}#{}]]'.format(
+        name,
+        name.split('.')[0]+' Parameters',
+        name.lower().replace('.', '')
+    )
+
+
 def write_header_by_level(output_file: TextIO, string: str, level: int = 0):
     """
     Writes a passed string as a header, with an appropriate type of underscore depending on
@@ -60,78 +90,79 @@ def write_str_indent(output_file: TextIO, string: str, indent: str = "  ", all: 
     return
 
 
-def output_parameter(output_file: TextIO, parameter: dict, level: int = 0, no_separator: bool = False):
+def output_parameter(parameter: dict, output_file: TextIO):
     """
     Output a parameter to file
 
     Arguments:
-        output_file: The file to write to
         parameter: The parameter to write to file
-        level: The level of the parameter, e.g. heading, subheading
+        output_file: The file to write to
     """
-    # Suppress transition line at top level
-    if not level and not no_separator:
-        output_file.write("----------------------------------------\n\n")
-    write_header_by_level(output_file, parameter['name'], level)
+    write_header_by_level(output_file, parameter['name'], 0)
     output_file.write("{}\n".format(parameter['description']))
 
     if parameter.get('type'):
-        output_file.write("**Type:** {}\n\n".format(parameter['type']))
+        output_file.write("Type\n  {}\n\n".format(parameter['type']))
     if parameter.get('unit'):
-        output_file.write("**Unit:** {}\n\n".format(parameter['unit']))
+        output_file.write("Unit\n  {}\n\n".format(parameter['unit']))
 
     if parameter.get('values'):
         if isinstance(parameter['values'], dict):
-            output_file.write("**Values:**\n\n")
+            output_file.write("Values\n")
             for key, value in parameter['values'].items():
-                output_file.write("{}\n".format(key))
+                output_file.write("  {}\n".format(key))
                 if isinstance(value, str):
-                    write_str_indent(output_file, value.strip(), indent="  ", all=True)
+                    write_str_indent(output_file, value.strip(), indent="    ", all=True)
                 elif isinstance(value, list):
                     write_str_indent(
                         output_file,
-                        ', '.join([str(x) for x in value]), indent="  ", all=True
+                        ', '.join([str(x) for x in value]), indent="    ", all=True
                     )
                 else:
-                    output_file.write("    "+str(value))
+                    output_file.write("    {}\n".format(value))
 
         elif isinstance(parameter['values'], list):
             # If this is a list of values, write each out as a bullet-point
-            output_file.write("**Values:**\n")
+            output_file.write("Values\n")
             for value in parameter['values'].items():
-                write_str_indent(output_file, "* {}".format(value), indent="  ")
+                write_str_indent(output_file, "  * {}".format(value), indent="  ")
 
         else:
-            output_file.write("**Values:** {}\n".format(parameter['values']))
+            output_file.write("Values\n  {}\n".format(parameter['values']))
         output_file.write("\n")
+
+    output_file.write(
+        "File\n  `{} <https://github.com/agnwinds/python/blob/master/source/{}>`_\n\n\n".format(
+            parameter['file'], parameter['file']
+        )
+    )
 
     if parameter.get('parent'):
         if isinstance(parameter['parent'], dict):
-            output_file.write("**Parent(s):**\n\n")
+            output_file.write("Parent(s)\n")
             for key, value in parameter['parent'].items():
                 if isinstance(value, str):
-                    write_str_indent(output_file, "* :ref:`{}`: {}".format(key, value), indent="  ")
+                    write_str_indent(output_file, "  * :ref:`{}`: {}".format(key, value), indent="    ")
                 elif isinstance(value, list):
                     list_text = ', '.join(['``'+str(x)+'``' for x in value])
-                    write_str_indent(output_file, "* :ref:`{}`: {}".format(key, list_text, indent="  "))
+                    write_str_indent(output_file, "  * :ref:`{}`: {}".format(key, list_text, indent="    "))
                 else:
-                    output_file.write("* :ref:`{}`: ``{}``\n\n".format(key, value))
+                    output_file.write("  * :ref:`{}`: ``{}``\n\n".format(key, value))
             output_file.write("\n")
 
         elif isinstance(parameter['parent'], list):
             # If this is a list of parents, write each out as a bullet-point
-            output_file.write("**Parent(s):**\n")
+            output_file.write("Parent(s)\n")
             for value in parameter['parent'].items():
-                write_str_indent(output_file, "* {}".format(value), indent="  ")
+                write_str_indent(output_file, "  * {}".format(value), indent="    ")
         else:
-            output_file.write("**Parent(s):** {}\n\n".format(parameter['parent']))
-
-    output_file.write("**File:** {}\n\n\n".format(parameter['file']))
+            output_file.write("Parent(s)\n  {}\n\n".format(parameter['parent']))
 
     # Go through all the children and output them
     if parameter.get('children'):
-        for child in parameter['children'].values():
-            output_parameter(output_file, child, level+1)
+        output_file.write("Child(ren)\n")
+        for key in parameter['children'].keys():
+            write_str_indent(output_file, "  * :ref:`{}`".format(key), indent="    ")
     return
 
 
@@ -169,24 +200,48 @@ def read_yaml(input_folder: str) -> dict:
     return dox_all
 
 
-def write_rst(output_folder: str, dox_structured: dict):
+def write_rst(output_folder: str, dox_all: dict, dox_structured: dict):
     """
-    Write the structured documentation out to rst files
+    Write the documentation out to rst files
 
     Arguments:
         output_folder: The folder to write to
         dox_structured: The tree structured documentation
     """
-    # Go through the parameter tree and write it out
-    for parameter_type, type_parameters in dox_structured.items():
-        with open(os.path.join(output_folder, "{}.autogen.rst".format(parameter_type)), 'w') as type_file:
-            header_line = ''.join('=' for i in range(len(parameter_type)))
-            type_file.write("{}\n{}\n{}\n\n".format(header_line, parameter_type, header_line))
-            no_separator=True
-            for parameter in type_parameters.values():
-                output_parameter(type_file, parameter, level=0, no_separator=True)
-                no_separator=False
 
+    output_file = open(os.path.join(output_folder, 'top_level_parameters.rst'), 'w')
+    write_header_by_level(output_file, 'Top level parameters', 0)
+    output_file.write("\n\n.. todo::\n    Fill in\n\n")
+    for parameter in dox_all.values():
+        if not 'parent' in parameter.keys():
+            output_file.write(' * :ref:`{}`\n'.format(parameter['name']))
+    output_file.close()
+
+    for root, root_dict in dox_structured.items():
+        if len(root_dict['all']) > 1:
+            try:
+                os.makedirs(os.path.join(output_folder, root))
+            except OSError as e:
+                pass
+
+            output_file = open(os.path.join(output_folder, root+'.rst'), 'w')
+            write_header_by_level(output_file, root, 0)
+            output_file.write("\n\n.. todo::\n   Fill in\n")
+            output_file.write("\n\n.. toctree::\n   :glob:\n\n   {}/*".format(root))
+            output_file.close()
+
+    # Go through the parameter tree and write it out
+    for parameter in dox_all.values():
+        if len(dox_structured[parameter['root_type']]['all']) == 1:
+            output_file = open(
+                os.path.join(output_folder, parameter['name']+'.rst'), 'w'
+            )
+        else:
+            output_file = open(
+                os.path.join(output_folder, parameter['root_type'], parameter['name']+'.rst'), 'w'
+            )
+        output_parameter(parameter, output_file)
+        output_file.close()
 
 def autogenerate_rtd_pages():
     """
@@ -197,38 +252,29 @@ def autogenerate_rtd_pages():
     docs_folder = os.path.join(os.environ["PYTHON"], "docs")
     dox_all = {}
 
-    try:
-        # Try making output folder
-        os.makedirs(output_folder)
-
-    except OSError:
-        # If we can't create the folder, clear out the old autogenerated files
-        for filename in os.listdir(output_folder):
-            if "autogen" in filename:
-                os.remove(os.path.join(output_folder, filename))
-
-        call(["git", "rm", "-f", os.path.join(output_folder, "*.autogen.rst")])
-
     dox_all = read_yaml(
         os.path.join(os.environ["PYTHON"], "docs", "parameters")
     )
 
     # This is a tree-structured dictionary e.g.
     # reverb: {
-    #    children: {
-    #        mode: {},
-    #        visualisation: {
-    #            children: {
-    #                angular_bins: {}
+    #    type: {
+    #        children: {
+    #           mode: {},
+    #           visualisation: {
+    #               children: {
+    #                   angular_bins: {}
+    #               }
     #            }
     #        }
-    #    }
+    #    },
+    #    all: [type, mode, visualisation, angular_bins]
     # }
     dox_structured = {}
 
     # For each possible root type, set up a root dictionary for it
     for parameter_name, parameter in dox_all.items():
-        dox_structured[parameter['root_type']] = {}
+        dox_structured[parameter['root_type']] = {'all': []}
 
     # We want to build a tree with children etc. to respect parentage
     # Now, for the unstructured list of all parameters
@@ -244,13 +290,9 @@ def autogenerate_rtd_pages():
                     # Check each parent.
                     if parent_name in dox_all.keys():
                         # If it's parent is another parameter (i.e. in .keys())
-                        if parameter_type == dox_all[parent_name]['root_type']:
-                            # If both the parameter and its parents are in the same class
-                            # We assign this parameter to the children's list of its parent
-                            dox_all[parent_name]["children"][parameter_name] = parameter
-                            # And then 'continue' on, skipping other parents
-                            found_parent = True
-                            break
+                        # We assign this parameter to the children's list of its parent
+                        dox_all[parent_name]["children"][parameter_name] = parameter
+                        found_parent = True
 
             if not found_parent:
                 # If we didn't find the parameter's parent elsewhere,
@@ -261,11 +303,10 @@ def autogenerate_rtd_pages():
             # If it has no parents, add it to the top layer
             dox_structured[parameter_type][parameter_name] = parameter
 
-    write_rst(output_folder, dox_structured)
+        dox_structured[parameter_type]['all'].append(parameter_name)
 
-    call(["sphinx-build", "-b", "html", docs_folder, html_folder])
-    call(["git", "add", os.path.join(output_folder, "*.autogen.rst")])
-    webbrowser.open(os.path.join(html_folder, "index.html"))
+
+    write_rst(output_folder, dox_all, dox_structured)
 
 
 # Next lines permit one to run the routine from the command line

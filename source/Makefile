@@ -80,12 +80,12 @@ ifeq (D,$(firstword $(MAKECMDGOALS)))
 # use pg when you want to use gprof the profiler
 # to use profiler make with arguments "make D python"
 # this can be altered to whatever is best
-	CFLAGS = -g -pg -Wall $(EXTRA_FLAGS) -I$(INCLUDE) $(MPI_FLAG)
+	CFLAGS = -g -pg -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
 	FFLAGS = -g -pg
 	PRINT_VAR = DEBUGGING, -g -pg -Wall flags
 else
 # Use this for large runs
-	CFLAGS = -O3 -Wall $(EXTRA_FLAGS) -I$(INCLUDE) $(MPI_FLAG)
+	CFLAGS = -O3 -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
 	FFLAGS =
 	PRINT_VAR = LARGE RUNS, -03 -Wall flags
 endif
@@ -93,14 +93,16 @@ endif
 
 
 # next line for debugging when concerned about memory problems and duma installed in python directory
-# LDFLAGS= -L$(LIB)  -lm -lkpar  -lgsl -lgslcblas ../duma_2_5_3/libduma.a -lpthread
+# LDFLAGS= -L$(LIB)  -lm -lkpar  -lgslcblas ../duma_2_5_3/libduma.a -lpthread
 # next line if you want to use kpar as a library, rather than as source below
 # LDFLAGS= -L$(LIB)  -lm -lkpar -lcfitsio -lgsl -lgslcblas
 LDFLAGS+= -L$(LIB) -lm -lgsl -lgslcblas
 
 #Note that version should be a single string without spaces.
 
-VERSION = 83b
+VERSION = 84
+
+INDENT = yes
 
 startup:
 	@echo $(COMPILER_PRINT_STRING)			# prints out compiler information
@@ -113,6 +115,22 @@ startup:
 # indent:
 # 	@echo $(INDENT_STRING)
 # 	$(INDENT_CMD)
+
+
+
+
+
+indent:
+	# Fix indenting, if necessary.
+	@if [ $(INDENT) = yes ] ; then  \
+	../py_progs/run_indent.py -changed ; \
+	fi \
+
+
+zoo:
+	# Fix indenting, if necessary.
+	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
+
 
 
 foo: foo.o signal.o time.o
@@ -178,10 +196,13 @@ prototypes:
 	cproto -I$(INCLUDE) $(kpar_source) > log.h
 	cproto  -I$(INCLUDE) get_atomicdata.c > atomic_proto.h
 
-python: startup  python.o $(python_objects)
+python: startup python.o $(python_objects)
 	$(CC) ${CFLAGS} python.o $(python_objects) $(kpar_objects) $(LDFLAGS) -o python
 	cp $@ $(BIN)/py
 	mv $@ $(BIN)/py$(VERSION)
+	# Fix indenting, if necessary.
+	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
+
 
 #This line is jsut so you can use make D python for debugging
 D:
@@ -208,7 +229,7 @@ py_wind: startup $(py_wind_objects)
 	$(CC) $(CFLAGS) $(py_wind_objects) $(LDFLAGS) -o py_wind
 	cp $@ $(BIN)
 	mv $@ $(BIN)/py_wind$(VERSION)
-
+	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
 
 table_objects = windsave2table.o windsave2table_sub.o get_atomicdata.o py_wind_sub.o windsave.o py_wind_ion.o \
@@ -226,18 +247,20 @@ table_objects = windsave2table.o windsave2table_sub.o get_atomicdata.o py_wind_s
 		cooling.o
 
 
+run_indent:
+	../py_progs/run_indent.py -all_no_headers
+
 
 windsave2table: $(table_objects)
 	$(CC) $(CFLAGS) $(table_objects) $(LDFLAGS) -o windsave2table
 	cp $@ $(BIN)
 	mv $@ $(BIN)/windsave2table$(VERSION)
-
-run_indent:
-	../py_progs/run_indent.py -all
+	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 
 
 # The next line runs recompiles all of the routines after first cleaning the directory
-all: clean run_indent python windsave2table py_wind
+# all: clean run_indent python windsave2table py_wind
+all: clean python windsave2table py_wind indent
 
 
 FILE = get_atomicdata.o atomic.o

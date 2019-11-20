@@ -10,10 +10,10 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
 
@@ -78,6 +78,14 @@ spherical_ds_in_cell (ndom, p)
 
   smax = ds_to_sphere (zdom[ndom].wind_x[ix], p);
   s = ds_to_sphere (zdom[ndom].wind_x[ix + 1], p);
+
+  if (smax == VERY_BIG && s == VERY_BIG)
+  {
+    Error ("spherical: ds_in_cell s and smax returning VERY_BIG in cell %i nudging photon by DFUDGE\n");
+    return (DFUDGE);            //Set an error condtion and leave
+  }
+
+
   if (s < smax)
     smax = s;
 

@@ -9,16 +9,13 @@
  * 
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 
-
 #include "atomic.h"
 #include "python.h"
-
 
 
 /**********************************************************/
@@ -375,7 +372,7 @@ line_summary (w, rootname, ochoice)
   }
 
 /* Convert wavelength to energy and frequency */
-  freq_search = C / lambda;
+  freq_search = VLIGHT / lambda;
   energy = HC / lambda;
 
 /* Find the ion */
@@ -429,7 +426,7 @@ line_summary (w, rootname, ochoice)
       return (-1);
     }
     nline = 0;
-    freq_search = C / lambda;
+    freq_search = VLIGHT / lambda;
 
     while (fabs (1. - lin_ptr[nline]->freq / freq_search) > 0.0001 && nline < nlines)
       nline++;
@@ -485,7 +482,7 @@ line_summary (w, rootname, ochoice)
       {                         //If this is not a matom line
         two_level_atom (lin_ptr[nline], &plasmamain[nplasma], &d1, &d2);
       }
-      x = (d2) * a21 (lin_ptr[nline]) * H * lin_ptr[nline]->freq * w[n].vol;
+      x = (d2) * a21 (lin_ptr[nline]) * PLANCK * lin_ptr[nline]->freq * w[n].vol;
 
       if (geo.line_mode != 4)
       {
@@ -802,7 +799,7 @@ collision_summary (w, rootname, ochoice)
 
   while (nline < nlines)
   {
-    wavelength = C / lin_ptr[nline]->freq / ANGSTROM;
+    wavelength = VLIGHT / lin_ptr[nline]->freq / ANGSTROM;
 
     qup = q12 (lin_ptr[nline], t_e);
     qdown = q21 (lin_ptr[nline], t_e);

@@ -15,10 +15,6 @@
  *    which encloses the Roche lobe of the secondary.  It must be called before
  *    the other routines can be used!
  *
- *    - ds_to_roche2   calculates the distance a photon defined by p_roche has to travel
- *    before it will encounter the secondary.  If it misses, ds_to_roche2
- *    returns VERY_BIG.
- *
  *    - hit_secondary   determines whether a photon defined by p_roche will hit the secondary
  *    or not.  If it misses, hit_secondary returns 0, if it hits, the return is
  *    P_SEC (or hit secondary as contained in python.h).
@@ -42,20 +38,20 @@
  *    hits the secondary (using the intersections with the pillbox to define the limits of the careful
  *    search.
  *
- *    Note: ds_to_roche2 is not actually used by Python.  It would be used if one wanted to calculate
- *    the heating of the secondary.
+
  *
  ***********************************************************/
-
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
 
 /* Given the mass of the primary and secondary and the period calculate some other basic parameters
  for the binary system, including the L1 point. */
+
 
 /**********************************************************/
 /** p_roche provides a way to pass a photon structure to roche() and roche_derive which
@@ -82,16 +78,15 @@ binary_basics ()
 {
   double x;
 
-  void find_l1 (), roche (), roche_deriv ();
-  double rtsafe ();
-
-  double phi (), dphi_ds (), d2phi_ds2 ();
+  void find_l1 ();
   double roche2_width_max ();
+  void *dummy_par = NULL;
   double pow ();
+
 
   /* Calculate a the separation of the primary and the secondary */
 
-  x = G * geo.period * geo.period * (geo.mstar + geo.m_sec) / (16. * PI * PI);
+  x = GRAV * geo.period * geo.period * (geo.mstar + geo.m_sec) / (16. * PI * PI);
   geo.a = pow (x, 1. / 3.);
 
   /*Calculate the mass ratio.  */
@@ -118,7 +113,7 @@ binary_basics ()
   p_roche.lmn[0] = 1;
   p_roche.lmn[1] = p_roche.lmn[2] = 0;
 
-  geo.l1 = x = rtsafe (roche_deriv, 0.01 * geo.a, 0.99 * geo.a, geo.a / 1000.);
+  geo.l1 = x = zero_find (dphi_ds, 0.01 * geo.a, 0.99 * geo.a, geo.a / 1000.);
 
   geo.l1_from_m2 = geo.a - geo.l1;
 
@@ -129,16 +124,16 @@ binary_basics ()
 
   /* Similarly, find l2, the Lagrangian point behind the secondary */
 
-  geo.l2 = x = rtsafe (roche_deriv, 1.01 * geo.a, 2.0 * geo.a, geo.a / 1000.);
+  geo.l2 = x = zero_find (dphi_ds, 1.01 * geo.a, 2.0 * geo.a, geo.a / 1000.);
 
   /* Now find the position of the far side of the star */
 
-  geo.phi = phi (geo.l1);       /* Set geo.phi so phi will be zero on Roche lobes */
+  geo.phi = phi (geo.l1, dummy_par);    /* Set geo.phi so phi will be zero on Roche lobes */
 
 
   /* Set geo.r2_far to be the radius of the secondary on the backside of the secondary */
 
-  geo.r2_far = rtsafe (roche, 1.01 * geo.a, geo.l2, geo.a / 1000.) - geo.a;
+  x = zero_find (phi, 1.01 * geo.a, geo.l2, geo.a / 1000.) - geo.a;
 
   /* Define a plane on the backside of the secondary */
 
@@ -151,91 +146,14 @@ binary_basics ()
   Log_silent ("binary_basics: l1=%8.2e l2=%8.2e l1_from_m2=%8.2e r2_far %8.2e\n", geo.l1, geo.l2, geo.l1_from_m2, geo.r2_far);
 
   /* Calculate the maximum half width of the secondary in the plane of the orbit */
+
   geo.r2_width = roche2_width_max ();
   Log_silent ("binary_basics: r2_width=%6.2e\n", geo.r2_width);
-
   return (0);
 }
 
 
 
-
-/**********************************************************/
-/**
- * @brief      Calculate the distance to the Roche surface for a photon
- *
- * @param [in] PhotPtr  p  The photon whose path one wishes to track
- * @return     the distance to the roche surface of the secondary for photon p, or VERY_BIG
- *  if the photon does not intercept the surface
- *
- * Instead of simply determining whether the photon hits the Roche surface, this routine determine
- * how far the photon would need to travel to hit the Roche surface.
- *
- * ###Notes###
- *
- * This routine is currently not used in Python.  It would be important
- * if one actually wished to calculate the heating of the secondary.
- *
- * If it were used for this purpose, one should confirm that it is working
- * correctly
- *
- *
- **********************************************************/
-
-double
-ds_to_roche_2 (p)
-     PhotPtr p;
-{
-
-
-  void roche ();
-  double rtsafe ();
-  double phi (), dphi_ds (), d2phi_ds2 ();
-  double ds_to_sphere2 ();
-  struct photon pp;
-
-  double smin, smax, s;
-  double golden (), phi ();
-  double potential;
-
-  double pillbox ();
-
-  if ((s = pillbox (p, &smin, &smax)) == VERY_BIG)
-    return (0);                 /* Missed secondary */
-  stuff_phot (p, &p_roche);
-
-// So, after next line,  s is the minimum of the potential, between smin and smax
-// If this value is > 0, then the photon did not hit the secondary
-
-  potential = golden (smin, 0.5 * (smin + smax), smax, phi, 0.0001, &s);
-
-  if (potential > 0.0)
-    return (VERY_BIG);          /*Missed secondary) */
-
-
-  if (smin > s)
-    Log ("Error Knoxy %e %e %e\n", smin, s, smax);
-
-  if ((s = rtsafe (roche, smin, s, geo.a / 1000.)) < 0)
-  {
-    Log ("Problem located Roche surface s %6.2e\n", s);
-    Log ("smin %6.2e  phi %6.2e %6.2e %6.2e\n", smin, phi (smin), dphi_ds (smin), d2phi_ds2 (smin));
-    Log ("smax %6.2e  phi %6.2e %6.2e %6.2e\n", smax, phi (smax), dphi_ds (smax), d2phi_ds2 (smax));
-    stuff_phot (p, &pp);
-    move_phot (&pp, smin);
-    Log ("pmin %6.2e %6.2e %6.2e\n", pp.x[0], pp.x[1], pp.x[2]);
-    stuff_phot (p, &pp);
-    move_phot (&pp, smax);
-    Log ("pmax %6.2e %6.2e %6.2e\n", pp.x[0], pp.x[1], pp.x[2]);
-
-    return (s);                 /* This is an error return */
-  }
-
-  Log ("Distance to roche surface  %6.2e\n", s);
-
-
-  return (s);
-}
 
 
 
@@ -257,22 +175,66 @@ ds_to_roche_2 (p)
  * value of the Rooche potential. If this is greater than 0, then the photon has missed the secondary. If less
  * thn zero then it has hit the secondary.
  *
+ * modified in 2019 to use gsl routines instead of numerical recipies
+ *
  **********************************************************/
 
 int
 hit_secondary (p)
      PhotPtr p;
 {
-  double smin, smax, s;
-  double golden (), phi ();
+  double smin, smax, smid, s;
   double potential;
-
+  double idelt = 1e-2;
   double pillbox ();
+  void *dummy_par = NULL;       //A variable required (but not set) for calls to phi
+
 
   if (pillbox (p, &smin, &smax) == VERY_BIG)
     return (0);                 /* Missed secondary */
   stuff_phot (p, &p_roche);
-  potential = golden (smin, 0.5 * (smin + smax), smax, phi, 0.0001, &s);
+
+
+  smid = 0.5 * (smin + smax);
+  if (phi (smid, dummy_par) > phi (smin, dummy_par) || phi (smid, dummy_par) > phi (smax, dummy_par))   //value of the function at the midpoint is greater than the end(s) problem
+  {
+    if (phi (smin + idelt * (smax - smin), dummy_par) > phi (smin, dummy_par) && phi (smax - idelt * (smax - smin), dummy_par) < phi (smax, dummy_par)) //monotonically rising? - no minimum
+    {
+      potential = fmin (phi (smin, dummy_par), phi (smax, dummy_par));
+    }
+
+    else if (phi (smin + idelt * (smax - smin), dummy_par) < phi (smin, dummy_par) && phi (smax - idelt * (smax - smin), dummy_par) > phi (smax, dummy_par))    //monotonically rising? - no minimum
+    {
+      potential = fmin (phi (smin, dummy_par), phi (smax, dummy_par));
+    }
+    else if (phi (smin + idelt * (smax - smin), dummy_par) > phi (smin, dummy_par) && phi (smax - idelt * (smax - smin), dummy_par) > phi (smax, dummy_par))    //hump - probably no minimum
+    {
+      potential = fmin (phi (smin, dummy_par), phi (smax, dummy_par));
+    }
+    else if (phi (smin + idelt * (smax - smin), dummy_par) < phi (smin, dummy_par) && phi (smax - idelt * (smax - smin), dummy_par) < phi (smax, dummy_par))    //there most likely is a minimum - need to find a sensibly midpoint 
+    {
+      if (phi (smin, dummy_par) < phi (smax, dummy_par))
+      {
+        smid = smin + idelt * (smax - smin);    //the function at this point, just inside smin should be lower than the function at smin
+      }
+      else
+      {
+        smid = smax - idelt * (smax - smin);    //the function at this point, just inside smax should be lower than the function at smax
+      }
+      potential = func_minimiser (smin, smid, smax, phi, 0.0001, &s);   //call the minimuser            
+    }
+    else
+    {
+      potential = 1.;           //goodness only knows, lets say the photon missed
+    }
+  }
+  else
+  {
+    potential = func_minimiser (smin, smid, smax, phi, 0.0001, &s);     //All is well behaved, call the minimiser
+  }
+
+
+
   if (potential > 0.0)
     return (0);                 /*Missed secondary) */
 
@@ -443,7 +405,8 @@ double phi_gm1, phi_gm2, phi_3, phi_4;
 /**
  * @brief      Calculate the Roche potential at position indicated by the photon p_roche and the length s
  *
- * @param [in] double  s   The distance from the current position of the photon to the point where one wishes to calculate the Roche potentail
+ * @param [in] double  s   The distance from the current position of the photon to the point where one wishes to calculate the Roche potential
+ *              void * params  An unused variable required to make the function compatible with the gsl routine used to minimise it
  * @return     The Roche potential at the postiong given by the photon moved by a distance s
  *
  * Given a photon stored in p_roche and a distance s to move the photone, phi returns the roche potentail at that point
@@ -454,8 +417,7 @@ double phi_gm1, phi_gm2, phi_3, phi_4;
  **********************************************************/
 
 double
-phi (s)
-     double s;
+phi (double s, void *params)
 {
   struct photon pp;
   double x1, x2, z, z1, z2, z3;
@@ -463,8 +425,8 @@ phi (s)
 
   if (phi_init == 0)
   {
-    phi_gm1 = G * geo.mstar;
-    phi_gm2 = G * geo.m_sec;
+    phi_gm1 = GRAV * geo.mstar;
+    phi_gm2 = GRAV * geo.m_sec;
     phi_3 = (phi_gm1 + phi_gm2) / (geo.a * geo.a * geo.a);
     phi_3 = 0.5 * phi_3;
     phi_4 = geo.a * geo.m_sec / (geo.mstar + geo.m_sec);
@@ -495,7 +457,6 @@ phi (s)
 
 }
 
-
 #define EPS 10000.
 
 
@@ -504,6 +465,8 @@ phi (s)
  * @brief      Calculate the gradient of the Roche potential as the photon travels
  *
  * @param [in] double  s   The distance the photon has traveled from its initial position
+ *             void * params  An unused variable required to make the function compatible with the gsl routine used to minimise it
+
  * @return     the first derivative of the potential
  *
  * This is a brute force calculation of the first derivative of the Roche potentail
@@ -514,60 +477,28 @@ phi (s)
  **********************************************************/
 
 double
-dphi_ds (s)
-     double s;
+dphi_ds (double s, void *params)
 {
   double phi (), x1, x2;
+  void *dummy_par = NULL;
   double dx, z;
   if ((dx = 0.001 * geo.a) < EPS)
     dx = EPS;
 
-  x2 = phi (s + dx);
-  x1 = phi (s);
+  x2 = phi (s + dx, dummy_par);
+  x1 = phi (s, dummy_par);
   z = (x2 - x1) / dx;
   return (z);
 
 }
 
 
-
 /**********************************************************/
 /**
- * @brief      Calculate the second derivative of the Roche potential of the secondary
+ * @brief      Calculate the width of the Roche potential at a position x along the x axis
  *
- * @param [in] double  s   The distance the phtoon has traveled from its inital postiion
- * @return     The second deritave
- *
- *
- * ###Notes###
- *
- * This is a brute force calculation of the derivative
- *
- **********************************************************/
-
-double
-d2phi_ds2 (s)
-     double s;
-{
-  double phi (), x1, x2, x3;
-  double dx;
-  if ((dx = 0.001 * geo.a) < EPS)
-    dx = EPS;
-
-  x1 = phi (s);
-  x2 = phi (s + dx);
-  x3 = phi (s + 2. * dx);
-  return ((x3 - 2. * x2 + x1) / (dx * dx));
-
-}
-
-
-
-/**********************************************************/
-/**
- * @brief      Calculate the width of the Roche potentiil at a position x along the x axis
- *
- * @param [in, out] double  x   The distance the phtoon has traveled from its initial position
+ * @param [in, out] double  x   The distance the photon has traveled from its initial position
+ *                  void params  unused variable required to present the correct function to gsl
  *
  * @return     the width
  *
@@ -577,18 +508,16 @@ d2phi_ds2 (s)
  * ###Notes###
  *   There is no real guarantee that this would
  *   work if you were outside L2 or L3.
- *
+ *   modified in 2019 to use gsl zero find in place of numerical recipie rtsafe
  *
  *
  **********************************************************/
 
+
 double
-roche_width (x)
-     double x;
+roche_width (double x, void *params)
 {
   double rho, smax;
-  void roche ();
-  double rtsafe ();
 
   if (x < geo.l1)
     smax = geo.l1;
@@ -601,15 +530,15 @@ roche_width (x)
   p_roche.lmn[1] = 1;
   p_roche.lmn[2] = 0;
 
-  rho = rtsafe (roche, 1000., smax, geo.a / 1000.);
-
+  rho = zero_find (phi, 1000., smax, geo.a / 1000.);
   if (rho < 0)
   {
-    Error ("roche_with : rtsafe failure x=%6.2e\n", x);
+    Error ("roche_with : zero_find failure x=%6.2e\n", x);
   }
   return (-rho);                /* This is because we are going to search for a minimun not a maximum */
 
 }
+
 
 
 
@@ -623,6 +552,8 @@ roche_width (x)
  *   uses the NR routine golden to find the point in x where the Roche lobe is maximized.
  *
  * ###Notes###
+ *
+ *  modified in 2019 to use gsl routines rather than numerical recipies  
  *
  *
  **********************************************************/
@@ -640,74 +571,12 @@ roche2_width_max ()
 
   Log_silent ("roche2_width_max: Search from %6.2e %6.2e %6.2e\n", xmin, xmid, xmax);
 
-  /* golden returns the value of the function it is evaluating; xbest is the position of the maximum */
+  /* func_minimiser returns the miniumum value of the function it is evaluating; xbest is the position of the minimum */
 
-  rmin = golden (xmin, xmid, xmax, roche_width, 0.0001, &xbest);
+  rmin = func_minimiser (xmin, xmid, xmax, roche_width, 0.0001, &xbest);
+
 
   Log_silent ("roche2_width_max: Max width at %6.2e of %6.2e\n", xbest, -rmin);
 
-  return (-rmin);               /* Because "golden" is designed to find a minimum rather than a maximum! */
-}
-
-
-
-/**********************************************************/
-/**
- * @brief      Calculate the value of the Roche potential and its derivative along a particular lien of sight
- *
- * @param [in] double  s   The distance s
- * @param [out] double *  value   The value of the Roche potenial at a distance s along the path of the photon
- * @param [out] double *  derivative   The derivative of the roche potential as the photon tavels
- * @return     N/A
- *
- *
- * This is the function used by the Recipes routine rtsafe to locate specific
- *   surfaces of the Roche potential.  Here *value is phi and *derivative is
- *   the slope of phi at s along the vector defined by p_roche.  The value of
- *   phi has to be set in advance through geo.phi and would normally be that of
- *   the Roche lobe
- *
- * ###Notes###
- *
- * The routime simply calls phi and dphi_ds
- *
- **********************************************************/
-
-void
-roche (s, value, derivative)
-     double s, *value, *derivative;
-{
-  *value = phi (s);
-  *derivative = dphi_ds (s);
-
-}
-
-
-/**********************************************************/
-/**
- * @brief      Calculate the first and second derivative of the roche potential along a specific line of sight
- *
- * @param [in] double  s  The distance from the initial photon position at which derivatives are to be calcualted
- * @param [out] double *  value   The first derivative
- * @param [out] double *  derivative   The second derivatiove
- * @return     N/A
- *
- * This is the function used by the Recipes routine rtsafe to lacate extrema of
- *  the Roche potential.  Thus it can be used to find the L1 point, for example.  Here
- *  *value is the derivative of phi at s along the vector defined by p_roche, and
- *  *derivative is the second derivative
- *
- *
- * ###Notes###
- *
- *
- **********************************************************/
-
-void
-roche_deriv (s, value, derivative)
-     double s, *value, *derivative;
-{
-  *value = dphi_ds (s);
-  *derivative = d2phi_ds2 (s);
-
+  return (-rmin);               /* Because "func_minimiser" is designed to find a minimum rather than a maximum! */
 }

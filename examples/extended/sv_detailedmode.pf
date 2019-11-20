@@ -1,4 +1,4 @@
-System_type(star,binary,agn,previous)                 star
+System_type(star,cv,bh,agn,previous)                 star
 
 ### Parameters for the Central Object
 Central_object.mass(msol)                  0.8
@@ -11,31 +11,33 @@ Central_object.temp                        40000
 Disk.type(none,flat,vertically.extended)                 flat
 Disk.radiation(yes,no)                          yes
 Disk.rad_type_to_make_wind(bb,models)                   bb
-Disk.temperature.profile(standard,readin,yso)             standard
+Disk.temperature.profile(standard,readin)             standard
 Disk.mdot(msol/yr)                         1e-8
 Disk.radmax(cm)                            2.38e10
 
-### Parameters for BL or AGN
+### Parameters for Boundary Layer or the compact object in an X-ray Binary or AGN
 Boundary_layer.radiation(yes,no)                  yes
 Boundary_layer.rad_type_to_make_wind(bb,models,power)                   bb
 Boundary_layer.luminosity(ergs/s)          0
 Boundary_layer.temp(K)                     10000
 
-### Parameters descibing the various winds or coronae in the system
+### Parameters describing the various winds or coronae in the system
 Wind.radiation(yes,no)                           no
 Wind.number_of_components                  1
-Wind.type(SV,star,hydro,corona,kwd,homologous,yso,shell,imported)                   sv
+Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)                   sv
 Wind.coord_system(spherical,cylindrical,polar,cyl_var)          cylindrical
-Wind.dim.in.x_or_r.direction               5
-Wind.dim.in.z_or_theta.direction           5
+Wind.dim.in.x_or_r.direction               30
+Wind.dim.in.z_or_theta.direction           30
+@Diag.adjust_grid(yes,no)                        no
 
 ### Parameters associated with photon number, cycles,ionization and radiative transfer options
-Photons_per_cycle                          10000
-Ionization_cycles                          1
-Spectrum_cycles                            100
+Photons_per_cycle                          100000
+Ionization_cycles                          10
+Spectrum_cycles                            10
 Wind.ionization(on.the.spot,ML93,LTE_tr,LTE_te,fixed,matrix_bb,matrix_pow)                 ml93
 Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms,macro_atoms_thermal_trapping)          escape_prob
-Atomic_data                                data/standard78
+Atomic_data                                data/standard80
+@Diag.write_atomicdata(yes,no)                   no
 Surface.reflection.or.absorption(reflect,absorb,thermalized.rerad)               absorb
 Wind_heating.extra_processes(none,adiabatic,nonthermal,both)            adiabatic
 
@@ -49,6 +51,9 @@ SV.mdot_r_exponent                         0
 SV.v_infinity(in_units_of_vescape          3
 SV.acceleration_length(cm)                 7e10
 SV.acceleration_exponent                   1.5
+SV.gamma(streamline_skew;1=usually)        1
+SV.v_zero_mode(fixed,sound_speed)                fixed
+SV.v_zero(cm/s)                            6e5
 Wind.radmax(cm)                            1e12
 Wind.t.init                                40000
 Wind.filling_factor(1=smooth,<1=clumped)   1
@@ -75,10 +80,17 @@ Spectrum.angle(0=pole)                     50
 Spectrum.angle(0=pole)                     60
 Spectrum.angle(0=pole)                     80
 Spectrum.live_or_die(live.or.die,extract)              extract
+@Spectrum.select_specific_no_of_scatters_in_spectra(yes,no)                   no
+@Spectrum.select_photons_by_position(yes,no)                   no
 Spectrum.type(flambda,fnu,basic)              flambda
+@Diag.use_standard_care_factors(yes,no)                   no
+@Diag.fractional_distance_photon_may_travel   0.5
+@Diag.lowest_ion_density_for_photoabs      1e-10
+@Diag.keep_photoabs_in_final_spectra(yes,no)                   no
 
 ### Parameters for Reverberation Modeling (if needed)
 Reverb.type(none,photon,wind,matom)                 none
 
 ### Other parameters
 Photon_sampling.approach(T_star,cv,yso,AGN,min_max_freq,user_bands,cloudy_test,wide,logarithmic)                   cv
+@Diag.extra(yes,no)                              no

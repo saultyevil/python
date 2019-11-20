@@ -6,9 +6,10 @@ description: |
   are asked for later.
 type: Enumerator
 values:
-    star: System in which the central object is a star or WD
-    binary: System with a secondary star, which can occult the central object and disk depending on phase
-    agn: AGN or BH binary (currently)
+    star: System in which the central object is a star
+    cv: System with a secondary star, which can occult the central object and disk depending on phase
+    bh: System with a black hole binary
+    agn: AGN
     previous: |
       In this case, one is starting from a previous run with python, and one want to either continue the
       run or change some parameters associated with radiation sources

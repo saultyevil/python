@@ -1,5 +1,4 @@
 
-
 /***********************************************************/
 /** @file   cv.c
  * @author  ksl
@@ -12,14 +11,13 @@
  * Python
 ***********************************************************/
 
-
 #include	<math.h>
 #include	<stdio.h>
 #include	<strings.h>
 #define  PI  3.141592
 #define MSOL    1.989e33
 #define GRAV    6.67e-8
-#define C       2.997e10
+#define VLIGHT       2.997e10
 #define YEAR    3.1556925e7
 #define SIGMA   5.66956e-5
 

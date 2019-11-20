@@ -16,11 +16,10 @@
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "atomic.h"
 #include "python.h"
-
 #include "log.h"
-
 
 
 /**********************************************************/
@@ -100,7 +99,7 @@ agn_init (r, lum, alpha, freqmin, freqmax, ioniz_or_final, f)
     *f = emit;
     *f *= (4. * PI * r * r);
   }
-  else if (spectype == SPECTYPE_CL_TAB) //A specical broken power law mode made to match cloudy - mainly for testing purposes
+  else if (spectype == SPECTYPE_CL_TAB) //A special broken power law mode made to match cloudy - mainly for testing purposes
   {
     /* Emittance_pow actually returns the specific luminosity directly */
     emit = emittance_bpow (freqmin, freqmax, alpha);
@@ -108,7 +107,9 @@ agn_init (r, lum, alpha, freqmin, freqmax, ioniz_or_final, f)
   }
   else if (spectype == SPECTYPE_BREM)   //Bremstrahlung - uses T and alpha which are stored in geo. 
   {
-    emit = qromb (integ_brem, freqmin, freqmax, 1e-4);
+//    emit = qromb (integ_brem, freqmin, freqmax, 1e-4);
+    emit = num_int (integ_brem, freqmin, freqmax, 1e-4);
+
     *f = emit;
   }
 
@@ -477,7 +478,6 @@ photo_gen_agn (p, r, alpha, weight, f1, f2, spectype, istart, nphot)
       p[i].x[0] = p[i].x[1] = 0.0;
 
       /* need to set the z coordinate to the lamp post height, but allow it to be above or below */
-//      if (rand () > MAXRAND / 2) // DONE
       if (random_number (-1.0, 1.0) > 0.0)
 
       {                         /* Then the photon emerges in the upper hemisphere */
@@ -490,7 +490,6 @@ photo_gen_agn (p, r, alpha, weight, f1, f2, spectype, istart, nphot)
 
       randvec (p[i].lmn, 1.0);  // lamp-post geometry is isotropic, so completely random vector
     }
-
   }
 
   return (0);

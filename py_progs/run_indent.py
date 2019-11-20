@@ -20,7 +20,7 @@ Description:
 Primary routines:
 
     doit  processes a single file
-    steer procesest the command calling either doi or do_all
+    steer processes the command calling either doi or do_all
     do_all processes all the .c and .h files in a directory
 
 Notes:
@@ -36,7 +36,7 @@ History:
 '''
 
 import sys
-from astropy.io import ascii
+# from astropy.io import ascii
 import numpy
 from glob import glob
 import subprocess
@@ -148,19 +148,60 @@ def doit(filename='lines.c'):
 
 
 
-def do_all():
+def do_all(ignore_list=None):
     '''
     Indent all of the .c and .h files in a directory in a standard way
+
+    ignore_list     list of file strings to ignore 
+                    if NoneType or blank array then nothing is ignored
+                    gets converted to numpy array inside function 
     '''
     if get_gnu()=='':
         return
 
     files=glob('*.h')+glob('*.c')
+    ignore_list = numpy.array(ignore_list)
 
     for one in files:
+        # test if the file is in the "ignore" list 
+        # np.array() ensures this works even if ignore_list is Nonetype 
+        # or has zero length (prevents TypeError)
+        ignore = (one == ignore_list).any()
+
+        if ignore == False:
+            doit(one)
+
+    return
+
+def do_changed():
+    '''
+    Indent only those files which have not yet been committed
+    '''
+    if get_gnu()=='':
+        return
+
+
+    proc = subprocess.Popen('git diff --name-only', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout,stderr=proc.communicate()
+    stdout = stdout.decode().split('\n')
+    # print(stdout)
+    stderr = stderr.decode().split('\n')
+    # print(stderr)
+
+    todo=[]
+    for one in stdout:
+        if one.count('source'):
+            word=one.split('/')
+            xfile=word[len(word)-1]
+            if xfile.count('.c'):
+                todo.append(xfile)
+    # print(todo)
+    for one in todo:
         doit(one)
 
     return
+
+
 
 
 
@@ -181,8 +222,16 @@ def steer(argv):
         if argv[i]=='-h':
             print(__doc__)
             return
+        # all files including prototypes
         if argv[i]=='-all':
             do_all()
+            return
+        # exclude python prototype files 
+        if argv[i]=='-all_no_headers':
+            do_all(ignore_list=["atomic_proto.h", "templates.h", "log.h"])
+            return
+        if argv[i]=='-changed':
+            do_changed()
             return
         else:
             files.append(argv[i])
@@ -212,8 +261,6 @@ def steer(argv):
 if __name__ == "__main__":
     import sys
     if len(sys.argv)>1:
-        # doit(int(sys.argv[1]))
-        # doit(sys.argv[1])
         steer(sys.argv)
     else:
         print (__doc__)

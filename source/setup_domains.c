@@ -20,7 +20,6 @@
 #include "python.h"
 
 
-
 /**********************************************************/
 /** 
  * @brief       Get inputs that describe a particular component of the wind
@@ -68,6 +67,13 @@ get_domain_params (ndom)
   zdom[ndom].wind_type = rdchoice ("Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)", "0,1,3,4,5,6,9,10", answer);
 
 
+  /* For a shell wind, we define the coordinate system in shell_wind */
+  if (zdom[ndom].wind_type == SHELL)
+  {
+    return (0);
+  }
+
+
 
   strcat (zdom[ndom].name, "Wind");
 
@@ -81,6 +87,7 @@ get_domain_params (ndom)
   {
     strcpy (answer, "spherical");
   }
+
   zdom[ndom].coord_type = rdchoice ("Wind.coord_system(spherical,cylindrical,polar,cyl_var)", "0,1,2,3", answer);
 
   if (zdom[ndom].wind_type == IMPORT)

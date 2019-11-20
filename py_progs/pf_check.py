@@ -197,6 +197,7 @@ def doit(directory):
 
     print('The commands that will be executed will be:')
     f=open('DoCommands','w')
+    g=open('Cycle_files','w')
     for one in commands:
         print(one)
         f.write('%s >foo.txt\n' % one)
@@ -225,6 +226,7 @@ def doit(directory):
         cmd='diff -b  %s.pf %s.out.pf' % (one,one)  #ignore differences in white space length
         f.write("echo 'Check %s.pf'\n" % one)
         f.write('%s\n' % cmd)
+        g.write('mv %s.out.pf %s.pf\n' % (one,one))
         proc=subprocess.Popen(cmd,shell=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
         stdout,stderr=proc.communicate()
         # print('stdout: ',stdout)

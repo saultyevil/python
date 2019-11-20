@@ -1,4 +1,4 @@
-System_type(star,binary,agn,previous)                  agn
+System_type(star,cv,bh,agn,previous)                  agn
 
 ### Parameters for the Central Object
 Central_object.mass(msol)                  1e9
@@ -8,21 +8,21 @@ Central_object.radius(cm)                  8.85667e+14
 Disk.type(none,flat,vertically.extended)                 flat
 Disk.radiation(yes,no)                          yes
 Disk.rad_type_to_make_wind(bb,models)                   bb
-Disk.temperature.profile(standard,readin,yso)             standard
+Disk.temperature.profile(standard,readin)             standard
 Disk.mdot(msol/yr)                         5
 Disk.radmax(cm)                            1e17
 
-### Parameters for BL or AGN
-BH.radiation(yes,no)                            yes
-BH.rad_type_to_make_wind(bb,models,power,cloudy,brems)                power
-BH.lum(ergs/s)                             1e43
-BH.power_law_index                         -0.9
-BH.geometry_for_pl_source(sphere,lamp_post)               sphere
+### Parameters for Boundary Layer or the compact object in an X-ray Binary or AGN
+Central_object.radiation(yes,no)                  yes
+Central_object.rad_type_to_make_wind(bb,models,power,cloudy,brems)                power
+Central_object.luminosity(ergs/s)          1e43
+Central_object.power_law_index             -0.9
+Central_object.geometry_for_source(sphere,lamp_post)               sphere
 
-### Parameters descibing the various winds or coronae in the system
+### Parameters describing the various winds or coronae in the system
 Wind.radiation(yes,no)                          yes
 Wind.number_of_components                  1
-Wind.type(SV,star,hydro,corona,kwd,homologous,yso,shell,imported)                   sv
+Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)                   sv
 Wind.coord_system(spherical,cylindrical,polar,cyl_var)          cylindrical
 Wind.dim.in.x_or_r.direction               100
 Wind.dim.in.z_or_theta.direction           100
@@ -33,7 +33,7 @@ Ionization_cycles                          30
 Spectrum_cycles                            20
 Wind.ionization(on.the.spot,ML93,LTE_tr,LTE_te,fixed,matrix_bb,matrix_pow)           matrix_pow
 Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms,macro_atoms_thermal_trapping)          escape_prob
-Atomic_data                                data/standard78
+Atomic_data                                data/standard80
 Surface.reflection.or.absorption(reflect,absorb,thermalized.rerad)               absorb
 Wind_heating.extra_processes(none,adiabatic,nonthermal,both)            adiabatic
 
@@ -47,6 +47,9 @@ SV.mdot_r_exponent                         0
 SV.v_infinity(in_units_of_vescape          1
 SV.acceleration_length(cm)                 1e18
 SV.acceleration_exponent                   1.0
+SV.gamma(streamline_skew;1=usually)        1
+SV.v_zero_mode(fixed,sound_speed)                fixed
+SV.v_zero(cm/s)                            600000
 Wind.radmax(cm)                            1e19
 Wind.t.init                                1e5
 Wind.filling_factor(1=smooth,<1=clumped)   1
@@ -54,7 +57,7 @@ Wind.filling_factor(1=smooth,<1=clumped)   1
 ### Parameters defining the spectra seen by observers
 
 Disk.rad_type_in_final_spectrum(bb,models,uniform)                   bb
-BH.rad_type_in_final_spectrum(power,cloudy,brems)                power
+Central_object.rad_type_in_final_spectrum(bb,models,power,cloudy,brems)                power
 
 ### The minimum and maximum wavelengths in the final spectra
 Spectrum.wavemin(Angstroms)                200

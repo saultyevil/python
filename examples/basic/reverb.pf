@@ -1,58 +1,64 @@
-System_type(star,binary,agn,previous)   agn
+System_type(star,cv,bh,agn,previous)                  agn
 
 ### Parameters for the Central Object
 Central_object.mass(msol)                  1e9
 Central_object.radius(cm)                  8.85667e+14
 
 ### Parameters for the Disk (if there is one)
-Disk.type(none,flat,vertically.extended)   flat
-Disk.radiation(yes,no)                     yes
-Disk.rad_type_to_make_wind(bb,models)      bb
-Disk.temperature.profile(standard,readin,yso)   standard
+Disk.type(none,flat,vertically.extended)                 flat
+Disk.radiation(yes,no)                          yes
+Disk.rad_type_to_make_wind(bb,models)                   bb
+Disk.temperature.profile(standard,readin)             standard
 Disk.mdot(msol/yr)                         5
 Disk.radmax(cm)                            1e17
 
-### Parameters for BL or AGN
-QSO_BH_radiation(yes,no)                   yes
-Rad_type_for_agn(bb,models,power_law,cloudy_table,bremsstrahlung)_to_make_wind   power_law
-lum_agn(ergs/s)                            1e43
-AGN.power_law_index                        -0.9
-AGN.geometry_for_pl_source(sphere,lamp_post)   sphere
+### Parameters for Boundary Layer or the compact object in an X-ray Binary or AGN
+Central_object.radiation(yes,no)                  yes
+Central_object.rad_type_to_make_wind(bb,models,power,cloudy,brems)                power
+Central_object.luminosity(ergs/s)          1e43
+Central_object.power_law_index             -0.9
+Central_object.geometry_for_source(sphere,lamp_post)               sphere
 
-### Parameters descibing the various winds or coronae in the system
-Wind_radiation(yes,no)                     yes
+### Parameters describing the various winds or coronae in the system
+Wind.radiation(yes,no)                          yes
 Wind.number_of_components                  1
-Wind_type(SV,Star,Hydro,corona,knigge,homologous,yso,shell,imported)   SV
-Wind.coord_system(spherical,cylindrical,spherical_polar,cyl_var)   cylindrical
-Wind.dim.in.x_or_r.direction               100
-Wind.dim.in.z_or_theta.direction           100
-photons_per_cycle                          20000000
-Ionization_cycles                          30
-spectrum_cycles                            20
-Wind_ionization(on.the.spot,LTE(tr),fixed,recalc_bb,LTE(t_e),pairwise_bb,pairwise_pow,matrix_bb,matrix_pow)   matrix_pow
-Line_transfer(pure.abs,pure.scat,sing.scat,escape.prob,macro_atoms,macro_atoms+aniso.scattering)   escape.prob
-Atomic_data                                data/standard78
-Surface.reflection.or.absorption(no.rerad,high.albedo,thermalized.rerad)   no.rerad
-Thermal_balance_options(everything.on,no.adiabatic)   everything.on
+Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)                   sv
+Wind.coord_system(spherical,cylindrical,polar,cyl_var)          cylindrical
+Wind.dim.in.x_or_r.direction               30
+Wind.dim.in.z_or_theta.direction           30
+
+### Parameters associated with photon number, cycles,ionization and radiative transfer options
+Photons_per_cycle                          100000
+Ionization_cycles                          20
+Spectrum_cycles                            20
+Wind.ionization(on.the.spot,ML93,LTE_tr,LTE_te,fixed,matrix_bb,matrix_pow)           matrix_pow
+Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms,macro_atoms_thermal_trapping)     thermal_trapping
+Atomic_data                                data/standard80
+Surface.reflection.or.absorption(reflect,absorb,thermalized.rerad)               absorb
+Wind_heating.extra_processes(none,adiabatic,nonthermal,both)                 both
+Wind_heating.extra_luminosity              0
 
 ### Parameters for Domain 0
-wind.radmax(cm)                            1e19
-wind.t.init                                1e5
-wind.mdot(msol/yr)                         5
-sv.diskmin(units_of_rstar)                 50
-sv.diskmax(units_of_rstar)                 100
-sv.thetamin(deg)                           70
-sv.thetamax(deg)                           82
-sv.mdot_r_exponent                         0
-sv.v_infinity(in_units_of_vescape          1
-sv.acceleration_length(cm)                 1e18
-sv.acceleration_exponent                   1.0
+Wind.mdot(msol/yr)                         5
+SV.diskmin(units_of_rstar)                 50
+SV.diskmax(units_of_rstar)                 100
+SV.thetamin(deg)                           70
+SV.thetamax(deg)                           82
+SV.mdot_r_exponent                         0
+SV.v_infinity(in_units_of_vescape          1
+SV.acceleration_length(cm)                 1e18
+SV.acceleration_exponent                   1.0
+SV.gamma(streamline_skew;1=usually)        1
+SV.v_zero_mode(fixed,sound_speed)                fixed
+SV.v_zero(cm/s)                            600000
+Wind.radmax(cm)                            1e19
+Wind.t.init                                1e5
 Wind.filling_factor(1=smooth,<1=clumped)   1
 
 ### Parameters defining the spectra seen by observers
 
-Disk.rad_type_in_final_spectrum(0=bb,1=models,2=uniform)   0
-Rad_type_for_agn(3=power_law,4=cloudy_table,5=bremsstrahlung)_in_final_spectrum   3
+Disk.rad_type_in_final_spectrum(bb,models,uniform)                   bb
+Central_object.rad_type_in_final_spectrum(bb,models,power,cloudy,brems)                power
 
 ### The minimum and maximum wavelengths in the final spectra
 Spectrum.wavemin(Angstroms)                200
@@ -62,15 +68,15 @@ Spectrum.wavemax(Angstroms)                2600
 Spectrum.no_observers                      2
 Spectrum.angle(0=pole)                     20
 Spectrum.angle(0=pole)                     40
-Spectrum.live_or_die(0=live.or.die,extract=anything_else)   1
-Spectrum.type(flambda(1),fnu(2),basic(other)   1
+Spectrum.live_or_die(live.or.die,extract)              extract
+Spectrum.type(flambda,fnu,basic)              flambda
 
 ### Parameters for Reverberation Modeling (if needed)
-Reverb.type(none,photon,wind,matom)                matom
-Reverb.disk(correlated,uncorrelated,ignore)        ignore
-Reverb.path_bins                                   100
-Reverb.visualisation(none,vtk,dump,both)           none
+Reverb.type(none,photon,wind,matom)                 wind
+Reverb.disk_type(correlated,uncorrelated,ignore)               ignore
+Reverb.path_bins                           100
+Reverb.visualisation(none,vtk,dump,both)                 none
 Reverb.filter_lines(0=off,-1=continuum,>0=count)   -1
 
 ### Other parameters
-Photon_sampling.approach(0=T,1=(f1,f2),2=cv,3=yso,4=user_defined,5=cloudy_test,6=wide,7=AGN,8=logarithmic)   7
+Photon_sampling.approach(T_star,cv,yso,AGN,min_max_freq,user_bands,cloudy_test,wide,logarithmic)                  agn

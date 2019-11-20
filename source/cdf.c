@@ -40,14 +40,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "atomic.h"
-#include "python.h"
-#include "models.h"
 #include <gsl/gsl_sort.h>
 #include <gsl/gsl_interp.h>
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+
+#include "atomic.h"
+#include "python.h"
+#include "models.h"
 
 /// This is the initial value of PDFSTEPS
 #define PDFSTEPS 10000

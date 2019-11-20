@@ -28,21 +28,16 @@
  *
  ***********************************************************/
 
-
-
-
 #include <stdio.h>
 #include <strings.h>
 #include <stdarg.h>
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
-#include "log.h"
 
+#include "log.h"
 #include "atomic.h"
 #include "python.h"
-
-
 
 
 /**********************************************************/

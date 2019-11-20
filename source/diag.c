@@ -62,10 +62,6 @@
  *
  ***********************************************************/
 
-
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -73,8 +69,6 @@
 
 #include "atomic.h"
 #include "python.h"
-
-
 
 
 /**********************************************************/
@@ -192,7 +186,7 @@ get_extra_diagnostics ()
   strcpy (answer, "no");
   modes.track_resonant_scatters = rdchoice ("@Diag.track_resonant_scatters(yes,no)", "1,0", answer);
 
-  if (modes.save_cell_stats || modes.save_photons || modes.save_extract_photons | modes.track_resonant_scatters)
+  if (modes.save_cell_stats || modes.save_photons || modes.save_extract_photons || modes.track_resonant_scatters)
   {
     modes.extra_diagnostics = 1;
   }

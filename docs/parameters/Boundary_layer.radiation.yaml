@@ -3,5 +3,5 @@ description: |
   Says whether the boundary layer will radiate.
 type: Boolean (yes/no)
 parent:
-  System_type: [star, binary]
+  System_type: [star, cv]
 file: setup_star_bh.c

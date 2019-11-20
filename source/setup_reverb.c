@@ -8,6 +8,7 @@
  * Contains the function for reading in reverberation mapping
  * and visualisation settings.
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -19,10 +19,12 @@ set(CMAKE_C_COMPILER mpicc)
 add_definitions(-D MPI_ON)
 
 # Include the source
-include_directories(source)
+include_directories(inc)
+link_directories(lib)
 
 # Define the executables
 add_executable(python
+        source/rdpar_init.c
         source/bb.c
         source/get_atomicdata.c
         source/python.c
@@ -70,7 +72,6 @@ add_executable(python
         source/matom.c
         source/estimators.c
         source/wind_sum.c
-        source/yso.c
         source/cylindrical.c
         source/rtheta.c
         source/spherical.c
@@ -114,10 +115,7 @@ add_executable(python
         source/setup_line_transfer.c
         source/cv.c
         source/wind_util.c
-        source/rdpar_init.c
-        source/tau_diag.c
-        source/mean_opacities.c
-        source/tau_diag.h)
+        )
 
 add_executable(py_wind
         source/bb.c
@@ -166,7 +164,6 @@ add_executable(py_wind
         source/matom.c
         source/estimators.c
         source/wind_sum.c
-        source/yso.c
         source/cylindrical.c
         source/rtheta.c
         source/spherical.c
@@ -264,7 +261,6 @@ add_executable(windsave2table
         source/matom.c
         source/estimators.c
         source/wind_sum.c
-        source/yso.c
         source/cylindrical.c
         source/rtheta.c
         source/spherical.c
@@ -313,7 +309,6 @@ add_executable(windsave2table
         )
 
 # Include external libs
-find_package(GSL REQUIRED)
-target_link_libraries(python GSL::gsl GSL::gslcblas m)
-target_link_libraries(py_wind GSL::gsl GSL::gslcblas m)
-target_link_libraries(windsave2table GSL::gsl GSL::gslcblas m)
+target_link_libraries(python gsl gslcblas m)
+target_link_libraries(py_wind gsl gslcblas m)
+target_link_libraries(windsave2table gsl gslcblas m)

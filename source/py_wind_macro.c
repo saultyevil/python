@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
 
@@ -847,7 +848,7 @@ level_escapeoverview (nlev, w, rootname, ochoice)
 
   nline--;
 
-  lambda = (C / lin_ptr[nline]->freq) * 1e8;
+  lambda = (VLIGHT / lin_ptr[nline]->freq) * 1e8;
 
   strcpy (name, "");
   sprintf (name, "Balmer series P_escapes for Level %i, Lambda %.1f", nlev, lambda);
@@ -940,7 +941,7 @@ level_tauoverview (nlev, w, rootname, ochoice)
 
   nline--;
 
-  lambda = (C / lin_ptr[nline]->freq) * 1e8;
+  lambda = (VLIGHT / lin_ptr[nline]->freq) * 1e8;
 
   strcpy (name, "");
   sprintf (name, "Balmer series taus for Level %i, Lambda %.1f", nlev, lambda);

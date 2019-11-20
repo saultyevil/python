@@ -9,16 +9,16 @@
  *
  *
  ***********************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <gsl/gsl_sf_expint.h>  //We need this gsl library to evaluate the first exponential integral
 
 #include "atomic.h"
 #include "python.h"
 #include "recipes.h"
-
-#include <gsl/gsl_sf_expint.h>  //We need this gsl library to evaluate the first exponential integral
 
 /* Ratio of hnu / kT beyond which we don't bother calculating
    see #197 */

@@ -18,8 +18,8 @@
 #include <math.h>
 #include <time.h>
 #include <string.h>
-#include "atomic.h"
 
+#include "atomic.h"
 #include "python.h"
 
 int init_stuff_phot = 0;
@@ -143,33 +143,6 @@ comp_phot (p1, p2)
 }
 
 
-//OLD /**************************************************************************
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD
-//OLD   phot_hist is designed to record the history of a single photon
-//OLD   bundle, in terms of a series of photon structures that are
-//OLD   populated as the photon goes through the grid
-//OLD
-//OLD   Unless phot_hist_on is true, then this routine is a NOP
-//OLD
-//OLD
-//OLD   Description:
-//OLD
-//OLD   This is a diagnostic routine only
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   Notes:
-//OLD
-//OLD   History:
-//OLD   090125  ksl     68b -Created to better understand where photon bundles were
-//OLD                   being absorbed or losing energy in the grid
-//OLD
-//OLD  ************************************************************************/
 
 /**********************************************************/
 /**
@@ -179,8 +152,9 @@ comp_phot (p1, p2)
  *
  *   Unless phot_hist_on is true, then this routine is a NOP
  *
- * @param [in, out] PhotPtr  p   A photon to track
- * @param [in, out] int  iswitch   A switch that resets
+ * @param [in] PhotPtr  p   A photon to track
+ * @param [in] int  iswitch   A switch that resets the array element
+ * into which the photons current status is recorded.
  * @return     Returns the number of photons which have been stored
  *
  * @details
@@ -230,30 +204,6 @@ phot_hist (p, iswitch)
 }
 
 
-//OLD /**************************************************************************
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD   The next routine is destigned to update a portion of the PlasmaPtr to reflect where
-//OLD   photons along the line of sight to the observer were absorbed in the wind
-//OLD
-//OLD   Description:
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   Notes:
-//OLD   As photon is extracted from the wind, tau changes due to scatters and w changes due
-//OLD   to absorption.  We are just recording how much energy is absorbed by scatterng processes
-//OLD   here, and so the energy absorbed is the current weight (exp(-tau_before) - exp (-tau_after))
-//OLD
-//OLD   History:
-//OLD   090211  ksl     Created to store the energy removed photons headed toward the observer
-//OLD                   by an ion in a particular cell of the wind.
-//OLD   0904    ksl     68c - Fixed problem concerning where energy was being stored
-//OLD
-//OLD  ************************************************************************/
 
 
 /**********************************************************/
@@ -261,11 +211,9 @@ phot_hist (p, iswitch)
  * @brief      The next routine is designed to update a portion of the PlasmaPtr to reflect where
  *  	photons along the line of sight to the observer were absorbed in the wind
  *
- * <NOTE: The [in, out] tag describes if the value of a parameter is used or altered. If it is used but not altered, delete 'OUT'. If the original value is not used and it is written to, delete 'IN'.>
- * @return     ??? RETURNS ???
+ * @return     Always returns 0  
  *
  * @details
- * ??? DESCRIPTION ???
  *
  * ### Notes ###
  * As photon is extracted from the wind, tau changes due to scatters and w changes due
@@ -308,7 +256,6 @@ phot_history_summarize ()
       Error ("phot_history_summarize:  n %d n_phot_hist %d phot_hist %d nplasma %d\n", n, n_phot_hist, p->grid, wmain[p->grid].nplasma);
     }
   }
-
 
 
   return (0);
@@ -383,56 +330,32 @@ phot_history_summarize ()
 
 /**********************************************************/
 /**
- * @brief      (cc, p) This is a new version of  introduced in order to
- *    allow cylvar coordinates  Eventually it is intended to replace ds_to_windcone
- *    completely, or at least the guts of ds_to_windcone.
+ * @brief      A routine to calculate the distance a photon must travel
+ *   to hit a cone.
  *
- * <NOTE: The [in, out] tag describes if the value of a parameter is used or altered. If it is used but not altered, delete 'OUT'. If the original value is not used and it is written to, delete 'IN'.>
- * @param [in, out] ConePtr  cc   ???
- * @param [in, out] struct photon *  p   ???
- * @return     ??? RETURNS ???
+ * @param [in] ConePtr  cc   A structure which describes a cone
+ * @param [in] struct photon *  p   A photon
+ * @return     The distance to the cone
  *
  * @details
- * ??? DESCRIPTION ???
  *
  * ### Notes ###
- * As part of the conversion, the old ds_to_cone was renamed to ds_to_windcone
  *
  *
+ * The cone is defined by  z=z_o + dz/drho *drho
+ * The photon is defined by X=X_o + LMN s
  *
- * 	56d -- Cones have become more prominent in python with time.  Originally
- * 	they were used simply to define the inner and outer edges of the
- * 	wind, that is   to determine when a photon entered the wind.  The wind was/is
- * 	assumed to be a biconical flow, and therefore the most naturally was defined in
- * 	terms of a footpoint in the disk for the innermost/outermost stream line
- * 	and a slope.
+ * Unless dz/drho = 0, this turns into a simple quadratic equation that must
+ * be solved.  We work in the northen hemisphere only.
  *
- * 	It was expanced when rtheta coordanates were introduced
- * 	to handle find when one had hit the theta coordinate boundaries.  And in
- * 	56d we also want it to handle the case where the grid cells have variable
- * 	z coordinates.  Therefore one needs to be quite careful, Since ds_to_cone
- * 	is the ultimate name of the routine I would like to use, the first step
- * 	I took was to change the name of the old routine to ds_to_windcone.  This
- * 	should allow me to replace the old routine incrementally.
+ * There are issues concerning what to do so one crosses the disk plane.  For
+ * finding how far a photon can travel in a cell, we are *not* interested
+ * in the possibility that the photon hits the cone on the other side of
+ * the disk plane, but for a photon travelling out of the wind we are
+ * very interested in this possibility.
  *
- * 	56d -- With python 56d the variable defining a cone were changed to be
- * 	the point on the z axis intercepted by the cone (extended) through
- * 	the disk, and the slope.
- *
- * 	Our approach is as follows:
- *
- * 	The cone is defined by  z=z_o + dz/drho *drho
- * 	The photon is defined by X=X_o + LMN s
- *
- * 	Unless dz/drho = 0, this turns into a simple quadratic equation that must
- * 	be solved.  We work in the northen hemisphere only.
- *
- * 	There are issues concerning what to do so one crosses the disk plane.  For
- *         finding how far a photon can travel in a cell, we are *not* interested
- * 	in the possibility that the photon hits the cone on the other side of
- * 	the disk plane, but for a photon travelling out of the wind we are
- * 	very interested in this possibility.
- *
+ * This version is intended to allow cylvar coordinates, in old versions (56d)
+ * prior to cylvar coordiantes, this routine was called ds_to_windcone
  **********************************************************/
 
 double
@@ -486,34 +409,14 @@ ds_to_cone (cc, p)
 }
 
 
-//OLD /**************************************************************************
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD
-//OLD   Calculate the pathlenth along a line of sight defined by
-//OLD   a photon p to a sphere or radius r centered on the origin.  If
-//OLD   the photon does not hit the sphere return a large number VERY_BIG
-//OLD
-//OLD   Description:
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   Notes:
-//OLD
-//OLD   History:
-//OLD
-//OLD  ************************************************************************/
 
 /**********************************************************/
 /**
  * @brief      Calculate the pathlenth along a line of sight defined by
  * 	a photon p to a sphere centered on the origin.
  *
- * @param [in, out] double  r   The radius of the sphere
- * @param [in, out] struct photon *  p   The photon
+ * @param [in] double  r   The radius of the sphere
+ * @param [in] struct photon *  p   The photon
  * @return     The distance to the sphere.
  * 	If
  * 	the photon does not hit the sphere return a large number VERY_BIG
@@ -581,9 +484,9 @@ both roots were imaginary */
  * @brief      Find the positive distance to
  *    	a sphere centered at x with radius r
  *
- * @param [in, out] double  x[]   The center of the sphere
- * @param [in, out] double  r   The radius of the sphere
- * @param [in, out] struct photon *  p   A photon
+ * @param [in] double  x[]   The center of the sphere
+ * @param [in] double  r   The radius of the sphere
+ * @param [in] struct photon *  p   A photon
  * @return     The distance to the sphere.
  * 	If
  * 	the photon does not hit the sphere return a large number VERY_BIG
@@ -629,37 +532,6 @@ ds_to_sphere2 (x, r, p)
 
 
 
-//OLD /**************************************************************************
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD
-//OLD   This solves a simple quadratic (or if a is zero linear equation).  The return is set up
-//OLD    to make it easy to identify the smallest positive root if one exists.  The routine returns
-//OLD    a negative number if both roots are negative or imaginary.
-//OLD    More specifically
-//OLD    -1 -> both roots are imaginary
-//OLD          -2 -> both roots are negative or 0
-//OLD           0 -> the first root is the smallest positive  root
-//OLD           1 -> the second root is the smallest positive root
-//OLD
-//OLD
-//OLD   Description:
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   Notes:
-//OLD
-//OLD   History:
-//OLD   05jul   ksl     56d -- Heretofore roots of 0 were on no insterest, but now that
-//OLD                   quadratic is called by bilin, we would like to know about values
-//OLD                   of zero, specifically.  Since the simplest thing to do was to
-//OLD                   check both roots in this case, I added a little code to make
-//OLD                   sure root was defined in all cases.
-//OLD
-//OLD  ************************************************************************/
 
 /**********************************************************/
 /**
@@ -731,54 +603,18 @@ quadratic (a, b, c, r)
 
 
 
-//OLD /**************************************************************************
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD
-//OLD   ds_to_plane calculates the distance of a photon must travel to hit the plane.
-//OLD
-//OLD
-//OLD   Description:
-//OLD
-//OLD   Calcululate the distance a photon must travel to hit a plane.  The plane, just for simplicity,
-//OLD   is defined as a photon structure since you need both a point and a direction to define it.
-//OLD   A plane can be defined by a position x_p and a normal lmn_p.  If the photon ray is then
-//OLD   defined by x=x_v+s lmn_v and the allowed values of s are determined by the equation
-//OLD
-//OLD   (x_v+s lmn_v - x_p)  .  lmn_p=0 where . implies the dot-product.   The routine returns
-//OLD   VERY_BIG if the photon ray does not intersect the plane .
-//OLD
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   Notes:
-//OLD
-//OLD    This routine should be a more general routine than z_plane_intercept, which it replaced at
-//OLD    some point.
-//OLD
-//OLD
-//OLD   History:
-//OLD    04aug  ksl     Changed return to +VERY_BIG if the photon cannot every hit the
-//OLD                           plane.
-//OLD
-//OLD
-//OLD
-//OLD  ************************************************************************/
 
 
 /**********************************************************/
 /**
  * @brief      calculates the distance of a photon must travel to hit the plane.
  *
- * @param [in, out] struct plane *  pl   A structure which descibes a plane in terms of a position and vector normal to the surface
- * @param [in, out] struct photon *  p   A photon
+ * @param [in] struct plane *  pl   A structure which descibes a plane in terms of a position and vector normal to the surface
+ * @param [in] struct photon *  p   A photon
  * @return     The distance to the plane, or VERY_BIG if the photon does not hit the plane (in the positive direction)
  *
  * @details
- * Calcululate the distance a photon must travel to hit a plane.  The plane, just for simplicity,
+ * Calculate the distance a photon must travel to hit a plane.  The plane, just for simplicity,
  * is defined as a photon structure since you need both a point and a direction to define it.
  * A plane can be defined by a position x_p and a normal lmn_p.  If the photon ray is then
  * defined by x=x_v+s lmn_v and the allowed values of s are determined by the equation
@@ -813,28 +649,6 @@ ds_to_plane (pl, p)
 }
 
 
-
-
-//OLD /**************************************************************************
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD   This routine calculates the distance a photon has to be moved to
-//OLD   reach the point of closest approach to a point described by x and also
-//OLD   calculates the distance of closest approach (i.e. the impact parameter).
-//OLD
-//OLD
-//OLD   Description:
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   Notes:
-//OLD
-//OLD   History:
-//OLD
-//OLD  ************************************************************************/
 
 
 /**********************************************************/
@@ -876,53 +690,13 @@ ds_to_closest_approach (x, p, impact_parameter)
 
 
 
-
-
-//OLD /**************************************************************************
-//OLD                     Space Telescope Science Institute
-//OLD
-//OLD
-//OLD   Synopsis:
-//OLD
-//OLD   calculate the distance a photon must travel to encouter a cylinder
-//OLD   that is centered on the z axis.
-//OLD
-//OLD   Description:
-//OLD
-//OLD   Given a position and a direction the distance to a cylinder can
-//OLD   be solved as a simple quadratic equation
-//OLD
-//OLD   Arguments:
-//OLD
-//OLD   rho is the size of the cylinder
-//OLD   p is a photon ptr
-//OLD
-//OLD
-//OLD   Returns:
-//OLD
-//OLD   The smallest positive distance to the cylinder. If the
-//OLD   ray does not hit the cylinder a large postive number is
-//OLD   returned.
-//OLD
-//OLD   Notes:
-//OLD
-//OLD
-//OLD
-//OLD   History:
-//OLD 11aug     ksl     Coding began
-//OLD
-//OLD  ************************************************************************/
-
-
-
-
 /**********************************************************/
 /**
  * @brief      calculate the distance a photon must travel to encouter a cylinder
  *   that is centered on the z axis.
  *
- * @param [in, out] double  rho   the size of the cylinder
- * @param [in, out] struct photon *  p   a photon ptr
+ * @param [in] double  rho   the size of the cylinder
+ * @param [in] struct photon *  p   a photon ptr
  * @return     The smallest positive distance to the cylinder. If the
  *   ray does not hit the cylinder a VERY_BIG is
  *   returned.

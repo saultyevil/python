@@ -9,10 +9,10 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
 
@@ -101,7 +101,7 @@ radiation (PhotPtr p, double ds)
   /* compute the initial momentum of the photon */
 
   stuff_v (p->lmn, p_in);       //Get the direction
-  renorm (p_in, p->w / C);      //Renormalise to momentum
+  renorm (p_in, p->w / VLIGHT); //Renormalise to momentum
 
   /* Create phot, a photon at the position we are moving to 
    *  note that the actual movement of the photon gets done after 
@@ -115,8 +115,8 @@ radiation (PhotPtr p, double ds)
 
   /* calculate photon frequencies in rest frame of cell */
 
-  freq_inner = p->freq * (1. - v1 / C);
-  freq_outer = phot.freq * (1. - v2 / C);
+  freq_inner = p->freq * (1. - v1 / VLIGHT);
+  freq_outer = phot.freq * (1. - v2 / VLIGHT);
 
   /* take the average of the frequencies at original position and original+ds */
   freq = 0.5 * (freq_inner + freq_outer);
@@ -414,7 +414,7 @@ radiation (PhotPtr p, double ds)
      which also updates the ionization parameters and scattered and direct contributions */
 
 
-  //Floowing bug #391, we now wish to use the mean, doppler shifted freqiency in the cell.
+  //Following bug #391, we now wish to use the mean, doppler shifted freqiency in the cell.
   freq_store = p->freq;         //Store the packets 'intrinsic' frequency
   p->freq = freq;               //Temporarily set the photon frequency to the mean doppler shifter frequency
   update_banded_estimators (xplasma, p, ds, w_ave);     //Update estimators
@@ -457,12 +457,12 @@ radiation (PhotPtr p, double ds)
       xplasma->heat_tot += z * frac_auger;      //All the inner shell opacities
 
       /* Calculate the number of H ionizing photons, see #255 */
-      if (freq > (RYD2ERGS / H))
+      if (freq > (RYD2ERGS / PLANCK))
         xplasma->nioniz++;
 
-      q = (z) / (H * freq * xplasma->vol);
+      q = (z) / (PLANCK * freq * xplasma->vol);
       /* So xplasma->ioniz for each species is just 
-         (energy_abs)*kappa_h/kappa_tot / H*freq / volume
+         (energy_abs)*kappa_h/kappa_tot / PLANCK*freq / volume
          or the number of photons absorbed in this bundle per unit volume by this ion
        */
 
@@ -480,7 +480,7 @@ radiation (PhotPtr p, double ds)
 
 
   stuff_v (p->lmn, p_out);
-  renorm (p_out, z * frac_ff / C);
+  renorm (p_out, z * frac_ff / VLIGHT);
   project_from_xyz_cyl (phot_mid.x, p_out, dp_cyl);
   if (p->x[2] < 0)
     dp_cyl[2] *= (-1);
@@ -490,7 +490,7 @@ radiation (PhotPtr p, double ds)
   }
 
   stuff_v (p->lmn, p_out);
-  renorm (p_out, (z * (frac_tot + frac_auger)) / C);
+  renorm (p_out, (z * (frac_tot + frac_auger)) / VLIGHT);
   project_from_xyz_cyl (phot_mid.x, p_out, dp_cyl);
   if (p->x[2] < 0)
     dp_cyl[2] *= (-1);
@@ -858,6 +858,9 @@ update_banded_estimators (xplasma, p, ds, w_ave)
      double w_ave;
 {
   int i;
+  double flux[3];
+  double p_dir_cos[3];
+  struct photon phot_mid;
 
   /*photon weight times distance in the shell is proportional to the mean intensity */
   xplasma->j += w_ave * ds;
@@ -873,11 +876,31 @@ update_banded_estimators (xplasma, p, ds, w_ave)
 
 
 
-/* frequency weighted by the weights and distance       in the shell .  See eqn 2 ML93 */
+/* frequency weighted by the weights and distance in the shell .  See eqn 2 ML93 */
   xplasma->mean_ds += ds;
   xplasma->n_ds++;
   xplasma->ave_freq += p->freq * w_ave * ds;
 
+
+/* The lines below compute the flux element of this photon */
+
+  stuff_phot (p, &phot_mid);    // copy photon ptr
+  move_phot (&phot_mid, ds / 2.);       // get the location of the photon mid-path 
+  stuff_v (p->lmn, p_dir_cos);  //Get the direction of the photon packet
+  renorm (p_dir_cos, w_ave * ds);       //Renormnalise the direction into a flux element
+  project_from_xyz_cyl (phot_mid.x, p_dir_cos, flux);   //Go from a direction cosine into a cartesian vector
+
+  if (p->x[2] < 0)              //If the photon is in the lower hemisphere - we need to reverse the sense of the z flux
+    flux[2] *= (-1);
+
+/* We now update the fluxes in the three bands */
+
+  if (p->freq < UV_low)
+    vadd (xplasma->F_vis, flux, xplasma->F_vis);
+  else if (p->freq < UV_hi)
+    vadd (xplasma->F_Xray, flux, xplasma->F_Xray);
+  else
+    vadd (xplasma->F_UV, flux, xplasma->F_UV);
 
 
   /* 1310 JM -- The next loop updates the banded versions of j and ave_freq, analogously to routine inradiation
@@ -893,12 +916,10 @@ update_banded_estimators (xplasma, p, ds, w_ave)
   {
     if (geo.xfreq[i] < p->freq && p->freq <= geo.xfreq[i + 1])
     {
-
       xplasma->xave_freq[i] += p->freq * w_ave * ds;    /* frequency weighted by weight and distance */
       xplasma->xsd_freq[i] += p->freq * p->freq * w_ave * ds;   /* input to allow standard deviation to be calculated */
       xplasma->xj[i] += w_ave * ds;     /* photon weight times distance travelled */
       xplasma->nxtot[i]++;      /* increment the frequency banded photon counter */
-
       /* work out the range of frequencies within a band where photons have been seen */
       if (p->freq < xplasma->fmin[i])
       {
@@ -930,7 +951,7 @@ update_banded_estimators (xplasma, p, ds, w_ave)
 
     /* IP needs to be radiation density in the cell. We sum contributions from
        each photon, then it is normalised in wind_update. */
-    xplasma->ip += ((w_ave * ds) / (H * p->freq));
+    xplasma->ip += ((w_ave * ds) / (PLANCK * p->freq));
 
     if (HEV * p->freq < 13600)  //Tartar et al integrate up to 1000Ryd to define the ionization parameter
     {
@@ -939,11 +960,11 @@ update_banded_estimators (xplasma, p, ds, w_ave)
 
     if (p->nscat == 0)
     {
-      xplasma->ip_direct += ((w_ave * ds) / (H * p->freq));
+      xplasma->ip_direct += ((w_ave * ds) / (PLANCK * p->freq));
     }
     else
     {
-      xplasma->ip_scatt += ((w_ave * ds) / (H * p->freq));
+      xplasma->ip_scatt += ((w_ave * ds) / (PLANCK * p->freq));
     }
   }
 
@@ -1026,7 +1047,7 @@ mean_intensity (xplasma, freq, mode)
 
               else if (xplasma->spec_mod_type[i] == SPEC_MOD_EXP)       //Exponential model
               {
-                J = xplasma->exp_w[i] * exp ((-1 * H * freq) / (BOLTZMANN * xplasma->exp_temp[i]));
+                J = xplasma->exp_w[i] * exp ((-1 * PLANCK * freq) / (BOLTZMANN * xplasma->exp_temp[i]));
               }
               else
               {
@@ -1070,8 +1091,8 @@ mean_intensity (xplasma, freq, mode)
     {
       if (mode == 1)            //We need a guess, so we use the initial guess of a dilute BB
       {
-        expo = (H * freq) / (BOLTZMANN * xplasma->t_r);
-        J = (2 * H * freq * freq * freq) / (C * C);
+        expo = (PLANCK * freq) / (BOLTZMANN * xplasma->t_r);
+        J = (2 * PLANCK * freq * freq * freq) / (VLIGHT * VLIGHT);
         J *= 1 / (exp (expo) - 1);
         J *= xplasma->w;
       }
@@ -1085,8 +1106,8 @@ mean_intensity (xplasma, freq, mode)
 
   else                          /*Else, use dilute BB estimator of J */
   {
-    expo = (H * freq) / (BOLTZMANN * xplasma->t_r);
-    J = (2 * H * freq * freq * freq) / (C * C);
+    expo = (PLANCK * freq) / (BOLTZMANN * xplasma->t_r);
+    J = (2 * PLANCK * freq * freq * freq) / (VLIGHT * VLIGHT);
     J *= 1 / (exp (expo) - 1);
     J *= xplasma->w;
   }

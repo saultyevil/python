@@ -9,21 +9,17 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "atomic.h"
 #include <time.h>               //To allow the used of the clock command without errors!!
 
-
-
+#include "atomic.h"
 #include "python.h"
 #include "models.h"
+
 #define NSPEC	20
-
-
 
 
 /**********************************************************/
@@ -296,14 +292,14 @@ main (argc, argv)
        */
 
 
-      rdpar_comment ("Parameters descibing the various winds or coronae in the system");
+      rdpar_comment ("Parameters describing the various winds or coronae in the system");
 
-      strcpy (answer, "yes");
-      geo.wind_radiation = rdchoice ("Wind.radiation(yes,no)", "1,0", answer);
+      //OLD strcpy (answer, "yes");
+      //OLD geo.wind_radiation = rdchoice ("Wind.radiation(yes,no)", "1,0", answer);
 
-      /* JM 1806 -- note that wind radiation will get "turned off" in indivisible packet/macro-atom
-         mode when geo.rt_mode == RT_MODE_MACRO. This is done in get_line_transfer_mode () in
-         setup_domains.c, see issue #390 */
+      //OLD /* JM 1806 -- note that wind radiation will get "turned off" in indivisible packet/macro-atom
+      //OLD    mode when geo.rt_mode == RT_MODE_MACRO. This is done in get_line_transfer_mode () in
+      //OLD    setup_domains.c, see issue #390 */
 
       if (geo.run_type == RUN_TYPE_NEW)
       {
@@ -325,8 +321,6 @@ main (argc, argv)
     }
 
   }
-
-
 
 
 /* Get the remainder of the input data.  Note that the next few lines are read from the input file whether or not the windsave file was read in,
@@ -408,7 +402,7 @@ main (argc, argv)
   else
     Log ("There is a disk which radiates and absorbs\n");
 
-  if (geo.bl_radiation)
+  if (geo.bl_radiation || (geo.agn_radiation && geo.system_type != SYSTEM_TYPE_AGN))
     Log ("There is a boundary layer which radiates\n");
   else
     Log ("There is no boundary layer\n");
@@ -437,27 +431,44 @@ main (argc, argv)
   {
     rdpar_comment ("Parameters defining the spectra seen by observers\n");
 
-    get_spectype (geo.star_radiation,
-                  //"Rad_type_for_star(0=bb,1=models,2=uniform)_in_final_spectrum",
-                  //"Central_object.rad_type_in_final_spectrum(0=bb,1=models,2=uniform)", &geo.star_spectype);
-                  "Central_object.rad_type_in_final_spectrum(bb,models,uniform)", &geo.star_spectype);
-    get_spectype (geo.disk_radiation,
-                  //"Rad_type_for_disk(0=bb,1=models,2=uniform)_in_final_spectrum",
-                  //"Disk.rad_type_in_final_spectrum(0=bb,1=models,2=uniform)", &geo.disk_spectype);
-                  "Disk.rad_type_in_final_spectrum(bb,models,uniform)", &geo.disk_spectype);
-    get_spectype (geo.bl_radiation,
-                  //"Rad_type_for_bl(0=bb,1=models,2=uniform)_in_final_spectrum",
-                  //"Boundary_layer.rad_type_in_final_spectrum(0=bb,1=models,2=uniform)", &geo.bl_spectype);
-                  "Boundary_layer.rad_type_in_final_spectrum(bb,models,uniform)", &geo.bl_spectype);
-    geo.agn_spectype = SPECTYPE_POW;
-    get_spectype (geo.agn_radiation,
-                  //"Rad_type_for_agn(3=power_law,4=cloudy_table,5=bremsstrahlung)_in_final_spectrum", &geo.agn_spectype);
-                  "BH.rad_type_in_final_spectrum(power,cloudy,brems)", &geo.agn_spectype);
-    if (geo.agn_radiation && geo.agn_spectype >= 0 && comp[geo.agn_spectype].nmods != 1)
+    if (geo.star_radiation)
     {
-      Error ("python: When using models with an AGN, there should be exactly 1 model, we have %i for spectrum cycles\n",
-             comp[geo.agn_ion_spectype].nmods);
-      exit (0);
+      get_spectype (geo.star_radiation, "Central_object.rad_type_in_final_spectrum(bb,models,uniform)", &geo.star_spectype);
+    }
+
+    if (geo.disk_radiation)
+    {
+      get_spectype (geo.disk_radiation, "Disk.rad_type_in_final_spectrum(bb,models,uniform)", &geo.disk_spectype);
+    }
+
+    if (geo.bl_radiation)
+    {
+      get_spectype (geo.bl_radiation, "Boundary_layer.rad_type_in_final_spectrum(bb,models,uniform)", &geo.bl_spectype);
+    }
+
+    if (geo.agn_radiation)
+    {
+      // This block will run for both AGN, *and* some versions of a boundary layer.
+      // Even though we're setting the same params, we need to change the wording based on the system, unfortunately.
+      geo.agn_spectype = SPECTYPE_POW;
+
+      // If there is 'AGN radiation' that genuinely *is* AGN radiation (and not a star boundary layer
+      if (geo.system_type == SYSTEM_TYPE_AGN || geo.system_type == SYSTEM_TYPE_BH)
+      {
+        get_spectype (geo.agn_radiation, "Central_object.rad_type_in_final_spectrum(bb,models,power,cloudy,brems)", &geo.agn_spectype);
+      }
+      else
+      {
+        get_spectype (geo.agn_radiation, "Boundary_layer.rad_type_in_final_spectrum(power)", &geo.agn_spectype);
+      }
+
+
+      if (geo.agn_spectype >= 0 && comp[geo.agn_spectype].nmods != 1)
+      {
+        Error ("python: When using models with an AGN, there should be exactly 1 model, we have %i for spectrum cycles\n",
+               comp[geo.agn_ion_spectype].nmods);
+        exit (0);
+      }
     }
     init_observers ();
   }
@@ -664,8 +675,8 @@ main (argc, argv)
 
 /* XXXX - THE CALCULATION OF A DETAILED SPECTRUM IN A SPECIFIC REGION OF WAVELENGTH SPACE */
 
-  freqmax = C / (geo.swavemin * 1.e-8);
-  freqmin = C / (geo.swavemax * 1.e-8);
+  freqmax = VLIGHT / (geo.swavemin * 1.e-8);
+  freqmin = VLIGHT / (geo.swavemax * 1.e-8);
 
   /* Perform the initilizations required to handle macro-atoms during the detailed
      calculation of the spectrum.

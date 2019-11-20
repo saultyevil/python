@@ -49,9 +49,7 @@
 #include "atomic.h"
 #include "python.h"
 
-
 long n_lost_to_dfudge = 0;
-
 
 
 /**********************************************************/
@@ -110,8 +108,12 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
 
     if (nphot % nreport == 0)
     {
-      Log ("Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle, geo.pcycle, basename, nphot, NPHOT,
-           nphot * 100. / NPHOT);
+      if (geo.ioniz_or_extract)
+        Log (" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, basename, nphot, NPHOT,
+             nphot * 100. / NPHOT);
+      else
+        Log ("Spec. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.pcycle + 1, geo.pcycles, basename, nphot, NPHOT,
+             nphot * 100. / NPHOT);
     }
 
     Log_flush ();
@@ -203,7 +205,6 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
   Log ("\n");
 
   print_timer_duration ("!!python: photon transport completed in", timer_t0);
-
   /* sometimes photons scatter near the edge of the wind and get pushed out by DFUDGE. We record these */
   if (n_lost_to_dfudge > 0)
     Error
@@ -269,6 +270,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
   int kkk, n;
   double weight_min;
   struct photon pp, pextract;
+  struct photon pp_reposition_test;
   int nnscat;
   int nerr;
   double p_norm, tau_norm;
@@ -277,7 +279,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
   double normal[3];
 
   /* Initialize parameters that are needed for the flight of the photon through the wind */
-
   stuff_phot (p, &pp);
   tau_scat = -log (1. - random_number (0.0, 1.0));
 
@@ -575,6 +576,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       istat = pp.istat = P_INWIND;
       tau = 0;
 
+      stuff_phot (&pp, &pp_reposition_test);
       stuff_v (pp.x, x_dfudge_check);   // this is a vector we use to see if dfudge moved the photon outside the wind cone
       reposition (&pp);
 
@@ -582,13 +584,28 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
          can take photon outside of the wind and into the disk or star
          after scattering. Note that walls updates the istat in pp as well.
          This may not be necessary but I think to account for every eventuality
-         it should be done */
+         it should be done. This *does not* update istat if the photon scatters
+         outside of the wind- I guess P_IN_WIND is really in wind or empty space
+         but not escaped. translate_in_space will take care of this next time
+         round. All a bit convoluted but should work. */
+
       istat = walls (&pp, p, normal);
 
-      /* This *does not* update istat if the photon scatters outside of the wind-
-         I guess P_IN_WIND is really in wind or empty space but not escaped.
-         translate_in_space will take care of this next time round. All a bit
-         convoluted but should work. */
+      /*
+       * EP 1908 -- see issue #584 for a more complete description of the problem.
+       * This additional error checking was added due to reposition () pushing
+       * photons through the disc plane for a geometrically thin accretion disc,
+       * which would sometimes result in a simulation exiting. The purpose of
+       * this is to move a photon a reduced distance to ensure that it does not
+       * get pushed through the disc plane accidentally
+       */
+
+      if (istat == P_REPOSITION_ERROR)
+      {
+        reposition_lost_disk_photon (&pp_reposition_test);
+        stuff_phot (&pp_reposition_test, &pp);
+        istat = walls (&pp, p, normal);
+      }
 
       /* JM 1506 -- we don't throw errors here now, but we do keep a track
          of how many 4 photons were lost due to DFUDGE pushing them

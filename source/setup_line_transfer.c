@@ -17,7 +17,6 @@
 #include "python.h"
 
 
-
 /**********************************************************/
 /** 
  * @brief       Get the line transfer mode for the wind
@@ -27,7 +26,7 @@
  *
  * This rontinues simply gets the line tranfer mode for
  * all componensts of the wind.  After logging this
- * information the routine also reads in the atomic 
+ * information, the routine also reads in the atomic 
  * data.
  *
  *
@@ -50,8 +49,9 @@ get_line_transfer_mode ()
 
   int user_line_mode = 0;
 
-  /* 181010-ksl-There a several line transfer modes which are diagnostic in nature which cannot be reached by rdchoice easily, except as numbers.  
-   * We need a better way to deal with these. */
+  /* 181010-ksl-There a several line transfer modes which are diagnostic in nature which 
+     cannot be reached by rdchoice easily, except as numbers.  
+     * We need a better way to deal with these. */
 
   strcpy (answer, "thermal_trapping");
   user_line_mode =
@@ -135,12 +135,24 @@ get_line_transfer_mode ()
   }
 
   /* With the macro atom approach we won't want to generate photon 
-     bundles in the wind so switch it off here. (SS) */
+     bundles in the wind so switch it off here. If not in macro atom mode
+     ask the user whether we want the wind to radiate
+   */
   if (geo.rt_mode == RT_MODE_MACRO)
   {
-    Log ("python: Using Macro Atom method so switching off wind radiation.\n");
-    geo.wind_radiation = 0;
+    geo.wind_radiation = FALSE;
   }
+  else
+  {
+    strcpy (answer, "yes");
+    geo.wind_radiation = rdchoice ("Wind.radiation(yes,no)", "1,0", answer);
+
+  }
+
+  /* Note the only other variable read in in this section is that for the atomic data,
+     which can only be specified for a new model, becuase of various structures
+     that have been allocated.  
+   */
 
   if (geo.run_type == RUN_TYPE_NEW)
   {

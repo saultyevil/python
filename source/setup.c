@@ -19,16 +19,13 @@
  * own files.
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "atomic.h"
-
-
 #include "python.h"
-
 
 
 /**********************************************************/
@@ -166,12 +163,12 @@ char get_spectype_oldname[LINELENGTH] = "data/kurucz91.ls";
  * @details
  *
  * If yesno is non-zero, the user will be asked for the type of spectrum
- * for a radation source.  If yesno is 0, we presume that this radiation souce (a star
+ * for a radation source.  If yesno is 0, we presume that this radiation source (a star
  * a disk or the wind itself) is not to radiate in the calculation, and the spectrum
  * type is set to SPECTYPE_NONE.
  *
  * If one wants to geneate spectra from a seriels of models (such as synthetic spectra
- * caluclated for stars), this routine calls routines to read the models.
+ * calculated for stars), this routine calls routines to read the models.
  *
  * ### Notes ###
  *
@@ -200,6 +197,16 @@ get_spectype (yesno, question, spectype)
   {
     init_choices ();            // Populate the spect array
 
+    /* If this is is RUN_TYPE_PREVIOUS or RUN_TYPE_RESTART, we need to check
+       whether a model spectrum was read in, and if so set the spectype to
+       SPEC_TYPE_MODEL.  Note that this assume that all other spectrum types
+       have negative values
+     */
+
+    if (*spectype >= 0 && (geo.run_type == RUN_TYPE_RESTART || geo.run_type == RUN_TYPE_PREVIOUS))
+    {
+      *spectype = SPECTYPE_MODEL;
+    }
     /* Locate the word that corresponds to the spectype that was entered
      */
 
@@ -374,8 +381,8 @@ init_observers ()
   /* convert wavelengths to frequencies and store for use
      in computing macro atom and k-packet emissivities. */
 
-  geo.sfmin = C / (geo.swavemax * 1.e-8);
-  geo.sfmax = C / (geo.swavemin * 1.e-8);
+  geo.sfmin = VLIGHT / (geo.swavemax * 1.e-8);
+  geo.sfmax = VLIGHT / (geo.swavemin * 1.e-8);
 
   geo.matom_radiation = 0;      //initialise for ionization cycles - don't use pre-computed emissivities for macro-atom levels/ k-packets.
 

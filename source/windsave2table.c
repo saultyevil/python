@@ -11,8 +11,8 @@
  *
  * windsave2table  windsave_root
  *
- * where windsave_root is the root name for a python run, or more precisel
- * the rootname of a windsave file.
+ * where windsave_root is the root name for a python run, or more precisely
+ * the rootname of a windsave file, as the .pf file is not read.
  *
  * The routine reads the windsavefile and then writes out a selected 
  * set of variables into a variety of number of files, each of which
@@ -52,14 +52,13 @@
  *
  ***********************************************************/
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
 #include "atomic.h"
 #include "python.h"
-
 
 
 /**********************************************************/

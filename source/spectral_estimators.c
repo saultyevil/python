@@ -9,9 +9,6 @@
  * ???
  ***********************************************************/
 
-
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -25,7 +22,6 @@
 double spec_numin, spec_numax, spec_numean;
 /// Log versions of numin and numax - the band ends
 double lspec_numin, lspec_numax;
-
 
 
 /**********************************************************/
@@ -53,7 +49,7 @@ spectral_estimators (xplasma)
      PlasmaPtr xplasma;
 {
   double pl_alpha_min, pl_alpha_max, pl_alpha_temp, pl_w_temp, j;
-  double exp_temp_min, exp_temp_max;    /* The 'temperature' range we are going to search for an effective temperature for the exponential model */
+  double exp_temp_min, exp_temp_max, exp_temp_store;    /* The 'temperature' range we are going to search for an effective temperature for the exponential model */
   double exp_temp_temp, exp_w_temp;     /* The temporary values for temperature and weight of the exponential model */
   int n, n1;
   double pl_sd, exp_sd;         /* Computed standard deviations for two models for comparison with true value */
@@ -202,7 +198,8 @@ spectral_estimators (xplasma)
 
       else                      //We have bracketed alpha
       {
-        pl_alpha_temp = zbrent (pl_alpha_func_log, pl_alpha_min, pl_alpha_max, 0.00001);        //find the actual value of alpha that matches our mean frequency
+//        pl_alpha_temp = zbrent (pl_alpha_func_log, pl_alpha_min, pl_alpha_max, 0.00001);        //find the actual value of alpha that matches our mean frequency
+        pl_alpha_temp = zero_find (pl_alpha_func_log2, pl_alpha_min, pl_alpha_max, 0.00001);    //find the actual value of alpha that matches our mean frequency
 
         /* This next line computes the PL weight using an external function. */
 
@@ -226,22 +223,23 @@ spectral_estimators (xplasma)
       }
 
       /* We will start the search around the temperature that we know will yield a sensible answer  */
-      exp_temp_min = ((H * spec_numax) / (BOLTZMANN)) * 0.9;
-      exp_temp_max = ((H * spec_numax) / (BOLTZMANN)) / 0.9;    /* NSH 131107 - and the same for the maximum temp */
+      exp_temp_min = ((PLANCK * spec_numax) / (BOLTZMANN)) * 0.9;
+      exp_temp_max = ((PLANCK * spec_numax) / (BOLTZMANN)) / 0.9;       /* NSH 131107 - and the same for the maximum temp */
 
       /* Bracket the temperature of an exponential model */
 
-      while ((exp_temp_func (exp_temp_min) * exp_temp_func (exp_temp_max) > 0.0) &&
-             ((exp_temp_func (-1.0 * exp_temp_min) * exp_temp_func (-1.0 * exp_temp_max) > 0.0)))
+      while ((exp_temp_func (exp_temp_min) * exp_temp_func (exp_temp_max) > 0.0)
+             && ((exp_temp_func (-1.0 * exp_temp_min) * exp_temp_func (-1.0 * exp_temp_max) > 0.0)))
       {
         /* In this case we are going to get errors since the temperature is too low
            give a result in the exponential, and we will divide by zero */
-        if ((H * spec_numax) < (100.0 * BOLTZMANN * exp_temp_min * 0.9))
+        if ((PLANCK * spec_numax) < (100.0 * BOLTZMANN * exp_temp_min * 0.9))
         {
           exp_temp_min = exp_temp_min * 0.9;    // Reduce the mininmum temperature, only if we will not end up with problems
         }
         exp_temp_max = exp_temp_max * 1.1;      // The maximum temperature can go up forever with no fear of numerical problems
       }
+
 
 
       if (isfinite (exp_temp_func (exp_temp_min)) == 0 || isfinite (exp_temp_func (exp_temp_max)) == 0)
@@ -256,14 +254,17 @@ spectral_estimators (xplasma)
       else
       {
         /* But first see if we have a positive or negative solution. The temperatures are positive at the moment,
-           if it was the negatives that worked, change the sign of the temperatures. */
+           if it was the negatives that worked, change the sign of the temperatures - we also need to swap min and max */
         if (exp_temp_func (-1.0 * exp_temp_min) * exp_temp_func (-1.0 * exp_temp_max) < 0.0)
         {
-          exp_temp_min = -1.0 * exp_temp_min;
-          exp_temp_max = -1.0 * exp_temp_max;
+          exp_temp_store = -1.0 * exp_temp_min;
+          exp_temp_min = -1.0 * exp_temp_max;
+          exp_temp_max = exp_temp_store;
         }
         /* Solve for the effective temperature */
-        exp_temp_temp = zbrent (exp_temp_func, exp_temp_min, exp_temp_max, 0.00001);
+
+        exp_temp_temp = zero_find (exp_temp_func2, exp_temp_min, exp_temp_max, 0.00001);
+
         /* Calculate the weight */
         exp_w_temp = exp_w (j, exp_temp_temp, spec_numin, spec_numax);
 
@@ -362,14 +363,18 @@ spectral_estimators (xplasma)
  **********************************************************/
 
 double
-pl_alpha_func_log (alpha)
-     double alpha;
+pl_alpha_func_log (double alpha)
 {
   double answer;
   answer = pl_logmean (alpha, lspec_numin, lspec_numax) - spec_numean;
   return (answer);
 }
 
+double
+pl_alpha_func_log2 (double alpha, void *params)
+{
+  return (pl_alpha_func_log (alpha));
+}
 
 /**********************************************************/
 /**
@@ -524,15 +529,18 @@ pl_log_stddev (alpha, lnumin, lnumax)
  **********************************************************/
 
 double
-exp_temp_func (exp_temp)
-     double exp_temp;
+exp_temp_func (double exp_temp)
 {
   double answer;
-
   answer = exp_mean (exp_temp, spec_numin, spec_numax) - spec_numean;
   return (answer);
 }
 
+double
+exp_temp_func2 (double exp_temp, void *params)
+{
+  return (exp_temp_func (exp_temp));
+}
 
 /**********************************************************/
 /**
@@ -565,7 +573,7 @@ exp_mean (exp_temp, numin, numax)
   double emin, emax;            /*The exponential evaluated at numin and numax */
   double t1, t2;
 
-  exp1 = (-1.0 * H) / (BOLTZMANN * exp_temp);
+  exp1 = (-1.0 * PLANCK) / (BOLTZMANN * exp_temp);
 
   t1 = exp1 * numin;
   t2 = exp1 * numax;
@@ -612,7 +620,7 @@ exp_w (j, exp_temp, numin, numax)
   double exp1;                  /* We supply a temperature, but actually we expect the correct function to be of the form e^-hnu/kt, so this will hold -1*h/kt */
   double emin, emax;            /*The exponential evaluated at numin and numax */
 
-  exp1 = (-1.0 * H) / (BOLTZMANN * exp_temp);
+  exp1 = (-1.0 * PLANCK) / (BOLTZMANN * exp_temp);
 
 
   emin = exp (exp1 * numin);
@@ -654,7 +662,7 @@ exp_stddev (exp_temp, numin, numax)
   double numerator, denominator;
   double mean;
 
-  exp1 = (-1.0 * H) / (BOLTZMANN * exp_temp);
+  exp1 = (-1.0 * PLANCK) / (BOLTZMANN * exp_temp);
   emin = exp (exp1 * numin);
   emax = exp (exp1 * numax);
 

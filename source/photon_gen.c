@@ -13,11 +13,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-
 #include "atomic.h"
 #include "python.h"
-
-
 
 // These are external variables that are used to determine whether one needs to reinitialize
 // by running xdefine_phot
@@ -27,6 +24,7 @@ int iwind_old = 0;
 
 #define PRINT_OFF 0
 #define PRINT_ON  1
+
 
 /**********************************************************/
 /**
@@ -193,9 +191,11 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
     p[n].w_orig = p[n].w;
     p[n].freq_orig = p[n].freq;
     p[n].origin_orig = p[n].origin;
+    p[n].np = n;
     if (geo.reverb != REV_NONE && p[n].path < 0.0)      // SWM - Set path lengths for disk, star etc.
       simple_paths_gen_phot (&p[n]);
   }
+
   return (0);
 
 }
@@ -312,18 +312,26 @@ populate_bands (ioniz_or_final, iwind, band)
  * 1-> it is for the final spectrum calculation
  * @param [in] int  iwind   if 0, include wind photons; if 1 include wind photons and force a recalcuation of
  * ion denisities, if -1, ignore the possibility of wind photons
+ * @param [in] int print_mode Detemines whether certain summary messages are printed out or not
  * @return     Always returns 0
  *
  * @details
- * This is a routine that initilizes things.  It does not generate photons itself.
+ * This is a routine that initializes variables that are used to determine how many
+ * photons from a particular source in a particular wavelength range are to be generated
+ * It does not generate photons itself.
  *
  * The routine calls various other routines to calcuate the band limited luminosities
  * of various radiation sources (which is used in allocating how many photons to create
- * from each).  The results are stored in elements of the geo structure.
- *
- *
+ * from each).  
+ * 
+ * The results are stored in elements of the geo structure. (By convention
+ * elements of the geo structure that begin with f, such a geo.f_star refer
+ * to the band limited luminosity of a particular source, in theis case the
+ * star (or central object).
  *
  * ### Notes ###
+ * 
+ *
  * @bug This routine is something of a kluge.  Information is passed back to the calling
  * routine through the geo structure, rather than a more obvious method.  The routine was
  * created when a banded approach was defined, but the whole section might be more obvious.
@@ -409,43 +417,65 @@ iwind = -1 	Don't generate any wind photons at all
 
   geo.f_tot = geo.f_star + geo.f_disk + geo.f_bl + geo.f_wind + geo.f_kpkt + geo.f_matom + geo.f_agn;
   geo.lum_tot = geo.lum_star + geo.lum_disk + geo.lum_bl + geo.lum_agn + geo.lum_wind;
+  /* Store the 3 variables that have to remain the same to avoid reinitialization */
+
+  geo.f1 = f1_old = f1;
+  geo.f2 = f2_old = f2;
+  iwind_old = iwind;
 
   if (print_mode == PRINT_ON)
   {
-    if (geo.adiabatic)
-      Log ("!! xdefine_phot: heating & cooling  due to adiabatic processes:         %8.2e %8.2e \n", geo.heat_adiabatic,
-           geo.cool_adiabatic);
-
-    Log
-      ("!! xdefine_phot: lum_tot %8.2e lum_star %8.2e lum_disk %8.2e lum_bl %8.2e lum_agn %8.2e lum_wind %8.2e\n",
-       geo.lum_tot, geo.lum_star, geo.lum_disk, geo.lum_bl, geo.lum_agn, geo.lum_wind);
-
-    Log
-      ("!! xdefine_phot:   f_tot %8.2e   f_star %8.2e   f_disk %8.2e   f_bl %8.2e   f_agn %8.2e   f_wind %8.2e   f_matom %8.2e   f_kpkt %8.2e \n",
-       geo.f_tot, geo.f_star, geo.f_disk, geo.f_bl, geo.f_agn, geo.f_wind, geo.f_matom, geo.f_kpkt);
-
-    Log
-      ("!! xdefine_phot: wind ff %8.2e       fb %8.2e   lines  %8.2e  for freq %8.2e %8.2e\n",
-       geo.lum_ff, geo.lum_rr, geo.lum_lines, f1, f2);
-    Log
-      ("!! xdefine_phot: star  tstar  %8.2e   %8.2e   lum_star %8.2e %8.2e  %8.2e \n",
-       geo.tstar, geo.tstar_init, geo.lum_star, geo.lum_star_init, geo.lum_star_back);
-    Log
-      ("!! xdefine_phot: disk                               lum_disk %8.2e %8.2e  %8.2e \n",
-       geo.lum_disk, geo.lum_disk_init, geo.lum_disk_back);
+    phot_status ();
   }
 
-  /* Store the 3 variables that have to remain the same to avoid reinitialization */
 
-  f1_old = f1;
-  f2_old = f2;
-  iwind_old = iwind;
   return (0);
 
 }
 
 
 
+/**********************************************************/
+/**
+ * @brief    Logs information about total and band limited
+ * luminosities
+ *
+ * @return     Always returns 0
+ *
+ * @details
+ * This routines logs information from that exists in the
+ * geo structure at the time it is called.
+ *
+ * ### Notes ###
+ *
+ **********************************************************/
+
+int
+phot_status ()
+{
+  if (geo.adiabatic)
+    Log ("!! xdefine_phot: heating & cooling  due to adiabatic processes:         %8.2e %8.2e \n", geo.heat_adiabatic, geo.cool_adiabatic);
+
+  Log
+    ("!! xdefine_phot: lum_tot %8.2e lum_star %8.2e lum_disk %8.2e lum_bl %8.2e lum_agn %8.2e lum_wind %8.2e\n",
+     geo.lum_tot, geo.lum_star, geo.lum_disk, geo.lum_bl, geo.lum_agn, geo.lum_wind);
+
+  Log
+    ("!! xdefine_phot:   f_tot %8.2e   f_star %8.2e   f_disk %8.2e   f_bl %8.2e   f_agn %8.2e   f_wind %8.2e   f_matom %8.2e   f_kpkt %8.2e \n",
+     geo.f_tot, geo.f_star, geo.f_disk, geo.f_bl, geo.f_agn, geo.f_wind, geo.f_matom, geo.f_kpkt);
+
+  Log
+    ("!! xdefine_phot: wind ff %8.2e       fb %8.2e   lines  %8.2e  for freq %8.2e %8.2e\n",
+     geo.lum_ff, geo.lum_rr, geo.lum_lines, geo.f1, geo.f2);
+  Log
+    ("!! xdefine_phot: star  tstar  %8.2e   %8.2e   lum_star %8.2e %8.2e  %8.2e \n",
+     geo.tstar, geo.tstar_init, geo.lum_star, geo.lum_star_init, geo.lum_star_back);
+  Log
+    ("!! xdefine_phot: disk                               lum_disk %8.2e %8.2e  %8.2e \n",
+     geo.lum_disk, geo.lum_disk_init, geo.lum_disk_back);
+
+  return (0);
+}
 
 
 /**********************************************************/
@@ -711,7 +741,7 @@ star_init (freqmin, freqmax, ioniz_or_final, f)
   double emit, emittance_bb (), emittance_continuum ();
   int spectype;
 
-  log_g = geo.gstar = log10 (G * geo.mstar / (geo.rstar * geo.rstar));
+  log_g = geo.gstar = log10 (GRAV * geo.mstar / (geo.rstar * geo.rstar));
   r = geo.rstar;
 
   tstar = geo.tstar = geo.tstar_init;
@@ -918,7 +948,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
 
   gref = gdisk (m, mdot, rmin);
 
-
+  q_test_count = 0;
   /* Now compute the apparent luminosity of the disk.  This is not actually used
      to determine how annulae are set up.  It is just used to populate geo.ltot.
      It can change if photons hitting the disk are allowed to raise the temperature
@@ -1011,7 +1041,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
      the actual radius. */
 
   disk.r[0] = rmin;
-  disk.v[0] = sqrt (G * geo.mstar / rmin);
+  disk.v[0] = sqrt (GRAV * geo.mstar / rmin);
   nrings = 1;
   f = 0;
 
@@ -1042,7 +1072,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
         r = disk.r[nrings - 1] * (1. + 1.e-10);
       }
       disk.r[nrings] = r;
-      disk.v[nrings] = sqrt (G * geo.mstar / r);
+      disk.v[nrings] = sqrt (GRAV * geo.mstar / r);
       nrings++;
       if (nrings >= NRINGS)
       {
@@ -1059,7 +1089,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
 
 
   disk.r[NRINGS - 1] = exp (logrmax);
-  disk.v[NRINGS - 1] = sqrt (G * geo.mstar / disk.r[NRINGS - 1]);
+  disk.v[NRINGS - 1] = sqrt (GRAV * geo.mstar / disk.r[NRINGS - 1]);
 
 
   /* Now calculate the temperature and gravity of the annulae */
@@ -1081,7 +1111,6 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
     disk.w[nrings] = 0;
     disk.t_hit[nrings] = 0;
   }
-
   geo.lum_disk = ltot;
   return (ltot);
 }
@@ -1242,7 +1271,7 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
        to moving frame */
 
     vdisk (p[i].x, v);
-    p[i].freq /= (1. - dot (v, p[i].lmn) / C);
+    p[i].freq /= (1. - dot (v, p[i].lmn) / VLIGHT);
 
   }
 
@@ -1345,10 +1374,15 @@ bl_init (lum_bl, t_bl, freqmin, freqmax, ioniz_or_final, f)
   double integ_planck_d ();
   double alphamin, alphamax;
 
-  q1 = 2. * PI * (BOLTZMANN * BOLTZMANN * BOLTZMANN * BOLTZMANN) / (H * H * H * C * C);
-  alphamin = H * freqmin / (BOLTZMANN * t_bl);
-  alphamax = H * freqmax / (BOLTZMANN * t_bl);
-  *f = q1 * integ_planck_d (alphamin, alphamax) * lum_bl / STEFAN_BOLTZMANN;
+  q1 = 2. * PI * (BOLTZMANN * BOLTZMANN * BOLTZMANN * BOLTZMANN) / (PLANCK * PLANCK * PLANCK * VLIGHT * VLIGHT);
+  alphamin = PLANCK * freqmin / (BOLTZMANN * t_bl);
+  alphamax = PLANCK * freqmax / (BOLTZMANN * t_bl);
+//  *f = q1 * integ_planck_d (alphamin, alphamax) * lum_bl / STEFAN_BOLTZMANN;
+
+  *f = emittance_bb (freqmin, freqmax, t_bl) * lum_bl / (t_bl * t_bl * t_bl * t_bl * STEFAN_BOLTZMANN);
+
+
+
   return (lum_bl);
 }
 
@@ -1401,16 +1435,10 @@ photon_checks (p, freqmin, freqmax, comment)
 {
   int nnn, nn;
   int nlabel;
-//OLD  int max_errors;
   geo.n_ioniz = 0;
   geo.cool_tot_ioniz = 0.0;
   nnn = 0;
   nlabel = 0;
-//OLD  max_errors = 100;
-//OLD  if (max_errors < 1e-5 * NPHOT)
-//OLD  {
-//OLD    max_errors = 1e-5 * NPHOT;
-//OLD  }
 
   /* Next two lines are to allow for fact that photons generated in
    * a frequency range may be Doppler shifted out of that range, especially
@@ -1427,11 +1455,11 @@ photon_checks (p, freqmin, freqmax, comment)
   freqmin *= (0.6);
   for (nn = 0; nn < NPHOT; nn++)
   {
-    p[nn].np = nn;
-    if (H * p[nn].freq > ion[0].ip)
+//OLD    p[nn].np = nn;
+    if (PLANCK * p[nn].freq > ion[0].ip)
     {
       geo.cool_tot_ioniz += p[nn].w;
-      geo.n_ioniz += p[nn].w / (H * p[nn].freq);
+      geo.n_ioniz += p[nn].w / (PLANCK * p[nn].freq);
     }
     if (sane_check (p[nn].freq) != 0 || sane_check (p[nn].w))
     {

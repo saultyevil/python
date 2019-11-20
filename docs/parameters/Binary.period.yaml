@@ -6,7 +6,7 @@ description: |
   a secondary also initializes the outer radius of the disk.
 type: Double
 unit: Hours
-values: Greater than 0 
+values: Greater than 0
 parent:
-  System_type: binary
+  System_type: [cv, bh]
 file: setup_star_bh.c

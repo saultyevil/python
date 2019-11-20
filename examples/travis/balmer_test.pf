@@ -1,4 +1,4 @@
-System_type(star,binary,agn,previous)                 star
+System_type(star,cv,bh,agn,previous)                 star
 
 ### Parameters for the Central Object
 Central_object.mass(msol)                  0.8
@@ -10,13 +10,13 @@ Central_object.temp                        10000
 ### Parameters for the Disk (if there is one)
 Disk.type(none,flat,vertically.extended)                 none
 
-### Parameters for BL or AGN
+### Parameters for Boundary Layer or the compact object in an X-ray Binary or AGN
 Boundary_layer.radiation(yes,no)                   no
 
-### Parameters descibing the various winds or coronae in the system
+### Parameters describing the various winds or coronae in the system
 Wind.radiation(yes,no)                          yes
 Wind.number_of_components                  1
-Wind.type(SV,star,hydro,corona,kwd,homologous,yso,shell,imported)                shell
+Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)                shell
 Wind.coord_system(spherical,cylindrical,polar,cyl_var)            spherical
 Wind.dim.in.x_or_r.direction               4
 

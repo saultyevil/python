@@ -30,9 +30,7 @@
 #include <math.h>
 
 #include "atomic.h"
-
 #include "python.h"
-
 
 
 /**********************************************************/
@@ -361,7 +359,7 @@ cylvar_wind_complete (ndom, w)
 
 /**********************************************************/
 /**
- * @brief      w) calculates the wind volume of a cylindrical cell
+ * @brief      calculates the wind volume of a cylindrical cell
  * 	allowing for the fact that some cells
  *
  * @param [in] int  ndom   the domain poiinter

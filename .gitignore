@@ -3,6 +3,9 @@
 bin/py*
 bin/windsave2table*
 
+# Run files
+*.spec*
+
 # Object files
 *.o
 *.ko
@@ -45,7 +48,11 @@ include/gsl/
 lib/pkgconfig/
 
 # the configure Makefile should not be tracked
-Makefile
+./Makefile
+
+# sphinx stuff
+docs/sphinx/html/
+docs/sphinx/doctrees/
 
 # doxygen stuff
 docs/doxygen/html/
@@ -54,6 +61,9 @@ docs/doxygen/latex/
 # For if you're running py_progs in a virtual environment
 py_progs/venv/
 py_progs/*.html
+
+# For when the wiki is cloned locally
+wiki/
 
 # python and system files
 *.pyc
@@ -78,4 +88,9 @@ source/version.h
 *.log_spec_tot
 *.rdpar
 *.sig
+*.out.pf
 logfile
+
+# IDE files
+.idea/
+py_progs/.idea/

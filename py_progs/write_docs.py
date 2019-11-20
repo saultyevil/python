@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 
 Synopsis:
@@ -63,12 +62,10 @@ History:
         Otherwise it searches for it in the path and that is less
         likely to be what I want.
 180126  ksl Modified for use with python
-
 '''
-
 import sys
 import os
-import glob
+import pydoc
 from MarkupPy import markup
 
 
@@ -83,30 +80,41 @@ def make_toplevel(dirname, names):
     dirname = dirname.strip()
     dirname = dirname.split()
     dirname = dirname[len(dirname)-1]
-    print(dirname)
 
-    html_name = 'doc_'+dirname+'.html'
+    html_name = 'doc_index.html'
 
     # Start a page
-    page = markup.page( )
+    page = markup.page()
 
     page.init(title="Documentation for %s" % dirname)
 
     page.h1("Documentation for python scripts in the directory  %s" % dirname)
+
+    page.p('''This page lists the scripts that exist.  Some of these scripts will be useful to users, and some
+    will not.
+    At present, there is no obvious way to tell, except to look read the documentation associated with
+    each script by following the link, or to have seen a reference to a particular script in some other
+    place in the documentation set.
+    ''')
+
+    page.p('''To use the scripts, one will need to have the py_progs directory in their PYTHONPATH.  Occasionally
+    one will need to be prepared to install modules using conda or pip.''')
+
+    page.h2('The scripts')
 
     items = []
     for name in names:
         item = markup.oneliner.a(name, href="./%s.html" % name)
         items.append(item)
 
-    page.ul(class_='mylist' )
-    page.li(items, class_='myitem' )
+    page.ul(class_='mylist')
+    page.li(items, class_='myitem')
     page.ul.close()
 
     page.p('Warning: This page is rewritten every whenever write_docs.py is run on this directoryand so this page should not be edited')
-    g = open(html_name, 'w')
-    g.write('%s' % page)
-    g.close()
+    with open(html_name, 'w') as file:
+        file.write('%s' % page)
+        file.close()
 
 
 def write_docs(dirname='../../py_progs'):
@@ -115,28 +123,39 @@ def write_docs(dirname='../../py_progs'):
     write out help in the current working directory
     using pydocs
     '''
+    # First, we delete all the existing documentation in this directory
+    for item in os.listdir('.'):
+        if item.endswith(".html"):
+            os.remove(item)
 
-    search_name = dirname+'/*.py'
-    names = glob.glob(search_name)
-    print(names)
-    g = open('DoDocs', 'w')
-
-    roots = []
-
-    for name in names:
-        words = name.split('/')
-        filename = words[len(words)-1]
-        words = filename.split('.')
-        root = words[0]
-        roots.append(root)
-        # g.write('pydoc -w %s\n' % root)
-        g.write('pydoc -w %s\n' % name)
-    g.close()
-    os.system('source DoDocs')
+    # Now, we write new docs
+    pydoc.writedocs(dirname)
 
     # Now make a page that points to all the html pages
     # that have already been made
+    roots = [
+        item.replace('.py', '')
+        for item in os.listdir(dirname)
+        if item.endswith('.py')
+    ]
     make_toplevel(dirname, roots)
+
+    # Now check that we have the files we expected
+    got_all = True
+    for root in roots:
+        if not os.path.isfile(root+'.html'):
+            print('Failed to create an html file for %s.py' % root)
+            got_all = False
+
+    if got_all:
+        print('html files were created for all of the .py scripts')
+        return 0
+
+    print(
+        'Failed to generate documentation for some files.\n'
+        'Please look at the earlier output to find more details on the error.'
+    )
+    return 1  # Return nonzero to indicate error
 
 
 # Next lines permit one to run the routine from the command line

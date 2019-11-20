@@ -1,4 +1,4 @@
-System_type(star,binary,agn,previous)                 star
+System_type(star,cv,bh,agn,previous)                 star
 
 ### Parameters for the Central Object
 Central_object.mass(msol)                  52.5
@@ -10,13 +10,13 @@ Central_object.temp                        42000
 ### Parameters for the Disk (if there is one)
 Disk.type(none,flat,vertically.extended)                 none
 
-### Parameters for BL or AGN
+### Parameters for Boundary Layer or the compact object in an X-ray Binary or AGN
 Boundary_layer.radiation(yes,no)                   no
 
-### Parameters descibing the various winds or coronae in the system
+### Parameters describing the various winds or coronae in the system
 Wind.radiation(yes,no)                          yes
 Wind.number_of_components                  1
-Wind.type(SV,star,hydro,corona,kwd,homologous,yso,shell,imported)                 star
+Wind.type(SV,star,hydro,corona,kwd,homologous,shell,imported)                 star
 Wind.coord_system(spherical,cylindrical,polar,cyl_var)            spherical
 Wind.dim.in.x_or_r.direction               30
 
@@ -26,7 +26,7 @@ Ionization_cycles                          20
 Spectrum_cycles                            20
 Wind.ionization(on.the.spot,ML93,LTE_tr,LTE_te,fixed,matrix_bb,matrix_pow)                 ml93
 Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms,macro_atoms_thermal_trapping)          escape_prob
-Atomic_data                                data/standard78
+Atomic_data                                data/standard80_reduced
 Surface.reflection.or.absorption(reflect,absorb,thermalized.rerad)               absorb
 Wind_heating.extra_processes(none,adiabatic,nonthermal,both)            adiabatic
 

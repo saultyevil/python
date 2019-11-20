@@ -5,7 +5,7 @@
 
 Synopsis:  
 
-Compare to regression runs, highligting the differences
+Compare two regression runs, highligting the differences
 between them
 
 
