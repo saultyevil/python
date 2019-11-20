@@ -28,6 +28,7 @@ int main(int argc, char *argv[]);
 int translate(WindPtr w, PhotPtr pp, double tau_scat, double *tau, int *nres);
 int translate_in_space(PhotPtr pp);
 double ds_to_wind(PhotPtr pp, int *ndom_current);
+double find_smax(PhotPtr p);
 int translate_in_wind(WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell(int ndom, PhotPtr p);
 int walls(PhotPtr p, PhotPtr pold, double *normal);
@@ -124,7 +125,7 @@ double sobolev(WindPtr one, double x[], double den_ion, struct lines *lptr, doub
 int doppler(PhotPtr pin, PhotPtr pout, double v[], int nres);
 int scatter(PhotPtr p, int *nres, int *nnscat);
 /* radiation.c */
-int radiation(PhotPtr p, double ds);
+double radiation(PhotPtr p, double ds);
 double kappa_ff(PlasmaPtr xplasma, double freq);
 double sigma_phot(struct topbase_phot *x_ptr, double freq);
 double sigma_phot_verner(struct innershell *x_ptr, double freq);
@@ -557,6 +558,26 @@ double wdrad(double m);
 double diskrad(double m1, double m2, double period);
 double roche2(double q, double a);
 double logg(double mass, double rwd);
+/* tau_diag.c */
+void print_tau_angles(double *tau_store, double *col_den_store);
+void write_tau_spectrum_to_file(double *tau_spectrum, double freq_min, double dfreq);
+int calculate_tau(WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *tau);
+int extract_tau(WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *tau);
+void reposition_tau_photon(PhotPtr pout);
+int create_tau_diag_phot(PhotPtr pout, double nu);
+void init_tau_diag_angles(void);
+void create_tau_spectrum(WindPtr w);
+void tau_integrate_angles(WindPtr w);
+void tau_diag_main(WindPtr w);
+/* mean_opacities.c */
+int allocate_opacity_arrays(int ncells);
+void free_opacity_arrays(void);
+double dB_nu_dT(double nu);
+void set_ross_integ_temp(double temperature);
+void compute_rosseland_opacity(void);
+void compute_planck_opacity(void);
+int create_test_photon(PhotPtr pout, double nu, double x[3]);
+int init_mean_opacities(void);
 /* py_wind_sub.c */
 int zoom(int direction);
 int overview(WindPtr w, char rootname[]);

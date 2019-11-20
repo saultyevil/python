@@ -156,7 +156,6 @@ python_objects = bb.o get_atomicdata.o photon2d.o photon_gen.o parse.o setup_fil
 		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
 		reverb.o paths.o setup.o run.o brem.o synonyms.o \
 		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o tau_diag.o \
-		mean_opacities.o
 
 
 
@@ -178,7 +177,7 @@ python_source= bb.c get_atomicdata.c python.c photon2d.c photon_gen.c parse.c \
 		setup_disk.c photo_gen_matom.c macro_gov.c windsave2table_sub.c \
 		import.c import_spherical.c import_cylindrical.c import_rtheta.c\
 		reverb.c paths.c setup.c run.c brem.c synonyms.c \
-		setup_reverb.c setup_line_transfer.c cv.c tau_diag.c mean_opacities.c \
+		setup_reverb.c setup_line_transfer.c cv.c tau_diag.c \
 
 
 #
