@@ -115,6 +115,7 @@ add_executable(python
         source/setup_line_transfer.c
         source/cv.c
         source/wind_util.c
+        source/tau_diag.c
         )
 
 add_executable(py_wind

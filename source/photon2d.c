@@ -595,7 +595,7 @@ return and record an error */
 
     if (geo.ioniz_or_extract == 1)
     {
-      xplasma->ntot++;  // EP 11-19: Moved so only increments during ionisation cycles
+      xplasma->ntot++;          // EP 11-19: Moved so only increments during ionisation cycles
 
       /* For an ionization cycle */
       bf_estimators_increment (one, p, ds_current);
