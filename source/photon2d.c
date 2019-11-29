@@ -731,7 +731,8 @@ walls (p, pold, normal)
   double s, z;
   double theta, phi;
 
-  /* Check to see if the photon has hit the star. If so
+  /*
+   * Check to see if the photon has hit the star. If so
    * put the photon at the star surface and use that position
    * to determine the normal to the surface, the assumption
    * being that the star is located at the center of the
@@ -749,12 +750,13 @@ walls (p, pold, normal)
     return (p->istat = P_HIT_STAR);
   }
 
-  /* Check to see if it has hit the disk.
-   *
+  /*
+   * Check to see if it has hit the disk.
    * For a vertically extended disk these means checking whether
    * we are inside the maximum radius of the disk and then lookng
    * comparing the z position of z to the height of the disk at
-   * that point*/
+   * that point
+   */
 
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
   {
@@ -775,7 +777,6 @@ walls (p, pold, normal)
       {
         Error ("walls: %d Should not miss disk at this position %11.4e %11.4e %11.4e (%11.4e/%11.4e %11.4e/%11.4e %11.4e) \n", pold->np,
                pold->x[0], pold->x[1], pold->x[2], rho, geo.diskrad, fabs (p->x[2]), z, ds_to_disk (pold, 1));
-        save_photons (pold, "Disk");
       }
       stuff_phot (pold, p);
       move_phot (p, s - DFUDGE);
@@ -802,9 +803,14 @@ walls (p, pold, normal)
   {                             /* Then the photon crossed the xy plane and probably hit the disk */
     s = (-(pold->x[2])) / (pold->lmn[2]);
 
+    /*
+     * This captures the odd case where a photon has been pushed into the disk
+     * by reposition() moving it a distance dfudge
+     */
+
     if (s < 0 && fabs (pold->x[2]) < wmain[pold->grid].dfudge && pold->lmn[2] * p->lmn[2] < 0.0)
     {
-      Error ("walls: Reposition error\n");
+      Error ("walls: Reposition has probably pushed photon through the disk plane incorrectly\n");
       return (p->istat = P_REPOSITION_ERROR);
     }
 
@@ -836,7 +842,8 @@ walls (p, pold, normal)
 
   }
 
-  /* At this point we know the photon has not hit the disk or the star, so we now
+  /*
+   * At this point we know the photon has not hit the disk or the star, so we now
    * need to check if it has escaped the grid.  See note above regarding whether
    * we ought to be checking this differently.  This definition is clearly coordinate
    * system dependent.
@@ -844,7 +851,7 @@ walls (p, pold, normal)
 
   rho_sq = (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
   if (rho_sq > geo.rmax_sq)
-    return (p->istat = P_ESCAPE);       /* The photon is coursing through the universe */
+    return (p->istat = P_ESCAPE);
 
   if (fabs (p->x[2]) > geo.rmax)
     return (p->istat = P_ESCAPE);
