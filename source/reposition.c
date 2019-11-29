@@ -90,10 +90,18 @@ reposition_lost_disk_photon (PhotPtr p)
 
   if ((p->grid = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
   {
-    Error ("%s:%s(%i): Photon not in grid\n", __FILE__, __func__, __LINE__);
-    return;                     /* Photon was not in wind */
+    Error ("%s:%s(%i): Photon %i not in grid\n", __FILE__, __func__, __LINE__, p->np);
+    return;
   }
 
-  smax = -p->x[2] / p->lmn[2] * 0.999;  // Move some distance toward the disc
+  smax = ds_to_disk (p, FALSE);
+
+  if (smax == VERY_BIG)
+  {
+    Error ("%s:%s(%i): no disk in model. Unsure why how this photon is a reposition error\n", __FILE__, __func__, __LINE__);
+    return;
+  }
+
+  smax *= SMAX_FRAC;
   move_phot (p, smax);
 }
