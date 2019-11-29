@@ -238,12 +238,15 @@ FILE *epltptr;
 int
 init_extra_diagnostics ()
 {
+  char epl_fname[LINELENGTH];   /* Added to these two buffers to avoid situations where MPI processes overwrite the same file */
+  char pstat_fname[LINELENGTH];
   FILE *cellfile;               /*File that may or may not exist, pointing to cells we want to write out photon stats for */
   int cell;                     /*Temporary storage of cell to use */
 
   if (eplinit == 0 && modes.extra_diagnostics)
   {
-    epltptr = fopen ("python.ext.txt", "w");
+    sprintf (epl_fname, "python.ext_%i.txt", np_mpi_global);
+    epltptr = fopen (epl_fname, "w");
     eplinit = 1;
   }
 
@@ -268,7 +271,8 @@ init_extra_diagnostics ()
         }
       }
       fclose (cellfile);
-      pstatptr = fopen ("cell_phot_stats.dat", "w");
+      sprintf (pstat_fname, "cell_phot_stat_%i.dat", np_mpi_global);
+      pstatptr = fopen (pstat_fname, "w");
     }
     else
     {
