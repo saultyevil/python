@@ -374,8 +374,8 @@ int save_photon_number = 0;
  * @brief      save_photon
  *
  * @param [in] PhotPtr  p   Photon pointer
- * @param [in] char  comment[]   A comment indicating why/at what point the photon information
- * needed to be recorded.
+ * @param [in] char  comment[]   A comment indicating why/at what point the
+ *             photon information needed to be recorded.
  * @return     Always returns 0
  *
  * @details
@@ -396,9 +396,9 @@ save_photons (p, comment)
   save_photon_number += 1;
 
   fprintf (epltptr,
-           "PHOTON %3d %3d %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %s \n",
-           geo.wcycle, p->np, p->freq, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
-           p->lmn[2], p->grid, p->istat, p->origin, p->nres, comment);
+           "PHOTON %3d %3d %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %4d %4d %s\n",
+           geo.wcycle, p->np, p->freq, p->w, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
+           p->lmn[2], p->grid, p->istat, p->origin, p->nres, p->nscat, p->nrscat, comment);
 
   fflush (epltptr);
 
@@ -430,7 +430,7 @@ track_scatters (p, nplasma, comment)
      char *comment;
 {
 
-  fprintf (epltptr, "Scattter %i %.2e %.2e %.2e  %i %e %e %i %s\n", p->np,
+  fprintf (epltptr, "Scatter %i %.2e %.2e %.2e  %i %e %e %i %s\n", p->np,
            p->x[0], p->x[1], p->x[2], p->grid, p->freq, p->w, nplasma, comment);
 
   fflush (epltptr);
