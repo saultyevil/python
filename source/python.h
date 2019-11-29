@@ -4,8 +4,8 @@
 
 #endif
 
-#define UV_low 7.4e14 //The lower frequency bound of the UV band as defined in IOS 21348
-#define UV_hi 3e16 //The lower frequency bound of the UV band as defined in IOS 21348
+#define UV_low 7.4e14           //The lower frequency bound of the UV band as defined in IOS 21348
+#define UV_hi 3e16              //The lower frequency bound of the UV band as defined in IOS 21348
 
 int q_test_count;
 
@@ -869,7 +869,7 @@ typedef struct plasma
   double fmin_mod[NXBANDS];     /* the minimum freqneucy that the model should be applied for */
   double fmax_mod[NXBANDS];     /* the maximum frequency that the model should be applied for */
 
-  /* banded, directional fluxes */  
+  /* banded, directional fluxes */
   double F_vis[3];
   double F_UV[3];
   double F_Xray[3];
@@ -929,8 +929,8 @@ typedef struct plasma
                                            convergence. converging is an indicator of whether the program thought the cell is on the way to convergence 0
                                            implies converging */
 
-#define CELL_CONVERGING 0               /* Indicator for a cell which is considered converging - temperature is oscillating and decreasing */
-#define CELL_NOT_CONVERGING 1           /* Indicator for a cell which is considered not converging (temperature is shooting off in one direction) */
+#define CELL_CONVERGING 0       /* Indicator for a cell which is considered converging - temperature is oscillating and decreasing */
+#define CELL_NOT_CONVERGING 1   /* Indicator for a cell which is considered not converging (temperature is shooting off in one direction) */
 #define CONVERGENCE_CHECK_PASS 0        /* Indicator for that the cell has passed a convergence check */
 #define CONVERGENCE_CHECK_FAIL 1        /* Indicator for that the cell has failed a convergence check */
 #define CONVERGENCE_CHECK_OVER_TEMP 2   /* Indicator for a cell that its electron temperature is more than TMAX */
@@ -1152,7 +1152,7 @@ typedef struct photon
   int np;                       /*NSH 13/4/11 - an internal pointer to the photon number so 
                                    so we can write out details of where the photon goes */
   double path;                  /* SWM - Photon path length */
-  double ds;    // EP 11/19 - the distance of the path the photon previously moved
+  double ds;                    // EP 11/19 - the distance of the path the photon previously moved
 }
 p_dummy, *PhotPtr;
 
