@@ -245,7 +245,7 @@ init_extra_diagnostics ()
 
   if (eplinit == 0 && modes.extra_diagnostics)
   {
-    sprintf (epl_fname, "python.ext_%i.txt", np_mpi_global);
+    sprintf (epl_fname, "python.ext_%i.txt", rank_global);
     epltptr = fopen (epl_fname, "w");
     if (!epltptr)
     {
@@ -276,7 +276,7 @@ init_extra_diagnostics ()
         }
       }
       fclose (cellfile);
-      sprintf (pstat_fname, "cell_phot_stat_%i.dat", np_mpi_global);
+      sprintf (pstat_fname, "cell_phot_stat_%i.dat", rank_global);
       pstatptr = fopen (pstat_fname, "w");
       if (!pstatptr)
       {
