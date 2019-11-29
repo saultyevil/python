@@ -247,6 +247,11 @@ init_extra_diagnostics ()
   {
     sprintf (epl_fname, "python.ext_%i.txt", np_mpi_global);
     epltptr = fopen (epl_fname, "w");
+    if (!epltptr)
+    {
+      Error ("Cannot open save_photon diagnostic file\n");
+      Exit (1);
+    }
     eplinit = 1;
   }
 
@@ -273,6 +278,11 @@ init_extra_diagnostics ()
       fclose (cellfile);
       sprintf (pstat_fname, "cell_phot_stat_%i.dat", np_mpi_global);
       pstatptr = fopen (pstat_fname, "w");
+      if (!pstatptr)
+      {
+        Error ("Cannot open save_photon_stats diagnostic file\n");
+        Exit (1);
+      }
     }
     else
     {
