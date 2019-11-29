@@ -570,11 +570,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
       istat = walls (&pp, p, normal);
 
-      if (istat != p->istat)
-      {
-        Log ("Status of %9d changed from %d to %d after reposition\n", p->np, p->istat, istat);
-      }
-
       /*
        * EP 1908 -- see issue #584 for a more complete description of the problem.
        * This additional error checking was added due to reposition () pushing
@@ -589,6 +584,11 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
         reposition_lost_disk_photon (&pp_reposition_test);
         stuff_phot (&pp_reposition_test, &pp);
         istat = walls (&pp, p, normal);
+      }
+
+      if (istat != p->istat)
+      {
+        Log ("Status of %9d changed from %d to %d after reposition\n", p->np, p->istat, istat);
       }
 
       /* JM 1506 -- we don't throw errors here now, but we do keep a track
