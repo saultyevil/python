@@ -567,16 +567,22 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        * This additional error checking was added due to reposition () pushing
        * photons through the disc plane for a geometrically thin accretion disc,
        * which would sometimes result in a simulation exiting. The purpose of
-       * this is to move a photon a reduced distance to ensure that it does not
-       * get pushed through the disc plane accidentally
+       * this is to essentially not move a photon the distance dfudge. EP and CK
+       * are in somewhat agreement that reposition () is not necessarily required
+       * for a Sobolev code, especially where the Sobolev approximation is valid
        */
 
       if (istat == P_HIT_DISK || istat == P_HIT_STAR || istat == P_REPOSITION_ERROR)
       {
         if (modes.save_photons)
+        {
           save_photons (&pp, "repositionError");
+        }
+
+        Error ("Photon %i has istat %i after repositioning meaning it has probably hit a boundary or pushed by dfudge into one\n", p->np,
+               p->istat);
         stuff_phot (&pp_before_reposition, &pp);
-        istat = walls (&pp, p, normal);
+        istat = walls (&pp, p, normal); // Mainly for safety
       }
 
       if (istat != p->istat)
@@ -585,7 +591,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       }
 
       /* JM 1506 -- we don't throw errors here now, but we do keep a track
-         of how many 4 photons were lost due to DFUDGE pushing them
+         of how many photons were lost due to DFUDGE pushing them
          outside of the wind after scatter */
 
       if (where_in_wind (pp.x, &ndom) != W_ALL_INWIND && where_in_wind (x_dfudge_check, &ndom) == W_ALL_INWIND)

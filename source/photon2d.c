@@ -808,8 +808,9 @@ walls (PhotPtr pnew, PhotPtr pold, double *normal)
 
     if (s < 0)
     {
-      Error ("walls: Reposition has probably pushed photon through the disk plane incorrectly\n");
-      Log ("         Distance to disk %g < 0. Position %g %g %g \n", s, pnew->x[0], pnew->x[1], pnew->x[2]);
+      Log ("walls: Reposition has probably pushed photon %i through the disk plane incorrectly\n"
+           "      Distance to disk %g < 0. Pnew position %e %e %e  Pold position %e %e %e\n", pnew->np, s, pnew->x[0], pnew->x[1],
+           pnew->x[2], pold->x[1], pold->x[1], pold->x[2]);
       return (pnew->istat = P_REPOSITION_ERROR);
     }
 

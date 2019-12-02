@@ -282,8 +282,6 @@ calculate_ionization (restart_stat)
     Log ("!!python: luminosity lost by errors                     %18.12e \n", zz_err);
     Log ("!!python: luminosity lost by the unknown                %18.12e \n", zz_else);
 
-    Exit (1);
-
     photon_checks (p, freqmin, freqmax, "Check after transport");
 
     spectrum_create (p, freqmin, freqmax, geo.nangles, geo.select_extract);
