@@ -806,17 +806,11 @@ walls (PhotPtr pnew, PhotPtr pold, double *normal)
      * by reposition() moving it a distance dfudge
      */
 
-//    if (pnew->reposition && fabs (s) < wmain[pold->grid].dfudge)
     if (s < 0)
     {
       Error ("walls: Reposition has probably pushed photon through the disk plane incorrectly\n");
+      Log ("         Distance to disk %g < 0. Position %g %g %g \n", s, pnew->x[0], pnew->x[1], pnew->x[2]);
       return (pnew->istat = P_REPOSITION_ERROR);
-    }
-
-    if (s < 0)
-    {
-      Error ("walls: distance to disk %g < 0. Position %g %g %g \n", s, pnew->x[0], pnew->x[1], pnew->x[2]);
-      return (-1);
     }
 
     /* Check whether it hit the disk plane beyond the geo.diskrad**2 */
