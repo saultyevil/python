@@ -245,7 +245,7 @@ init_extra_diagnostics ()
 
   if (eplinit == 0 && modes.extra_diagnostics)
   {
-    sprintf (epl_fname, "python.ext_%i.txt", np_mpi_global);
+    sprintf (epl_fname, "python.ext_%i.txt", rank_global);
     epltptr = fopen (epl_fname, "w");
     if (!epltptr)
     {
@@ -276,7 +276,7 @@ init_extra_diagnostics ()
         }
       }
       fclose (cellfile);
-      sprintf (pstat_fname, "cell_phot_stat_%i.dat", np_mpi_global);
+      sprintf (pstat_fname, "cell_phot_stat_%i.dat", rank_global);
       pstatptr = fopen (pstat_fname, "w");
       if (!pstatptr)
       {
@@ -410,7 +410,7 @@ save_photons (p, comment)
   save_photon_number += 1;
 
   fprintf (epltptr,
-           "PHOTON %3d %3d %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %4d %4d %s\n",
+           "PHOTON %3d %3d %10.4e %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %4d %4d %s\n",
            geo.wcycle, p->np, p->freq, p->w, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
            p->lmn[2], p->grid, p->istat, p->origin, p->nres, p->nscat, p->nrscat, comment);
 
