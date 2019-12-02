@@ -579,8 +579,8 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
           save_photons (&pp, "repositionError");
         }
 
-        Error ("Photon %i has istat %i after repositioning meaning it has probably hit a boundary or pushed by dfudge into one\n", p->np,
-               p->istat);
+        Error ("Photon %i has istat %i after repositioning meaning it has probably hit a boundary or pushed by dfudge into one\n", pp.np,
+               pp.istat);
         stuff_phot (&pp_before_reposition, &pp);
         istat = walls (&pp, p, normal); // Mainly for safety
       }
