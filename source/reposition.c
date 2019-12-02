@@ -53,6 +53,7 @@ reposition (PhotPtr p)
     return (n);                 /* Photon was not in wind */
   }
 
+  p->reposition = TRUE;
   move_phot (p, wmain[p->grid].dfudge);
 
   return (0);
@@ -94,11 +95,11 @@ reposition_lost_disk_photon (PhotPtr p)
     return;
   }
 
-  smax = ds_to_disk (p, FALSE);
+  smax = -p->x[2] / p->lmn[2];
 
-  if (smax == VERY_BIG)
+  if (smax < 0)
   {
-    Error ("%s:%s(%i): no disk in model. Unsure why how this photon is a reposition error\n", __FILE__, __func__, __LINE__);
+    Error ("%s:%s(%i): Photon %i unable to be repositioned correctly toward the disk\n", __FILE__, __func__, __LINE__, p->np);
     return;
   }
 

@@ -226,6 +226,7 @@ calculate_ionization (restart_stat)
     for (nn = 0; nn < NPHOT; nn++)
     {
       zzz += p[nn].w;
+
       if (p[nn].istat == P_ESCAPE)
       {
         zze += p[nn].w;
@@ -281,6 +282,7 @@ calculate_ionization (restart_stat)
     Log ("!!python: luminosity lost by errors                     %18.12e \n", zz_err);
     Log ("!!python: luminosity lost by the unknown                %18.12e \n", zz_else);
 
+    Exit (1);
 
     photon_checks (p, freqmin, freqmax, "Check after transport");
 
