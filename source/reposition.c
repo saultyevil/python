@@ -13,6 +13,8 @@
  *
  ***********************************************************/
 
+#include <stdio.h>
+
 #include "atomic.h"
 #include "python.h"
 
