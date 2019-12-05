@@ -467,7 +467,6 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   cds_v2_old = v2;              // and the velocity along the line of sight
 
   return (ds_current);
-
 }
 
 

@@ -534,7 +534,7 @@ spectrum_create (p, f1, f2, nangle, select_extract)
 
   max_scat = max_res = 0;
 
-  for (i = 1; i < MAXSCAT; i++)
+  for (i = 0; i < MAXSCAT + 1; i++)
   {
     if (nscat[i] > 0)
     {
