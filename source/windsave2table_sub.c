@@ -864,7 +864,7 @@ create_ion_table (ndom, rootname, iz, ion_switch)
 
     /* First assemble the header line */
 
-    sprintf (start, "%8s %8s %4s %4s %6s ", "x", "z", "i", "j", "inwind");
+    sprintf (start, "%8s %8s %8s %8s %4s %4s %6s ", "x", "z", "xcen", "zcen", "i", "j", "inwind");
     strcpy (one_line, start);
     n = 0;
     while (n < number_ions)
@@ -882,7 +882,8 @@ create_ion_table (ndom, rootname, iz, ion_switch)
     for (i = 0; i < ndim2; i++)
     {
       wind_n_to_ij (ndom, nstart + i, &ii, &jj);
-      sprintf (start, "%8.2e %8.2e %4d %4d %6d ", wmain[nstart + i].xcen[0], wmain[nstart + i].xcen[2], ii, jj, wmain[nstart + i].inwind);
+      sprintf (start, "%8.2e %8.2e %8.2e %8.2e %4d %4d %6d ", wmain[nstart + i].x[0], wmain[nstart + i].x[2], wmain[nstart + i].xcen[0],
+               wmain[nstart + i].xcen[2], ii, jj, wmain[nstart + i].inwind);
       strcpy (one_line, start);
       n = 0;
       while (n < number_ions)

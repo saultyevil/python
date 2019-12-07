@@ -89,12 +89,7 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
   int nreport;
   struct timeval timer_t0;
 
-  nreport = 100000;
-  if (nreport < NPHOT / 100)
-  {
-    nreport = NPHOT / 100;
-  }
-
+  nreport = NPHOT / 10;
 
   Log ("\n");
 
@@ -267,7 +262,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
   int kkk, n;
   double weight_min;
   struct photon pp, pextract;
-  struct photon pp_reposition_test;
+  struct photon pp_before_reposition;
   int nnscat;
   double p_norm, tau_norm;
   double x_dfudge_check[3];
@@ -296,6 +291,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        which case it reach the inner edge and was reabsorbed. If the photon escapes then we leave the photon at the position
        of it's last scatter.  In most other cases though we store the final position of the photon. */
 
+    pp.reposition = FALSE;
     pp.ds = 0;                  // EP 11-19: reinitialise for safety
     istat = translate (w, &pp, tau_scat, &tau, &current_nres);
 
@@ -391,8 +387,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
     if (istat == P_SCAT)
     {                           /* Cause the photon to scatter and reinitilize */
-
-
       pp.grid = n = where_in_grid (wmain[pp.grid].ndom, pp.x);
 
       if (n < 0)
@@ -435,7 +429,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       {
         wind_paths_add_phot (&wmain[n], &pp);
       }
-
 
       /* SS July 04 - next lines modified so that the "thermal trapping" model of anisotropic scattering is included in the
          macro atom method. What happens now is all in scatter - within that routine the "thermal trapping" model is used to
@@ -551,12 +544,11 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        so that the photon can continue throug the wind */
 
       tau_scat = -log (1. - random_number (0.0, 1.0));
-      istat = pp.istat = P_INWIND;
+      pp.istat = P_INWIND;
       tau = 0;
 
-      stuff_phot (&pp, &pp_reposition_test);
+      stuff_phot (&pp, &pp_before_reposition);
       stuff_v (pp.x, x_dfudge_check);   // this is a vector we use to see if dfudge moved the photon outside the wind cone
-
       reposition (&pp);
 
       /* JM 1506 -- call walls again to account for instance where DFUDGE
@@ -575,15 +567,22 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        * This additional error checking was added due to reposition () pushing
        * photons through the disc plane for a geometrically thin accretion disc,
        * which would sometimes result in a simulation exiting. The purpose of
-       * this is to move a photon a reduced distance to ensure that it does not
-       * get pushed through the disc plane accidentally
+       * this is to essentially not move a photon the distance dfudge. EP and CK
+       * are in somewhat agreement that reposition () is not necessarily required
+       * for a Sobolev code, especially where the Sobolev approximation is valid
        */
 
-      if (istat == P_REPOSITION_ERROR)
+      if (istat == P_HIT_DISK || istat == P_HIT_STAR || istat == P_REPOSITION_ERROR)
       {
-        reposition_lost_disk_photon (&pp_reposition_test);
-        stuff_phot (&pp_reposition_test, &pp);
-        istat = walls (&pp, p, normal);
+        if (modes.save_photons)
+        {
+          save_photons (&pp, "repositionError");
+        }
+
+        Error ("Photon %i has istat %i after repositioning meaning it has probably hit a boundary or pushed by dfudge into one\n", pp.np,
+               pp.istat);
+        stuff_phot (&pp_before_reposition, &pp);
+        istat = walls (&pp, p, normal); // Mainly for safety
       }
 
       if (istat != p->istat)
@@ -592,7 +591,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       }
 
       /* JM 1506 -- we don't throw errors here now, but we do keep a track
-         of how many 4 photons were lost due to DFUDGE pushing them
+         of how many photons were lost due to DFUDGE pushing them
          outside of the wind after scatter */
 
       if (where_in_wind (pp.x, &ndom) != W_ALL_INWIND && where_in_wind (x_dfudge_check, &ndom) == W_ALL_INWIND)

@@ -722,9 +722,7 @@ double xsouth[] = {
  *
  **********************************************************/
 int
-walls (p, pold, normal)
-     PhotPtr p, pold;
-     double *normal;
+walls (PhotPtr pnew, PhotPtr pold, double *normal)
 {
   double r, rho, rho_sq;
   double xxx[3];
@@ -739,15 +737,15 @@ walls (p, pold, normal)
    * coordinate grid.
    */
 
-  r = dot (p->x, p->x);
+  r = dot (pnew->x, pnew->x);
   s = ds_to_sphere (geo.rstar, pold);
 
-  if (r < geo.rstar_sq || p->ds > s)
+  if (r < geo.rstar_sq || pnew->ds > s)
   {
-    stuff_phot (pold, p);
-    move_phot (p, s);
-    stuff_v (p->x, normal);
-    return (p->istat = P_HIT_STAR);
+    stuff_phot (pold, pnew);
+    move_phot (pnew, s);
+    stuff_v (pnew->x, normal);
+    return (pnew->istat = P_HIT_STAR);
   }
 
   /*
@@ -760,8 +758,8 @@ walls (p, pold, normal)
 
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
   {
-    rho = sqrt (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
-    if ((rho) < geo.diskrad && fabs (p->x[2]) <= (z = zdisk (rho)))
+    rho = sqrt (pnew->x[0] * pnew->x[0] + pnew->x[1] * pnew->x[1]);
+    if ((rho) < geo.diskrad && fabs (pnew->x[2]) <= (z = zdisk (rho)))
     {
       /* 0 here means to return VERY_BIG if one has missed the disk, something
        * that should not happen
@@ -776,47 +774,51 @@ walls (p, pold, normal)
       else if (s == VERY_BIG)
       {
         Error ("walls: %d Should not miss disk at this position %11.4e %11.4e %11.4e (%11.4e/%11.4e %11.4e/%11.4e %11.4e) \n", pold->np,
-               pold->x[0], pold->x[1], pold->x[2], rho, geo.diskrad, fabs (p->x[2]), z, ds_to_disk (pold, 1));
+               pold->x[0], pold->x[1], pold->x[2], rho, geo.diskrad, fabs (pnew->x[2]), z, ds_to_disk (pold, 1));
       }
-      stuff_phot (pold, p);
-      move_phot (p, s - DFUDGE);
+      stuff_phot (pold, pnew);
+      move_phot (pnew, s - DFUDGE);
 
       /* Finally, we must calculate the normal to the disk at this point */
 
       theta = atan ((zdisk (r * (1. + EPSILON)) - z) / (EPSILON * r));
-      phi = atan2 (p->x[0], p->x[1]);
+      phi = atan2 (pnew->x[0], pnew->x[1]);
 
       normal[0] = (-cos (phi) * sin (theta));
       normal[1] = (-sin (phi) * sin (theta));
       normal[2] = cos (theta);
 
-      if (p->x[2] < 0)
+      if (pnew->x[2] < 0)
       {
         normal[2] *= -1;
       }
 
 
-      return (p->istat = P_HIT_DISK);
+      return (pnew->istat = P_HIT_DISK);
     }
   }
-  else if (geo.disk_type == DISK_FLAT && p->x[2] * pold->x[2] < 0.0)
+  else if (geo.disk_type == DISK_FLAT && pnew->x[2] * pold->x[2] < 0.0)
   {                             /* Then the photon crossed the xy plane and probably hit the disk */
     s = (-(pold->x[2])) / (pold->lmn[2]);
 
     /*
-     * This captures the odd case where a photon has been pushed into the disk
+     * EP: This captures the odd case where a photon has been pushed into the disk
      * by reposition() moving it a distance dfudge
      */
 
-    if (s < 0 && fabs (pold->x[2]) < wmain[pold->grid].dfudge && pold->lmn[2] * p->lmn[2] < 0.0)
+    if (pnew->reposition && s < 0)
     {
-      Error ("walls: Reposition has probably pushed photon through the disk plane incorrectly\n");
-      return (p->istat = P_REPOSITION_ERROR);
+      return (pnew->istat = P_REPOSITION_ERROR);
     }
+
+    /*
+     * EP 12/19: I think this needs to be kept here for safety
+     */
 
     if (s < 0)
     {
-      Error ("walls: distance %g<0. Position %g %g %g \n", s, p->x[0], p->x[1], p->x[2]);
+      Error ("walls: photon %i distance to disk s = %e < 0. Pnew position %e %e %e Pold position %e %e %e\n", pnew->np, s,
+             pnew->x[0], pnew->x[1], pnew->x[2], pold->x[0], pold->x[1], pold->x[2]);
       return (-1);
     }
 
@@ -825,8 +827,8 @@ walls (p, pold, normal)
 
     if (dot (xxx, xxx) < geo.diskrad_sq)
     {                           /* The photon has hit the disk */
-      stuff_phot (pold, p);     /* Move the photon to the point where it hits the disk */
-      move_phot (p, s - DFUDGE);
+      stuff_phot (pold, pnew);  /* Move the photon to the point where it hits the disk */
+      move_phot (pnew, s - DFUDGE);
 
       /* Now fill in the direction for the normal to the surface */
       if (pold->x[2] > 0)
@@ -837,7 +839,7 @@ walls (p, pold, normal)
       {
         stuff_v (xsouth, normal);
       }
-      return (p->istat = P_HIT_DISK);
+      return (pnew->istat = P_HIT_DISK);
     }
 
   }
@@ -849,12 +851,12 @@ walls (p, pold, normal)
    * system dependent.
    */
 
-  rho_sq = (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
+  rho_sq = (pnew->x[0] * pnew->x[0] + pnew->x[1] * pnew->x[1]);
   if (rho_sq > geo.rmax_sq)
-    return (p->istat = P_ESCAPE);
+    return (pnew->istat = P_ESCAPE);
 
-  if (fabs (p->x[2]) > geo.rmax)
-    return (p->istat = P_ESCAPE);
+  if (fabs (pnew->x[2]) > geo.rmax)
+    return (pnew->istat = P_ESCAPE);
 
-  return (p->istat);            /* The photon is still in the wind */
+  return (pnew->istat);         /* The photon is still in the wind */
 }
