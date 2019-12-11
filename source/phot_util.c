@@ -103,6 +103,7 @@ move_phot (pp, ds)
      double ds;
 {
 
+  pp->ds = ds;
   pp->x[0] += pp->lmn[0] * ds;
   pp->x[1] += pp->lmn[1] * ds;
   pp->x[2] += pp->lmn[2] * ds;
@@ -435,9 +436,8 @@ ds_to_sphere (r, p)
      double r;
      struct photon *p;
 {
-  double a, b, c, root[2];
   int i;
-  double dot ();
+  double a, b, c, root[2];
 
   a = 1.;
   b = 2. * dot (p->x, p->lmn);

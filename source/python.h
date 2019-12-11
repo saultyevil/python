@@ -101,7 +101,7 @@ int NPHOT_MAX;                  /* The maximum number of photon bundles created 
 int NPHOT;                      /* The number of photon bundles created, defined in setup.c */
 
 #define NWAVE  			  10000 //This is the number of wavelength bins in spectra that are produced
-#define MAXSCAT 			1000
+#define MAXSCAT 			2000
 
 /* Define the structures */
 
@@ -1152,6 +1152,8 @@ typedef struct photon
   int np;                       /*NSH 13/4/11 - an internal pointer to the photon number so 
                                    so we can write out details of where the photon goes */
   double path;                  /* SWM - Photon path length */
+  double ds;                    // EP 11/19 - the distance of the path the photon previously moved
+  int reposition;
 }
 p_dummy, *PhotPtr;
 

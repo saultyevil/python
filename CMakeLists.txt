@@ -212,6 +212,7 @@ add_executable(py_wind
         source/setup_line_transfer.c
         source/cv.c
         source/wind_util.c
+        source/rdpar_init.c
         )
 
 add_executable(windsave2table
@@ -306,6 +307,7 @@ add_executable(windsave2table
         source/setup_line_transfer.c
         source/cv.c
         source/wind_util.c
+        source/rdpar_init.c
         )
 
 # Include external libs

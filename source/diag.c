@@ -238,12 +238,20 @@ FILE *epltptr;
 int
 init_extra_diagnostics ()
 {
+  char epl_fname[LINELENGTH];   /* Added to these two buffers to avoid situations where MPI processes overwrite the same file */
+  char pstat_fname[LINELENGTH];
   FILE *cellfile;               /*File that may or may not exist, pointing to cells we want to write out photon stats for */
   int cell;                     /*Temporary storage of cell to use */
 
   if (eplinit == 0 && modes.extra_diagnostics)
   {
-    epltptr = fopen ("python.ext.txt", "w");
+    sprintf (epl_fname, "python.ext_%i.txt", rank_global);
+    epltptr = fopen (epl_fname, "w");
+    if (!epltptr)
+    {
+      Error ("Cannot open save_photon diagnostic file\n");
+      Exit (1);
+    }
     eplinit = 1;
   }
 
@@ -268,7 +276,13 @@ init_extra_diagnostics ()
         }
       }
       fclose (cellfile);
-      pstatptr = fopen ("cell_phot_stats.dat", "w");
+      sprintf (pstat_fname, "cell_phot_stat_%i.dat", rank_global);
+      pstatptr = fopen (pstat_fname, "w");
+      if (!pstatptr)
+      {
+        Error ("Cannot open save_photon_stats diagnostic file\n");
+        Exit (1);
+      }
     }
     else
     {
@@ -374,8 +388,8 @@ int save_photon_number = 0;
  * @brief      save_photon
  *
  * @param [in] PhotPtr  p   Photon pointer
- * @param [in] char  comment[]   A comment indicating why/at what point the photon information
- * needed to be recorded.
+ * @param [in] char  comment[]   A comment indicating why/at what point the
+ *             photon information needed to be recorded.
  * @return     Always returns 0
  *
  * @details
@@ -396,9 +410,11 @@ save_photons (p, comment)
   save_photon_number += 1;
 
   fprintf (epltptr,
-           "PHOTON %3d %3d %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %s \n",
-           geo.wcycle, p->np, p->freq, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
-           p->lmn[2], p->grid, p->istat, p->origin, p->nres, comment);
+           "PHOTON %3d %3d %10.4e %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %4d %4d %s\n",
+           geo.wcycle, p->np, p->freq, p->w, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
+           p->lmn[2], p->grid, p->istat, p->origin, p->nres, p->nscat, p->nrscat, comment);
+
+  fflush (epltptr);
 
   return (0);
 }
@@ -428,8 +444,10 @@ track_scatters (p, nplasma, comment)
      char *comment;
 {
 
-  fprintf (epltptr, "Scattter %i %.2e %.2e %.2e  %i %e %e %i %s\n", p->np,
+  fprintf (epltptr, "Scatter %i %.2e %.2e %.2e  %i %e %e %i %s\n", p->np,
            p->x[0], p->x[1], p->x[2], p->grid, p->freq, p->w, nplasma, comment);
+
+  fflush (epltptr);
 
   return (0);
 }

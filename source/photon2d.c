@@ -139,7 +139,6 @@ translate_in_space (pp)
      PhotPtr pp;
 {
   double ds, delta, s, smax;
-  //OLD double x;
   int ndom, ndom_next;
   struct photon ptest;
   int ifail;
@@ -148,7 +147,7 @@ translate_in_space (pp)
 
   /* For IMPORT, although we have reached the edge of the wind, we may be in a cell that is
    * not really in the wind, so we have to address this situtation here.  The first problem
-   * we have though is that we do not know hat domain we are in.*/
+   * we have though is that we do not know what domain we are in.*/
 
   if (ndom >= 0 && zdom[ndom].wind_type == IMPORT)
   {
@@ -199,6 +198,7 @@ translate_in_space (pp)
     }
 
   }
+
   move_phot (pp, ds + DFUDGE);
 
 
@@ -573,7 +573,6 @@ The choice of SMAX_FRAC can affect execution time.*/
     radiation (p, ds_current);
   }
 
-
   move_phot (p, ds_current);
 
   p->nres = (*nres);
@@ -675,15 +674,14 @@ double xsouth[] = {
 
 /**********************************************************/
 /**
- * @brief      determines whether the photon has encountered the star of disk or
- * reached the edges of the grid and returns the appropriate
+ * @brief      determines whether the photon has reached a boundary, the central object, the disk or
+ * reached the edges of the wind and, if so, modify the position of the photon, and return the appropriate
  * status.
  *
  * @param [in, out] PhotPtr  p   A photon at its new proposed location.  On exiting the routine
- * this will contain the position of the photon after taking wind boundaries (e.g wind cones)
+ * this will contain the position of the photon after taking boundaries (e.g wind cones)
  * into account.
- * @param [in, out] PhotPtr  pold   the current and previous description of the photon bundle.
- * beore the lates movee
+ * @param [in] PhotPtr  pold   the previous position and direction of the photon. .
  * @param [out] double *  normal   A vector when the star or disk has been hit, which contains
  * the normal for the reflecting surface at the point the photon encountered the the boundary
  * @return   A status
@@ -708,7 +706,7 @@ double xsouth[] = {
  * location of p is either at the edge of a cell, or at the position of a resonance.  So pold should
  * be a valid position for the photon, but p may need to be adjusted.
  *
- * If one of the walls has been hit, the routine should have moved the photon to that wall, but not
+ * If one of the walls has been hit, the moves the photon back to that wall, but not
  * othewise changed it.
  *
  * The routine also calculates the normal to the surface that was hit, which is intended to
@@ -716,64 +714,50 @@ double xsouth[] = {
  *
  * ### Notes ###
  *
- * This really does determine whether the photon is in the grid, as opposed to whether the photon
- * has reached a radial distance geo.rwind.  I am not sure whether this is what we want???.
+ * Note that p and pold must be travelling in the same directon to work properly.  There is an
+ * error check at the beginning of the routine to make sure this is the case.  
+ *
  *
  **********************************************************/
 int
-walls (p, pold, normal)
-     PhotPtr p, pold;
-     double *normal;
+walls (PhotPtr pnew, PhotPtr pold, double *normal)
 {
   double r, rho, rho_sq;
   double xxx[3];
   double s, z;
   double theta, phi;
-  int hit_star = FALSE;
 
-  /* Check to see if the photon has hit the star. If so
+  /*
+   * Check to see if the photon has hit the star. If so
    * put the photon at the star surface and use that position
    * to determine the normal to the surface, the assumption
    * being that the star is located at the center of the
    * coordinate grid.
    */
 
-
-
+  r = dot (pnew->x, pnew->x);
   s = ds_to_sphere (geo.rstar, pold);
 
-  if ((r = dot (p->x, p->x)) < geo.rstar_sq)
+  if (r < geo.rstar_sq || pnew->ds > s)
   {
-    /* Then the photon is inside the star */
-    hit_star = TRUE;
+    stuff_phot (pold, pnew);
+    move_phot (pnew, s);
+    stuff_v (pnew->x, normal);
+    return (pnew->istat = P_HIT_STAR);
   }
 
-  else if (s < VERY_BIG && ds_to_sphere (geo.rstar, p) == VERY_BIG)
-  {
-    /* then we hit the star somewhere in between */
-    hit_star = TRUE;
-  }
-
-  if (hit_star == TRUE)
-  {
-    stuff_phot (pold, p);
-    move_phot (p, s);
-    stuff_v (p->x, normal);
-    return (p->istat = P_HIT_STAR);
-  }
-
-
-  /* Check to see if it has hit the disk.
-   *
+  /*
+   * Check to see if it has hit the disk.
    * For a vertically extended disk these means checking whether
    * we are inside the maximum radius of the disk and then lookng
    * comparing the z position of z to the height of the disk at
-   * that point*/
+   * that point
+   */
 
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
   {
-    rho = sqrt (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
-    if ((rho) < geo.diskrad && fabs (p->x[2]) <= (z = zdisk (rho)))
+    rho = sqrt (pnew->x[0] * pnew->x[0] + pnew->x[1] * pnew->x[1]);
+    if ((rho) < geo.diskrad && fabs (pnew->x[2]) <= (z = zdisk (rho)))
     {
       /* 0 here means to return VERY_BIG if one has missed the disk, something
        * that should not happen
@@ -784,46 +768,55 @@ walls (p, pold, normal)
       {
         Error ("walls: %d The previous position %11.4e %11.4e %11.4e was inside the disk, correcting by  %11.4e \n", pold->np, pold->x[0],
                pold->x[1], pold->x[2], s);
-        //OLD s = ds_to_disk (pold, 0);
       }
       else if (s == VERY_BIG)
       {
         Error ("walls: %d Should not miss disk at this position %11.4e %11.4e %11.4e (%11.4e/%11.4e %11.4e/%11.4e %11.4e) \n", pold->np,
-               pold->x[0], pold->x[1], pold->x[2], rho, geo.diskrad, fabs (p->x[2]), z, ds_to_disk (pold, 1));
-        //OLD s = ds_to_disk (pold, 0);
-        save_photons (pold, "Disk");
+               pold->x[0], pold->x[1], pold->x[2], rho, geo.diskrad, fabs (pnew->x[2]), z, ds_to_disk (pold, 1));
       }
-      stuff_phot (pold, p);
-      move_phot (p, s - DFUDGE);
+      stuff_phot (pold, pnew);
+      move_phot (pnew, s - DFUDGE);
 
       /* Finally, we must calculate the normal to the disk at this point */
 
       theta = atan ((zdisk (r * (1. + EPSILON)) - z) / (EPSILON * r));
-      phi = atan2 (p->x[0], p->x[1]);
+      phi = atan2 (pnew->x[0], pnew->x[1]);
 
       normal[0] = (-cos (phi) * sin (theta));
       normal[1] = (-sin (phi) * sin (theta));
       normal[2] = cos (theta);
 
-      if (p->x[2] < 0)
+      if (pnew->x[2] < 0)
       {
         normal[2] *= -1;
       }
 
 
-      return (p->istat = P_HIT_DISK);
+      return (pnew->istat = P_HIT_DISK);
     }
   }
-  else if (geo.disk_type == DISK_FLAT && p->x[2] * pold->x[2] < 0.0)
+  else if (geo.disk_type == DISK_FLAT && pnew->x[2] * pold->x[2] < 0.0)
   {                             /* Then the photon crossed the xy plane and probably hit the disk */
     s = (-(pold->x[2])) / (pold->lmn[2]);
 
-    if (s < 0 && fabs (pold->x[2]) < wmain[pold->grid].dfudge && pold->lmn[2] * p->lmn[2] < 0.0)
-      return (p->istat = P_REPOSITION_ERROR);
+    /*
+     * EP: This captures the odd case where a photon has been pushed into the disk
+     * by reposition() moving it a distance dfudge
+     */
+
+    if (pnew->reposition && s < 0)
+    {
+      return (pnew->istat = P_REPOSITION_ERROR);
+    }
+
+    /*
+     * EP 12/19: I think this needs to be kept here for safety
+     */
 
     if (s < 0)
     {
-      Error ("walls: distance %g<0. Position %g %g %g \n", s, p->x[0], p->x[1], p->x[2]);
+      Error ("walls: photon %i distance to disk s = %e < 0. Pnew position %e %e %e Pold position %e %e %e\n", pnew->np, s,
+             pnew->x[0], pnew->x[1], pnew->x[2], pold->x[0], pold->x[1], pold->x[2]);
       return (-1);
     }
 
@@ -832,8 +825,8 @@ walls (p, pold, normal)
 
     if (dot (xxx, xxx) < geo.diskrad_sq)
     {                           /* The photon has hit the disk */
-      stuff_phot (pold, p);     /* Move the photon to the point where it hits the disk */
-      move_phot (p, s - DFUDGE);
+      stuff_phot (pold, pnew);  /* Move the photon to the point where it hits the disk */
+      move_phot (pnew, s - DFUDGE);
 
       /* Now fill in the direction for the normal to the surface */
       if (pold->x[2] > 0)
@@ -844,21 +837,24 @@ walls (p, pold, normal)
       {
         stuff_v (xsouth, normal);
       }
-      return (p->istat = P_HIT_DISK);
+      return (pnew->istat = P_HIT_DISK);
     }
 
   }
 
-  /* At this point we know the photon has not hit the disk or the star, so we now
+  /*
+   * At this point we know the photon has not hit the disk or the star, so we now
    * need to check if it has escaped the grid.  See note above regarding whether
    * we ought to be checking this differently.  This definition is clearly coordinate
    * system dependent.
    */
 
-  rho_sq = (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
+  rho_sq = (pnew->x[0] * pnew->x[0] + pnew->x[1] * pnew->x[1]);
   if (rho_sq > geo.rmax_sq)
-    return (p->istat = P_ESCAPE);       /* The photon is coursing through the universe */
-  if (fabs (p->x[2]) > geo.rmax)
-    return (p->istat = P_ESCAPE);
-  return (p->istat);            /* The photon is still in the wind */
+    return (pnew->istat = P_ESCAPE);
+
+  if (fabs (pnew->x[2]) > geo.rmax)
+    return (pnew->istat = P_ESCAPE);
+
+  return (pnew->istat);         /* The photon is still in the wind */
 }

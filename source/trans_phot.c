@@ -89,12 +89,7 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
   int nreport;
   struct timeval timer_t0;
 
-  nreport = 100000;
-  if (nreport < NPHOT / 100)
-  {
-    nreport = NPHOT / 100;
-  }
-
+  nreport = NPHOT / 10;
 
   Log ("\n");
 
@@ -117,13 +112,6 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
     }
 
     Log_flush ();
-
-    /* Verify that the weights are real, a check that is proably unnecessary */
-
-    if (sane_check (p[nphot].w))
-    {
-      Error ("trans_phot:sane_check photon %d has weight %e\n", nphot, p[nphot].w);
-    }
 
     stuff_phot (&p[nphot], &pp);
     absorb_reflect = geo.absorb_reflect;
@@ -177,11 +165,6 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
          equal to 1/nnscat */
 
       pextract.w *= p[nphot].nnscat / p_norm;
-
-      if (sane_check (pextract.w))
-      {
-        Error ("trans_phot: sane_check photon %d has weight %e before extract\n", nphot, pextract.w);
-      }
       extract (w, &pextract, pextract.origin);
 
 
@@ -238,7 +221,7 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
  * and weight are updated.  In reverberation mode, the flight time is also
  * tracked.
  *
- * Basically what the routine does is generate a random number whihc is used to
+ * Basically what the routine does is generate a random number which is used to
  * determine the optical depth to a scatter, and then it calles translate
  * multiple times.   translate involves moving the photon only a single cell
  * (or alternatively a single tranfer in the windless region), and returns
@@ -246,15 +229,23 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
  * trans_phot again doing nothing, but if the scattering depth has been
  * reached, then trans_phot_single causes the photon to scatter,
  * which changes its direction.  This process continues until the photon
- * exits the system or hits a barrier.  If the photon hits a radiating
+ * exits the system or hits a barrier.  
+ 
+ * If the photon hits a radiating
  * surface, the disk or star, then the photon may either be absorbed,
- * or scattered depending on the reflection/absorption mode.
+ * or scattered depending on the reflection/absorption mode. If the
+ * reflection/absorption mode is set to reflection, then the 
+ * program is redirected in the main loop, but if the surfaces are
+ * set to aborb, hitting a surface will exist the routine.
  *
  *
  *
  * ### Notes ###
  *
  * This routine is called by trans_phot once for each photon in a flight of photons
+ * Internally, there are two main PhotPtrs p, and pp.  pp is a place that
+ * the photon has reached, and p is the location where it is going.  At
+ * the end of the main loop before a new cycle, pp is updated.
  *
  *
  **********************************************************/
@@ -264,15 +255,15 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 {
   double tau_scat, tau;
   int istat;
+  int ierr;
   double rrr;
   int icell;
-  int nres, *ptr_nres;
+  int current_nres;
   int kkk, n;
   double weight_min;
   struct photon pp, pextract;
-  struct photon pp_reposition_test;
+  struct photon pp_before_reposition;
   int nnscat;
-  int nerr;
   double p_norm, tau_norm;
   double x_dfudge_check[3];
   int ndom;
@@ -289,8 +280,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
   n = 0;                        /* Avoid 03 warning */
 
-
-
   /* This is the beginning of the loop for a single photon and executes until the photon leaves the wind */
 
   while (istat == P_INWIND)
@@ -302,15 +291,16 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        which case it reach the inner edge and was reabsorbed. If the photon escapes then we leave the photon at the position
        of it's last scatter.  In most other cases though we store the final position of the photon. */
 
+    pp.reposition = FALSE;
+    pp.ds = 0;                  // EP 11-19: reinitialise for safety
+    istat = translate (w, &pp, tau_scat, &tau, &current_nres);
 
-    istat = translate (w, &pp, tau_scat, &tau, &nres);
     /* nres is the resonance at which the photon was stopped.  At present the same value is also stored in pp->nres, but I have
        not yet eliminated it from translate. ?? 02jan ksl */
 
     icell++;
     istat = walls (&pp, p, normal);
     /* pp is where the photon is going, p is where it was  */
-
 
     if (istat == -1)
     {
@@ -333,7 +323,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       {
         /* If we got here, the a new photon direction needs to be defined that will cause the photon
          * to continue in the wind.  Since this is effectively a scattering event we also have to
-         * extract a photon to consturct the detailed spectrum
+         * extract a photon to construct the detailed spectrum
          */
         randvcos (pp.lmn, normal);
         move_phot (&pp, DFUDGE);
@@ -375,7 +365,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       {
         /* If we got here, the a new photon direction needs to be defined that will cause the photon
          * to continue in the wind.  Since this is effectively a scattering event we also have to
-         * extract a photon to consturct the detailed spectrum
+         * extract a photon to construct the detailed spectrum
          */
         randvcos (pp.lmn, normal);
         stuff_phot (&pp, p);
@@ -397,8 +387,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
     if (istat == P_SCAT)
     {                           /* Cause the photon to scatter and reinitilize */
-
-
       pp.grid = n = where_in_grid (wmain[pp.grid].ndom, pp.x);
 
       if (n < 0)
@@ -442,32 +430,20 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
         wind_paths_add_phot (&wmain[n], &pp);
       }
 
-
       /* SS July 04 - next lines modified so that the "thermal trapping" model of anisotropic scattering is included in the
          macro atom method. What happens now is all in scatter - within that routine the "thermal trapping" model is used to
          decide what the direction of emission is before returning here.
        */
 
-
-      nnscat = 0;
-      nnscat++;
-      ptr_nres = &nres;
-
-      if (sane_check (pp.w))
-      {
-        Error ("trans_phot:sane_check photon %d has weight %e before scatter\n", p->np, pp.w);
-      }
-      if ((nerr = scatter (&pp, ptr_nres, &nnscat)) != 0)
-      {
-        Error ("trans_phot: Bad return from scatter %d at point 2", nerr);
-      }
+      nnscat = 1;
       pp.nscat++;
 
-
-      if (sane_check (pp.w))
+      ierr = scatter (&pp, &current_nres, &nnscat);
+      if (ierr)
       {
-        Error ("trans_phot:sane_check photon %d has weight %e after scatter\n", p->np, pp.w);
+        Error ("trans_phot: bad return from scatter %d at point 2\n", ierr);
       }
+
 
       /* SS June 04: During the spectrum calculation cycles, photons are thrown away when they interact with macro atoms or
          become k-packets. This is done by setting their weight to zero (effectively they have been absorbed into either
@@ -492,7 +468,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       // XXXX ??? Need to modify line_heat for multiple scattering but not yet
       // Condition that nres < nlines added (SS)
 
-      if (nres > -1 && nres < nlines)
+      if (current_nres > -1 && current_nres < nlines)
       {
         pp.nrscat++;
 
@@ -501,11 +477,11 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
           track_scatters (&pp, wmain[n].nplasma, "Resonant");
 
 
-        plasmamain[wmain[n].nplasma].scatters[line[nres].nion] += 1;
+        plasmamain[wmain[n].nplasma].scatters[line[current_nres].nion] += 1;
 
         if (geo.rt_mode == RT_MODE_2LEVEL)      // only do next line for non-macro atom case
         {
-          line_heat (&plasmamain[wmain[n].nplasma], &pp, nres);
+          line_heat (&plasmamain[wmain[n].nplasma], &pp, current_nres);
         }
 
         if (pp.w < weight_min)
@@ -559,11 +535,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
            probability, which is equal to 1/nnscat */
 
         pextract.w *= nnscat / p_norm;
-
-        if (sane_check (pextract.w))
-        {
-          Error ("trans_phot: sane_check photon %d has weight %e before extract\n", p->np, pextract.w);
-        }
         extract (w, &pextract, PTYPE_WIND);     // Treat as wind photon for purpose of extraction
       }
 
@@ -573,10 +544,10 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        so that the photon can continue throug the wind */
 
       tau_scat = -log (1. - random_number (0.0, 1.0));
-      istat = pp.istat = P_INWIND;
+      pp.istat = P_INWIND;
       tau = 0;
 
-      stuff_phot (&pp, &pp_reposition_test);
+      stuff_phot (&pp, &pp_before_reposition);
       stuff_v (pp.x, x_dfudge_check);   // this is a vector we use to see if dfudge moved the photon outside the wind cone
       reposition (&pp);
 
@@ -596,19 +567,31 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        * This additional error checking was added due to reposition () pushing
        * photons through the disc plane for a geometrically thin accretion disc,
        * which would sometimes result in a simulation exiting. The purpose of
-       * this is to move a photon a reduced distance to ensure that it does not
-       * get pushed through the disc plane accidentally
+       * this is to essentially not move a photon the distance dfudge. EP and CK
+       * are in somewhat agreement that reposition () is not necessarily required
+       * for a Sobolev code, especially where the Sobolev approximation is valid
        */
 
-      if (istat == P_REPOSITION_ERROR)
+      if (istat == P_HIT_DISK || istat == P_HIT_STAR || istat == P_REPOSITION_ERROR)
       {
-        reposition_lost_disk_photon (&pp_reposition_test);
-        stuff_phot (&pp_reposition_test, &pp);
-        istat = walls (&pp, p, normal);
+        if (modes.save_photons)
+        {
+          save_photons (&pp, "repositionError");
+        }
+
+        Error ("Photon %i has istat %i after repositioning meaning it has probably hit a boundary or pushed by dfudge into one\n", pp.np,
+               pp.istat);
+        stuff_phot (&pp_before_reposition, &pp);
+        istat = walls (&pp, p, normal); // Mainly for safety
+      }
+
+      if (istat != p->istat)
+      {
+        Log ("Status of %9d changed from %d to %d after reposition\n", p->np, p->istat, istat);
       }
 
       /* JM 1506 -- we don't throw errors here now, but we do keep a track
-         of how many 4 photons were lost due to DFUDGE pushing them
+         of how many photons were lost due to DFUDGE pushing them
          outside of the wind after scatter */
 
       if (where_in_wind (pp.x, &ndom) != W_ALL_INWIND && where_in_wind (x_dfudge_check, &ndom) == W_ALL_INWIND)
@@ -645,7 +628,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
     p->nscat = pp.nscat;
     p->nrscat = pp.nrscat;
     p->w = pp.w;                // Assure that final weight of photon is returned.
-
   }
   /* This is the end of the loop over a photon */
 
@@ -654,10 +636,10 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
    * outer boundary of the calculation you would want pp.  So one should keep both lines below, and comment
    * out the one you do not want. */
 
-//OLD  if (modes.save_photons)
-//OLD    {
-//OLD      // save_photons (p, "Final");  // Where the last position of the photon in the wind
-//OLD      save_photons (&pp, "Final"); //The position of the photon where it exits the calculation
-//OLD    }
+  if (modes.save_photons)
+  {
+    save_photons (&pp, "Final");        //The position of the photon where it exits the calculation
+  }
+
   return (0);
 }
