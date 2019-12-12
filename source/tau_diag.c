@@ -47,7 +47,6 @@
 
 /*
  * tau_diag_observers
- * ------------------
  * This is the global variable type used to track the name and cosine direction
  * vectors of the inclinations of which observers are placed. Hence, the members
  * of this type will be the various inclination angles for integrated optical
@@ -207,7 +206,7 @@ write_tau_spectrum_to_file (double *tau_spectrum, double freq_min, double dfreq)
    * Write the file header - nothing fancy
    */
 
-  fprintf (tau_spec_file, "# Lambda ");
+  fprintf (tau_spec_file, "# Lambda Freq. ");
   for (ispec = 0; ispec < N_ANGLES; ispec++)
     fprintf (tau_spec_file, "%s ", tau_diag_observers[ispec].name);
   fprintf (tau_spec_file, "\n");
@@ -220,8 +219,8 @@ write_tau_spectrum_to_file (double *tau_spectrum, double freq_min, double dfreq)
 
   for (ifreq = 0; ifreq < NWAVE; ifreq++)
   {
-    wavelength = (VLIGHT / frequency) / ANGSTROM;
-    fprintf (tau_spec_file, "%e ", wavelength);
+    wavelength = VLIGHT / frequency / ANGSTROM;
+    fprintf (tau_spec_file, "%e %e ", wavelength, frequency);
 
     for (ispec = 0; ispec < N_ANGLES; ispec++)
       fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + ifreq]);
@@ -577,7 +576,7 @@ init_tau_diag_angles (void)
   int memory_req;
 
   double default_phase = 0.5;
-  double default_angles[] = { 0.0, 10.0, 40.0, 60.0, 80.0, 90.0 };
+  double default_angles[] = { 0.0, 10.0, 30.0, 45.0, 60.0, 75.0, 85.0, 90.0 };
   int const n_default_angles = sizeof default_angles / sizeof default_angles[0];
 
   /*
@@ -688,7 +687,7 @@ create_tau_spectrum (WindPtr w)
   Log ("Creating optical depth spectra:\n");
 
   tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum);
-  if (!tau_spectrum)
+  if (tau_spectrum == NULL)
   {
     memory_req = N_ANGLES * NWAVE * sizeof *tau_spectrum;
     Error ("%s:%s:%i: cannot allocate %d bytes for tau_spectrum\n", __FILE__, __func__, __LINE__, memory_req);
@@ -699,6 +698,7 @@ create_tau_spectrum (WindPtr w)
    * Define the limits of the spectra in both wavelength and frequency. The
    * size of the frequency and wavelength bins is also defined. Note that the
    * wavelength limits MUST be in units of Angstroms.
+   * TODO: make wavelengthm limits an advanced diag mode
    */
 
   wave_min = 100;
