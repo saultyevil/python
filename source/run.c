@@ -626,7 +626,7 @@ make_spectra (restart_stat)
     }
 #endif
 
-    if (modes.cycle_error_report)
+    if (modes.cycle_error_report && geo.pcycle < geo.pcycles - 1)
       error_summary ("Errors at end of cycle");
 
     Log ("Completed spectrum cycle %3d :  The elapsed TIME was %f\n", geo.pcycle + 1, timer ());
