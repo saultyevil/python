@@ -313,6 +313,7 @@ init_advanced_modes ()
   modes.quit_after_inputs = 0;  // testing mode which quits after reading in inputs
   modes.fixed_temp = 0;         // do not attempt to change temperature - used for testing
   modes.zeus_connect = 0;       // connect with zeus
+  modes.cycle_error_report = 0;       // print errors at the end of each cycle -- useful for when running on a supercomputer
 
   //note write_atomicdata  is defined in atomic.h, rather than the modes structure
   write_atomicdata = 0;         // print out summary of atomic data

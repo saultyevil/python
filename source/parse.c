@@ -140,6 +140,11 @@ parse_command_line (argc, argv)
         Log ("Setting the maximum number of errors of a type to print out to  %d\n", max_errors);
 
       }
+      else if (strcmp (argv[i], "-e_cycle") == 0)
+      {
+        modes.cycle_error_report = 1;
+        j = i;
+      }
       else if (strcmp (argv[i], "-d") == 0)
       {
         modes.iadvanced = 1;
@@ -294,7 +299,8 @@ These are largely diagnostic or for special cases. These include\n\
                 Python will then query the user for information about what to do with a series of \n\
                 inputs beginning with @ \n\
  -e             Change the maximum number of errors before the program will quit\n\
- -e_write 	Change the maximum number of errors to print out before recording errors silently\n\
+ -e_write 	    Change the maximum number of errors to print out before recording errors silently\n\
+ -e_cycle     Print out the error summary at the end of each ionization and spectrum cycle\n\
  -f             Invoke a fixed temperature mode, used for runs with Zeus \n\
  -z             Invoke a special mode for that causes Python to start with a run from Zeus\n\
  -p range       Invoke the photon logarithmic stepping algorithm which in some cases can result in a speed up\n\
