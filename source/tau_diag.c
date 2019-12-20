@@ -78,10 +78,10 @@ Opacities TAU_DIAG_OPACS[] = {
   {1.394384e+16, "HeIIEdge_215A"}
 };
 
-int const N_TAU = sizeof TAU_DIAG_OPACS / sizeof *TAU_DIAG_OPACS;
+int const N_TAU = sizeof TAU_DIAG_OPACS / sizeof *TAU_DIAG_OPACS;       // The number of optical depths for the simple calculation
 
 int N_ANGLES;                   // The number of inclination angles
-#define DEFAULT_DOMAIN 0        // For now, assume we only care about domain 0 diagnostics
+#define DEFAULT_DOMAIN 0        // For now, assume we only care about photons starting in domain 0
 
 /* ************************************************************************* */
 /**
@@ -266,7 +266,7 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
   double freq_inner, freq_outer;
   double mean_freq;
 
-  WindPtr  wind_cell;
+  WindPtr wind_cell;
   PlasmaPtr plasma_cell;
   struct photon p_far, p_mid;
 
@@ -916,6 +916,14 @@ tau_diag_main (WindPtr w)
 
   xsignal (files.root, "%-20s Optical depth diagnostics beginning\n", "TAU");
 
+  /*
+   * We have to set this flag, so radiation returns without updating the
+   * radiation field and etc estimators. Don't worry, we switch it back to
+   * what it was later...
+   */
+
+  geo.ioniz_or_extract = 0;
+
   init_tau_diag_angles ();
   tau_integrate_angles (w);
   create_tau_spectrum (w);
@@ -926,6 +934,8 @@ tau_diag_main (WindPtr w)
 #ifdef MPI_ON
   MPI_Barrier (MPI_COMM_WORLD);
 #endif
+
+  geo.ioniz_or_extract = 1;
 
   xsignal (files.root, "%-20s Optical depth diagnostics completed\n", "TAU");
   Log (" Completed optical depth diagnostics.  The elapsed TIME was %f\n", timer ());
