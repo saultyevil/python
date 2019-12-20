@@ -262,10 +262,11 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
   double kappa_tot, density;
   double smax;
   double v_inner[3], v_outer[3], v_check[3];
-  double v1, v2, vc, vch;
+  double v_extract, v_far, vc, vch;
   double freq_inner, freq_outer;
   double mean_freq;
 
+  WindPtr  wind_cell;
   PlasmaPtr plasma_cell;
   struct photon p_far, p_mid;
 
@@ -280,7 +281,8 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
    * column density can be calculated
    */
 
-  ndom = w[pextract->grid].ndom;
+  wind_cell = &w[pextract->grid];
+  ndom = wind_cell->ndom;
   nplasma = w[pextract->grid].nplasma;
   plasma_cell = &plasmamain[nplasma];
   density = plasma_cell->rho;
@@ -303,9 +305,9 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
   stuff_phot (pextract, &p_far);
   move_phot (&p_far, smax);
   vwind_xyz (ndom, pextract, v_inner);
-  v1 = dot (pextract->lmn, v_inner);
+  v_extract = dot (pextract->lmn, v_inner);
   vwind_xyz (ndom, &p_far, v_outer);
-  v2 = dot (p_far.lmn, v_outer);
+  v_far = dot (p_far.lmn, v_outer);
 
   /*
    * Check to see if the velocity is monotonic across the cell by calculating
@@ -320,12 +322,12 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
     move_phot (&p_mid, smax / 2.);
     vwind_xyz (ndom, &p_mid, v_check);
     vch = dot (p_mid.lmn, v_check);
-    vc = fabs (vch - 0.5 * (v1 + v2));
+    vc = fabs (vch - 0.5 * (v_extract + v_far));
     if (vc > VCHECK)
     {
       stuff_phot (&p_mid, &p_far);
       smax *= 0.5;
-      v2 = vch;
+      v_far = vch;
     }
   }
 
@@ -333,24 +335,33 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
    * Doppler shift the photons from the global to the local frame of rest
    */
 
-  freq_inner = pextract->freq * (1.0 - v1 / VLIGHT);
-  freq_outer = p_far.freq * (1.0 - v2 / VLIGHT);
+  freq_inner = pextract->freq * (1.0 - v_extract / VLIGHT);
+  freq_outer = p_far.freq * (1.0 - v_far / VLIGHT);
   mean_freq = (freq_inner + freq_outer) / 2.0;
 
   /*
-   * Now we can finally calculation the opacity due to all the continuum
-   * processes
+   * Now we can finally calculate the opacity due to all the continuum
+   * processes. In macro-atom mode, we need to calculate the continuum opacity
+   * using kappa_bf and kappa_ff using the macro treatment. For simple mode, we
+   * can simply use radiation which **SHOULD** return the continuum opacity
+   * as well, plus something from induced Compton heating. In either cases,
+   * we still then need to add the optical depth from electron scattering at
+   * the end.
    */
 
   kappa_tot = 0;
+
   if (geo.rt_mode == RT_MODE_2LEVEL)
   {
     kappa_tot += radiation (pextract, smax);
   }
   else if (geo.rt_mode == RT_MODE_MACRO)
   {
-    kappa_tot += kappa_bf (plasma_cell, freq_inner, 0);
-    kappa_tot += kappa_ff (plasma_cell, freq_inner);
+    if (wind_cell->vol > 0)
+    {
+      kappa_tot += kappa_bf (plasma_cell, freq_inner, 0);
+      kappa_tot += kappa_ff (plasma_cell, freq_inner);
+    }
   }
 
   kappa_tot += klein_nishina (mean_freq) * plasma_cell->ne * zdom[ndom].fill;
