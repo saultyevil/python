@@ -559,10 +559,10 @@ double diskrad(double m1, double m2, double period);
 double roche2(double q, double a);
 double logg(double mass, double rwd);
 /* tau_diag.c */
-void print_tau_angles(double *tau_store, double *col_den_store);
-void write_tau_spectrum_to_file(double *tau_spectrum, double freq_min, double dfreq);
-int calculate_tau(WindPtr w, PhotPtr pextract, int opac_type, double *col_den, double *tau);
-int extract_tau(WindPtr w, PhotPtr porig, int opac_type, double *col_den, double *tau);
+void print_tau_angles(const double *tau_store, const double *col_den_store);
+void write_tau_spectrum_to_file(const double *tau_spectrum, double freq_min, double dfreq);
+int calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
+int tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau);
 void reposition_tau_photon(PhotPtr pout);
 int create_tau_diag_phot(PhotPtr pout, double nu);
 void init_tau_diag_angles(void);
