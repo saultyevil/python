@@ -938,5 +938,5 @@ tau_diag_main (WindPtr w)
   geo.ioniz_or_extract = 1;
 
   xsignal (files.root, "%-20s Optical depth diagnostics completed\n", "TAU");
-  Log (" Completed optical depth diagnostics.  The elapsed TIME was %f\n", timer ());
+  Log (" Completed optical depth diagnostics. The elapsed TIME was %f\n", timer ());
 }
