@@ -229,8 +229,6 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
  *
  * @param[in]       WindPtr   w           A pointer to the entire wind
  * @param[in]       PhotPtr   pextract    The photon packet to extract
- * @param[in]       int       opac_type   The opacity to use to calculate the
- *                                        optical depth
  * @param[in,out]   double    *col_den    The column density the photon has
  *                                        translated through
  * @param[in,out]   double    *tau        The optical depth experienced by the
@@ -386,8 +384,6 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
  *
  * @param[in]       WindPtr   w          A pointer to the entire wind
  * @param[in]       PhotPtr   porig      The photon packet to extract
- * @param[in]       int       opac_type  An indicator of wheter to use a mean
- *                                       opacity or not
  * @param[out]      double    *col_den   The column depth of the extracted
  *                                       photon angle
  * @param[out]      double    *tau       The optical depth from photon origin to
