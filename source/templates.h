@@ -564,7 +564,7 @@ void write_tau_spectrum_to_file(const double *tau_spectrum, double freq_min, dou
 int calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
 int tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau);
 void reposition_tau_photon(PhotPtr pout);
-int create_tau_diag_phot(PhotPtr pout, double nu);
+int create_tau_diag_phot (PhotPtr pout, double nu, double *lmn);
 void init_tau_diag_angles(void);
 void create_tau_spectrum(WindPtr w);
 void tau_integrate_angles(WindPtr w);

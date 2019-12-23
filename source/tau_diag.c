@@ -542,30 +542,41 @@ reposition_tau_photon (PhotPtr pout)
  * @details
  *
  * This routine assumes that the user wishes for the photon to be generated from
- * the inner-most radius of the disk or from the central source of the
- * simulation. Note that photons are initialised with a weight of f_tot as
- * photons are required to have weight, but since the diagnostic functions do
- * not care about the weight of the photon, it is set to something large.
+ * the surface of the central source, taking into account the current direction
+ * of the sight-line being extracted. It's currently not possible, without a
+ * tedious re-write, to place the photon at the very origin of the grid when
+ * there is a central source because of how we check boundries.
+ *
+ * Note that photons are initialised with a weight of f_tot as photons are
+ * required to have weight, but since functions do not care about the weight of
+ * the photon, it is set to something large to make sure it does not get
+ * destroyed by accident somehow.
  *
  * ************************************************************************** */
 
 int
-create_tau_diag_phot (PhotPtr pout, double nu)
+create_tau_diag_phot (PhotPtr pout, double nu, double *lmn)
 {
+  double theta;
+
   if (nu < 0)
   {
     Error ("%s:%s:%i: photon can't be created with negative nu\n", __FILE__, __func__, __LINE__);
     return EXIT_FAILURE;
   }
 
+  stuff_v (lmn, pout->lmn);
+
   pout->freq = pout->freq_orig = nu;
   pout->origin = pout->origin_orig = PTYPE_DISK;
   pout->istat = P_INWIND;
   pout->w = pout->w_orig = geo.f_tot;
+  pout->tau = 0.0;
+
+  theta = acos (lmn[2]);
   pout->x[0] = geo.rstar + EPSILON;
   pout->x[1] = 0.0;
-  pout->x[2] = 0.0;
-  pout->tau = 0.0;
+  pout->x[2] = geo.rstar * sin (theta) + EPSILON;
 
   return EXIT_SUCCESS;
 }
@@ -715,7 +726,7 @@ create_tau_spectrum (WindPtr w)
    * Define the limits of the spectra in both wavelength and frequency. The
    * size of the frequency and wavelength bins is also defined. Note that the
    * wavelength limits MUST be in units of Angstroms.
-   * TODO: make wavelengthm limits an advanced diag mode
+   * TODO: make wavelength limits an advanced diag parameter
    */
 
   wave_min = 100;
@@ -746,19 +757,13 @@ create_tau_spectrum (WindPtr w)
       tau = 0;
       column = 0;
 
-      ierr = create_tau_diag_phot (&ptau, freq);
+      ierr = create_tau_diag_phot (&ptau, freq, current_observer);
       if (ierr == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, freq);
         continue;
       }
 
-      /*
-       * Point the photon in the direction of the observer and reposition it if
-       * required
-       */
-
-      stuff_v (current_observer, ptau.lmn);
       reposition_tau_photon (&ptau);
 
       ierr = tau_extract (w, &ptau, &column, &tau);
@@ -852,7 +857,7 @@ tau_integrate_angles (WindPtr w)
        * Create the tau diag photon and point it towards the extract angle
        */
 
-      ierr = create_tau_diag_phot (&ptau, nu);
+      ierr = create_tau_diag_phot (&ptau, nu, current_observer);
       if (ierr == EXIT_FAILURE)
       {
         Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
@@ -861,12 +866,6 @@ tau_integrate_angles (WindPtr w)
         continue;
       }
 
-      /*
-       * Point the photon in the direction of the observer and reposition it if
-       * required
-       */
-
-      stuff_v (current_observer, ptau.lmn);
       reposition_tau_photon (&ptau);
 
       ierr = tau_extract (w, &ptau, &column, &tau);
