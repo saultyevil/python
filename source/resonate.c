@@ -1036,10 +1036,6 @@ scatter (p, nres, nnscat)
   stuff_phot (p, &pold);
   n = where_in_grid (ndom, pold.x);     // Find out where we are
 
-  vwind_xyz (ndom, p, v);       //get the local velocity at the location of the photon
-  v_dop = dot (p->lmn, v);      //get the dot product of the photon direction with the wind, to get the doppler velocity
-  freq_comoving = p->freq * (1. - v_dop / VLIGHT);      //This is the photon frequency in the comoving frame
-
   if (n < 0)
   {
     Error ("scatter: Trying to scatter a photon in grid cell %d\n", n);
@@ -1049,7 +1045,6 @@ scatter (p, nres, nnscat)
   vwind_xyz (ndom, p, v);       //get the local velocity at the location of the photon
   v_dop = dot (p->lmn, v);      //get the dot product of the photon direction with the wind, to get the doppler velocity
   freq_comoving = p->freq * (1. - v_dop / VLIGHT);      //This is the photon frequency in the comoving frame
-
 
   /* On entering this subroutine we know that a photon packet has been
      absorbed. nres tells us which process absorbed it. There are currently
