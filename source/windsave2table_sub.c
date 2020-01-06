@@ -643,8 +643,14 @@ create_convergence_table (ndom, rootname)
   c[16] = get_one (ndom, "gain");
   strcpy (column_name[16], "gain");
 
+  c[17] = get_one (ndom, "macro_bf_in");
+  strcpy (column_name[17], "macro_bf_in");
+
+  c[18] = get_one (ndom, "macro_bf_out");
+  strcpy (column_name[18], "macro_bf_out");
+
   /* This should be the maxium number above +1 */
-  ncols = 17;
+  ncols = 19;
 
 
   converge = get_one (ndom, "converge");
@@ -1182,6 +1188,14 @@ get_one (ndom, variable_name)
       else if (strcmp (variable_name, "gain") == 0)
       {
         x[n] = plasmamain[nplasma].gain;
+      }
+      else if (strcmp (variable_name, "macro_bf_in") == 0)
+      {
+        x[n] = plasmamain[nplasma].bf_simple_ionpool_in;
+      }
+      else if (strcmp (variable_name, "macro_bf_out") == 0)
+      {
+        x[n] = plasmamain[nplasma].bf_simple_ionpool_out;
       }
 
 

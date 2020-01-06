@@ -40,11 +40,24 @@ Note that the export syntax is for bash- for csh use
   
     $ setenv PYTHON /path/to/python/
 
-Atomic data is stored in our [data repository](https://github.com/agnwinds/data) with its own releases page. one should unzip these files and place them in a $PYTHON/data folder.
+Atomic data for the current version of Python stored in the directory xdata which is part of the main repository,
 
-A development user may want to work on atomic data as part of their work, and pull in changes as they are made, in which case we recommend cloning the data repository:
+However, if one wishes to use model stellar spectra to simulate the spectra of the star or disk, one my wish to
+also to download various model grids of spectra that have been used in conjunction with Python over the years. These
+are in a separate [models repository]((https://github.com/agnwinds/xmod).  
+
+These can be downloaded as follows:
+
+    $ cd $PYTHON; git clone https://github.com/agnwinds/xmod xmod 
+
+(Previously, both the atomic data and the model grids were stored in a separate repository.  Users wishing
+to run older versions of the code pre-84b may need to download the 
+[old data repository](https://github.com/agnwinds/data)  This repository can be downloaded as follows
+
 
     $ cd $PYTHON; git clone https://github.com/agnwinds/data data
+
+Those users interested in the current version of Python should not need to do this)
 
 ## Running python
 

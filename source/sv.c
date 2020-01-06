@@ -414,10 +414,10 @@ double zero_p[3];
  * @brief      A setup routine for finding the footpoint of a stream line in a SV model
  *
  *
- * @param [in] double  p[]   A position in cartesian coordiantes
+ * @param [in] double  p[]   A position in cartesian coordinates
  * @return     The routine simply returns 0
  *
- * One of two routines used to find the postion on the disk from which a steamline
+ * One of two routines used to find the position on the disk from which a steamline
  * arises. This routine is just a setup routine, to make the position an external
  * variable so it can be accessed by sv_zero_r 
  *

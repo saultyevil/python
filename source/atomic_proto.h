@@ -1,5 +1,6 @@
 /* get_atomicdata.c */
 int get_atomic_data(char masterfile[]);
+int atomicdata2file(void);
 int index_lines(void);
 int index_phot_top(void);
 int index_inner_cross(void);

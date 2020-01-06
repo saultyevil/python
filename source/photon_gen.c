@@ -399,10 +399,11 @@ iwind = -1 	Don't generate any wind photons at all
 
   if (geo.matom_radiation)
   {
-    /* JM 1408 -- only calculate macro atom emissivity if first cycle.
-       Otherwise have restarted run and can use saved emissivities */
-    /* This returns the specific luminosity
+    /* Only calculate macro atom emissivity during ionization cycles ant
+       at the beginning of the spectral cycles.  Otherwise we can 
+       can use the saved emissivities.  The routine  returns the specific luminosity
        in the spectral band of interest */
+
     if (geo.pcycle == 0)
     {
       geo.f_matom = get_matom_f (CALCULATE_MATOM_EMISSIVITIES);
@@ -414,7 +415,7 @@ iwind = -1 	Don't generate any wind photons at all
     geo.f_kpkt = get_kpkt_f (); /* This returns the specific luminosity
                                    in the spectral band of interest */
 
-    matom_emiss_report ();      // function which logs the macro atom level emissivites
+    matom_emiss_report ();      // Log the macro atom level emissivites
   }
 
   geo.f_tot = geo.f_star + geo.f_disk + geo.f_bl + geo.f_wind + geo.f_kpkt + geo.f_matom + geo.f_agn;
@@ -455,26 +456,32 @@ iwind = -1 	Don't generate any wind photons at all
 int
 phot_status ()
 {
-  if (geo.adiabatic)
-    Log ("!! xdefine_phot: heating & cooling  due to adiabatic processes:         %8.2e %8.2e \n", geo.heat_adiabatic, geo.cool_adiabatic);
 
   Log
-    ("!! xdefine_phot: lum_tot %8.2e lum_star %8.2e lum_disk %8.2e lum_bl %8.2e lum_agn %8.2e lum_wind %8.2e\n",
-     geo.lum_tot, geo.lum_star, geo.lum_disk, geo.lum_bl, geo.lum_agn, geo.lum_wind);
+    ("!! xdefine_phot: lum_tot %8.2e lum_star %8.2e lum_bl %8.2e lum_bh %8.2e lum_disk %8.2e lum_wind %8.2e\n",
+     geo.lum_tot, geo.lum_star, geo.lum_bl, geo.lum_agn, geo.lum_disk, geo.lum_wind);
 
   Log
-    ("!! xdefine_phot:   f_tot %8.2e   f_star %8.2e   f_disk %8.2e   f_bl %8.2e   f_agn %8.2e   f_wind %8.2e   f_matom %8.2e   f_kpkt %8.2e \n",
-     geo.f_tot, geo.f_star, geo.f_disk, geo.f_bl, geo.f_agn, geo.f_wind, geo.f_matom, geo.f_kpkt);
+    ("!! xdefine_phot:   f_tot %8.2e   f_star %8.2e   f_bl %8.2e   f_bh %8.2e   f_disk %8.2e   f_wind %8.2e   f_matom %8.2e   f_kpkt %8.2e \n",
+     geo.f_tot, geo.f_star, geo.f_bl, geo.f_agn, geo.f_disk, geo.f_wind, geo.f_matom, geo.f_kpkt);
 
   Log
     ("!! xdefine_phot: wind ff %8.2e       fb %8.2e   lines  %8.2e  for freq %8.2e %8.2e\n",
      geo.lum_ff, geo.lum_rr, geo.lum_lines, geo.f1, geo.f2);
-  Log
-    ("!! xdefine_phot: star  tstar  %8.2e   %8.2e   lum_star %8.2e %8.2e  %8.2e \n",
-     geo.tstar, geo.tstar_init, geo.lum_star, geo.lum_star_init, geo.lum_star_back);
-  Log
-    ("!! xdefine_phot: disk                               lum_disk %8.2e %8.2e  %8.2e \n",
-     geo.lum_disk, geo.lum_disk_init, geo.lum_disk_back);
+  if (geo.lum_star > 0)
+  {
+    Log
+      ("!! xdefine_phot: star  tstar  %8.2e   %8.2e   lum_star %8.2e %8.2e  %8.2e \n",
+       geo.tstar, geo.tstar_init, geo.lum_star, geo.lum_star_init, geo.lum_star_back);
+  }
+  if (geo.lum_disk > 0)
+  {
+    Log
+      ("!! xdefine_phot: disk                               lum_disk %8.2e %8.2e  %8.2e \n",
+       geo.lum_disk, geo.lum_disk_init, geo.lum_disk_back);
+  }
+  if (geo.adiabatic)
+    Log ("!! xdefine_phot: heating & cooling  due to adiabatic processes:         %8.2e %8.2e \n", geo.heat_adiabatic, geo.cool_adiabatic);
 
   return (0);
 }

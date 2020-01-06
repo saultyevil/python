@@ -31,9 +31,9 @@
  *             removes this by calling matom and kpkt which on return tell  to either return
  *             an r-packet to resonate or make another call to either kpkt or matom as appropriate.
  *
- * @param [in]  PhotPtr  p   the packet at the point of activation
+ * @param [in,out]  PhotPtr  p   the packet at the point of activation
  * @param [out] int *  nres   the process which activates the Macro Atom
- * @param [out] int  matom_or_kpkt   to tell us if we should initially excite a
+ * @param [in] int  matom_or_kpkt   initially excite a matom (1) or create a kpkt (2)
  * @param [out] int *  which_out   set to 1 if return is via macro atom and 2 if via kpkt
  * @return      Will return an r-packet after (possibly) several calls to matom and kpkt
  *
@@ -43,7 +43,7 @@
  * @details
  *
  * ### Notes ###
- * 			I've written this to be as general as possible so that if we want to improve the treatment of simple
+ *          I've written this to be as general as possible so that if we want to improve the treatment of simple
  *          ions it should not need to be re-written.
  *
  *          During the spectrum calculation the emission of r-packets within the spectral region of interest
@@ -66,13 +66,14 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
 
   escape = 0;                   //start with it not being ready to escape as an r-packet
 
+  /* Beginning of the main loop for processing a macro-atom */
   while (escape == 0)
   {
-    if (matom_or_kpkt == 1)     //excite a macro atom - depending on simple/macro choice call different routines
+    if (matom_or_kpkt == 1)     //excite a macro atom (either complete or simple)
     {
 
       if (*nres > (-1) && *nres < NLINES && geo.macro_simple == 0 && lin_ptr[*nres]->macro_info == 1)
-        /* This is a bb line of a macro atoms and we want the full macro atom treatment. */
+        /* Make a bb transition of a full macro atom (macro_simple==FALSE). */
       {
 
         if (geo.matom_radiation == 1)
@@ -91,7 +92,7 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
                Therefore, if the frequency is suitable it should be recorded as a macro atom emission event for use in the
                computation of the k-packet emissivity needed for the final spectrum calculation. */
             *which_out = 1;
-            /* 0803 - ksl - 60 - Added code to modify the photon origin to indicate the packet has been processed
+            /* Update the the photon origin to indicate the packet has been processed
                by a macro atom */
             if (p->origin < 10)
               p->origin += 10;
@@ -100,12 +101,12 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
         }
       }
       else if (*nres > (-1) && *nres < NLINES && (geo.macro_simple == 1 || lin_ptr[*nres]->macro_info == 0))
-        /* This is a bb line for which we don't want a full macro atom treatment. */
+        /*  Make a bb transition  without the full macro atom treatment. */
       {
         fake_matom_bb (p, nres, &escape);
       }
       else if (*nres > NLINES && phot_top[*nres - NLINES - 1].macro_info == 1 && geo.macro_simple == 0)
-        /* This is a bf continuum of a macro atom and we want the full treatment. */
+        /* Make a transition ot the bf continuum of a macro atom and we want the full treatment. */
       {
 
         if (geo.matom_radiation == 1)
@@ -131,7 +132,7 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
               line_paths_add_phot (&(wmain[p->grid]), p, nres);
             }
             return (1);
-            /* 0803 - ksl - 60 - Added code to modify the photon origin to indicate the packet has been processed
+            /* Update the the photon origin to indicate the packet has been processed
                by a macro atom */
             if (p->origin < 10)
               p->origin += 10;
@@ -140,7 +141,11 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
         }
       }
       else if (*nres > NLINES && (phot_top[*nres - NLINES - 1].macro_info == 0 || geo.macro_simple == 1))
-        /* This is a bf continuum but we don't want the full macro atom treatment. */
+        /* This is a bf continuum but we don't want the full macro atom treatment. In the pre-2018
+           approach, we process the photon in a way that makes it return a bf photon of the same type
+           as caused the excitation.  In the old approach, escape will be set to 1, and we will escape.
+           In the new approach, we should never satisfy the do loop, and
+           so an error is thrown and we exit. */
       {
 #if BF_SIMPLE_EMISSIVITY_APPROACH
         Error ("Macro_go: Error - trying to access fake_matom_bf in alternate bf treatment.\n");
@@ -149,10 +154,16 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
         fake_matom_bf (p, nres, &escape);
       }
 
-      matom_or_kpkt = 2;        //if it did not escape then it must have had a
-      //de-activation by collision processes -> need a k-packet
+      matom_or_kpkt = 2;
+      /* If it did not escape then it must have had a
+         de-activation by collision processes, and so we label it a kpkt.  On the next go-through 
+         of the loop we will process it as such */
     }
-    else if (matom_or_kpkt == 2)        //deal with a k-packet
+
+    /* This the end of the section of the loop that deals with matom excitations. next domes the 
+       section of the loop that deals with kpts */
+
+    else if (matom_or_kpkt == 2)
     {
       if (geo.matom_radiation == 1)
       {
@@ -177,12 +188,14 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
     }
   }
 
-  //When it gets here an escpae has taken place. That's it done.
+  /* End of main matom processing loop 
+     When it gets here an escpae has taken place. 
+   */
 
   *which_out = 2;
 
-  /* 0803 - ksl - 60 - Added code to modify the photon origin to indicate the packet has been processed
-     by a macro atom */
+/* Update the the photon origin to indicate the packet has been processed
+by a macro atom */
 
   if (p->origin < 10)
     p->origin += 10;

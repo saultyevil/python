@@ -76,6 +76,7 @@ wiki/
 
 # atomic data files should not be tracked by this repository
 data/
+xmod/
 
 # we shouldn't be tracking version.h either 
 source/version.h

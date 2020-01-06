@@ -172,6 +172,8 @@ bf_estimators_increment (one, p, ds)
 
         exponential = y * exp (-(freq_av - ft) / BOLTZMANN / xplasma->t_e);
 
+        /* Increment the photoionization rate estimator */
+
         mplasma->gamma[config[llvl].bfu_indx_first + m] += y / freq_av;
 
         mplasma->alpha_st[config[llvl].bfu_indx_first + m] += exponential / freq_av;

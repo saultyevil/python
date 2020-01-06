@@ -363,7 +363,7 @@ struct geometry
   double swavemin, swavemax, sfmin, sfmax;      // The minimum and maximum wavelengths/freqs for detailed spectra
   int select_extract, select_spectype;
 
-/* Begin description of the actual geometery */
+/* Begin description of the actual geometry */
 
 /* The next variables refere to the entire space in which pbotons sill be tracked.  Photons
  * outside these regions are assumed to have hit something or be freely moving through space.
@@ -394,7 +394,7 @@ struct geometry
                                            the temperature of the disk for future ionization cycles
                                          */
 
-  int absorb_reflect;           /*Controls what happens when a photong hits the disk or star
+  int absorb_reflect;           /*Controls what happens when a photon hits the disk or star
                                  */
 
 #define DISK_TPROFILE_STANDARD          0       // This is a standard Shakura-Sunyaev disk. The profile depends on mstar and mdot_disk
@@ -581,7 +581,6 @@ struct geometry
                                    of the agn is elsewhere in the structure
                                  */
   double const_agn;             /*The constant for the Power law, there are lots of ways of defining the PL which is best? */
-//OLD  double r_agn;                 /* radius of the "photosphere" of the BH in the AGN.  */
   double d_agn;                 /* the distance to the agn - only used in balance to calculate the ionization fraction */
 
 
@@ -795,11 +794,11 @@ typedef struct plasma
   double *partition;            /*The partition function for each  ion. 78 - changed to dynamic allocation */
   double *levden;               /*The number density (occupation number?) of a specific level */
 
-  double kappa_ff_factor;       /* Multiplicative factor for calculating the FF heating for                                      a photon. */
+  double kappa_ff_factor;       /* Multiplicative factor for calculating the FF heating for a photon. */
 
 
   double *recomb_simple;        /* "alpha_e - alpha" (in Leon's notation) for b-f processes in simple atoms. */
-  double *recomb_simple_upweight;       /* multiplicative factor to account for ration of total to "cooling" energy for b-f processes in simple atoms. */
+  double *recomb_simple_upweight;       /* multiplicative factor to account for ratio of total to "cooling" energy for b-f processes in simple atoms. */
 
 /* Begining of macro information */
   double kpkt_emiss;            /*This is the specific emissivity due to the conversion k-packet -> r-packet in the cell

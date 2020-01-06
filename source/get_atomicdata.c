@@ -1129,7 +1129,7 @@ described as macro-levels. */
  *   4.420684E+00 1.206E+00
  * @endverbatim
  *
- * They are converted to something that is more compatible with Topbase
+ * They are converted to something that is more compatible with Python 
  * by py_top_phot
  *
  * The new topbase style records look like this.
@@ -1149,7 +1149,7 @@ described as macro-levels. */
  *
  * The main changes from the original records are that energy levels
  * have been converted to eV, cross sections to cm**2, and the electron
- * number has been converted to conventional astronomical notiation
+ * number has been converted to conventional astronomical notation
  * for the ionstate.
  *
  * ### Macro atoms (SS)
@@ -1193,6 +1193,13 @@ described as macro-levels. */
             sscanf (aline, "%*s %d %d %d %d %le %d\n", &z, &istate, &levl, &levu, &exx, &np);
             islp = -1;
             ilv = -1;
+
+            if (np > NCROSS)
+            {
+              Error ("Get_atomicdata: More x-sections (%d) to be read in than maximum allowed (%d).  Increase NCROSS\n", np, NCROSS);
+              Error ("Get_atomic_data: %s\n", aline);
+              exit (0);
+            }
 
             for (n = 0; n < np; n++)
             {
@@ -1306,6 +1313,14 @@ described as macro-levels. */
           {
             // It's a TOPBASE style photoionization record, beginning with the summary record
             sscanf (aline, "%*s %d %d %d %d %le %d\n", &z, &istate, &islp, &ilv, &exx, &np);
+
+            if (np > NCROSS)
+            {
+              Error ("Get_atomicdata: More x-sections (%d) to be read in than maximum allowed (%d).  Increase NCROSS\n", np, NCROSS);
+              Error ("Get_atomic_data: %s\n", aline);
+              exit (0);
+            }
+
             for (n = 0; n < np; n++)
             {                   //Read the topbase photoionization records
               if (fgets (aline, LINELENGTH, fptr) == NULL)
@@ -1849,10 +1864,18 @@ described as macro-levels. */
           {
             if (ion[n].z == z && ion[n].istate == istate)
             {                   /* Then there is a match */
-              if (freq == 0 || f <= 0 || gl == 0 || gu == 0)
+              if (gl == 0 || gu == 0 || freq == 0)
               {
-                Error_silent ("getatomic_data: line input incomplete: %s\n", aline);
+                Error_silent ("getatomic_data: line input freq, gl or gu = 0: %s\n", aline);
                 break;
+              }
+              if (f <= 0)
+              {
+                Error_silent ("getatomic_data: line input f odd (may be OK if Macro): %s\n", aline);
+                if (mflag == -1)
+                {
+                  break;
+                }
               }
               //
               //define macro atom case (SS)
@@ -1884,7 +1907,7 @@ would like to have simple lines for macro-ions */
               line[nlines].eu = eu;
               line[nlines].nconfigl = nconfigl;
               line[nlines].nconfigu = nconfigu;
-              line[nlines].coll_index = -999;   //Tokick off with we assume there is no collisional strength data
+              line[nlines].coll_index = -999;   // We start assuming there is no collisional strength data
               if (mflag == -1)
               {
                 line[nlines].macro_info = 0;    // It's an old-style line`
@@ -2489,14 +2512,18 @@ would like to have simple lines for macro-ions */
 /**
  * @section Chianti Collision Strengths
  * The lines below read in collision strength data from Chianti (after Burgess and Tully). The original
- *		  is stored in .scups files in chianti. The python script searches for matches to the lines_linked_ver_2.py
- *		  data file, on the basis of energy and oscillator strength (and z and state). As a rather hamfisted
- *		  approach, all of the line data is stored on the same line as the collision strength data in
- *		  the file, so it is possible to make a very accurate match. It does mean quite a lot is read in
- *		  from a line, but most is thrown away. Currently the code below matches based on z, state, upper and
- *		  lower level numbers and oscillator strength
- * Each line is defned with a set of three lines
- * first line is CSTREN - this contains line data to try and match
+ * is stored in .scups files in chianti. 
+ * 
+ * To create the input data files,  a python script searches for matches to the lines_linked_ver_2.py
+ * data file, on the basis of energy and oscillator strength (and z and state). 
+ *
+ * As a rather hamfisted
+ * approach, all of the line data is stored on the same line as the collision strength data in
+ * the file, so it is possible to make a very accurate match. It does mean quite a lot is read in
+ * from a line, but most is thrown away. Currently the code below matches based on z, state, upper and
+ * lower level numbers and oscillator strength.
+ * Each line is defined with a set of three lines.
+ * The first line is CSTREN - this contains line data to try and match
  * Second two lines are collision strength data from Burgess and Tully 1992A&A...254..436B
  * These are generally 5 pojnt but up to 20 point spline fits of the T vs upsilon data. Typical lines are below
  * @verbatim
@@ -2530,6 +2557,7 @@ SCUPS    1.132e-01   2.708e-01   5.017e-01   8.519e-01   1.478e+00
               if (line[n].coll_index > -1)      //We already have a collision strength record from this line - throw an error and quit
               {
                 Error ("Get_atomic_data More than one collision strength record for line %i\n", n);
+                Error ("Get_atomic_data: %s\n", aline);
                 exit (0);
               }
               match = 1;
@@ -2757,6 +2785,17 @@ a total emission oscillator strength for the level....really ought to be radiati
       }
       else
         line[n].nconfigu = -9999;
+
+    }
+    else
+    {                           // a macro atom so check for collision data
+      if (line[n].f <= 0 && line[n].coll_index == -999)
+      {
+        Error ("get_atomic_data: Macro line with neither collision data or oscillator strength\n");
+        Error ("get_atomic_data: n %3d ion_no %3d z %2d ion %2d freq %8.1e f %6.3f macro %2d coll %4d up_down %2d %2d\n",
+               n, line[n].nion, line[n].z, line[n].istate, line[n].freq, line[n].f, line[n].macro_info, line[n].coll_index,
+               line[n].down_index, line[n].up_index);
+      }
     }
   }
 
@@ -2830,65 +2869,8 @@ or zero so that simple checks of true and false can be used for them */
 /* this is controlled by one of the -d flag modes, defined in atomic.h */
   if (write_atomicdata)
   {
+    atomicdata2file ();
 
-    if ((fptr = fopen ("data.out", "w")) == NULL)
-    {
-      Error ("get_atomic data:  Could not open data.out\n");
-      exit (0);
-    }
-
-    fprintf (fptr, "This file contains data which was read in by get_atomicdata\n");
-
-    fprintf (fptr, "Data of %d elements, %d ions, and %d levels %d lines\n", nelements, nions, nlevels, nlines);
-
-
-    /* Write the element array */
-    fprintf (fptr, "Element Data:\n");
-    for (nelem = 0; nelem < nelements; nelem++)
-    {
-      fprintf (fptr, "Element %2d %5s firstion %2d nions %2d\n", nelem, ele[nelem].name, ele[nelem].firstion, ele[nelem].nions);
-    }
-
-    /* Write the ion array */
-    fprintf (fptr, "Ion data:\n");
-    for (n = 0; n < nions; n++)
-    {
-      fprintf (fptr,
-               "ion %3d z %3d istate %3d firstlevel %3d nlevels %3d potential %8.3g\n",
-               n, ion[n].z, ion[n].istate, ion[n].firstlevel, ion[n].nlevels, ion[n].ip / EV2ERGS);
-    }
-
-    /* Write the excitation level data */
-    fprintf (fptr, "Excitation levels: There are %d levels\n", nlevels);
-    for (n = 0; n < nlevels; n++)
-      fprintf (fptr, "n %3d q %.1f g %3.0f ex %8.3g\n", n, config[n].q_num, config[n].g, config[n].ex);
-
-    /* Write the photoionization data  */
-    fprintf (fptr, "Photoionization data: There are %d edges\n", ntop_phot + nxphot);
-    for (n = 0; n < ntop_phot + nxphot; n++)
-    {
-      fprintf (fptr, "n %3d z %2d istate %3d sigma %8.2e freq[0] %8.2e\n",
-               n, phot_top[n].z, phot_top[n].istate, phot_top[n].sigma, phot_top[n].freq[0]);
-    }
-
-    /* Write the resonance line data to the file */
-
-    fprintf (fptr, "Line data: There are %d lines\n", nlines);
-
-    for (n = 0; n < nlines; n++)
-    {
-      fprintf (fptr, "n %3d ion %3d freq %8.1e f %6.3f\n", n, line[n].nion, line[n].freq, line[n].f);
-    }
-
-    /* Write the ground fraction data to the file */
-    fprintf (fptr, "Ground frac data (just first and last fracs here as a check):\n");
-
-    for (n = 0; n < NIONS; n++)
-    {
-      fprintf (fptr, "%3d %3d %6.3f %6.3f\n", ground_frac[n].z, ground_frac[n].istate, ground_frac[n].frac[0], ground_frac[n].frac[19]);
-    }
-
-    fclose (fptr);
   }                             // end of if statement based on modes.write_atomicdata
 
 
@@ -2913,6 +2895,96 @@ or zero so that simple checks of true and false can be used for them */
   return (0);
 }
 
+
+
+/**********************************************************/
+/**
+ * @brief      Write out the atomic data to a file   
+ *
+ * @return     Always returns 0
+ *
+ * @details
+ *
+ * ### Notes ###
+ *
+ * Note that there are a number of "variables" such as 
+ * nelements, and nions, that are global variables which
+ * are part of atomic.h
+ **********************************************************/
+
+int
+atomicdata2file ()
+{
+  FILE *fptr;                   //, fopen ();
+  int nelem;
+  int n;
+
+  if ((fptr = fopen ("data.out", "w")) == NULL)
+  {
+    Error ("get_atomic data:  Could not open data.out\n");
+    exit (0);
+  }
+
+  fprintf (fptr, "This file contains data which was read in by get_atomicdata\n");
+
+  fprintf (fptr, "Data of %d elements, %d ions, and %d levels %d lines\n", nelements, nions, nlevels, nlines);
+
+
+  /* Write the element array */
+  fprintf (fptr, "Element Data:\n");
+  for (nelem = 0; nelem < nelements; nelem++)
+  {
+    fprintf (fptr, "Element %2d %5s firstion %2d nions %2d\n", nelem, ele[nelem].name, ele[nelem].firstion, ele[nelem].nions);
+  }
+
+  /* Write the ion array */
+  fprintf (fptr, "Ion data:\n");
+  for (n = 0; n < nions; n++)
+  {
+    fprintf (fptr,
+             "ion %3d z %3d istate %3d firstlevel %3d nlevels %3d potential %8.3g\n",
+             n, ion[n].z, ion[n].istate, ion[n].firstlevel, ion[n].nlevels, ion[n].ip / EV2ERGS);
+  }
+
+  /* Write the excitation level data */
+  fprintf (fptr, "Excitation levels: There are %d levels\n", nlevels);
+  for (n = 0; n < nlevels; n++)
+    fprintf (fptr, "n %3d z %2d istate %2d q %.1f g %3.0f ex %8.3g  bb %2d %2d bf %2d %2d\n", n,
+             config[n].z, config[n].istate, config[n].q_num, config[n].g, config[n].ex,
+             config[n].n_bbu_jump, config[n].n_bbd_jump, config[n].n_bfu_jump, config[n].n_bfd_jump);
+
+  /* Write the resonance line data to the file */
+
+  fprintf (fptr, "Line data: There are %d lines\n", nlines);
+
+  for (n = 0; n < nlines; n++)
+  {
+    fprintf (fptr, "n %3d ion_no %3d z %2d ion %2d freq %8.1e f %6.3f macro %2d coll %4d up_down %2d %2d\n",
+             n, line[n].nion, line[n].z, line[n].istate, line[n].freq, line[n].f, line[n].macro_info, line[n].coll_index,
+             line[n].down_index, line[n].up_index);
+  }
+
+  /* Write the photoionization data  */
+  fprintf (fptr, "Photoionization data: There are %d edges\n", ntop_phot + nxphot);
+  for (n = 0; n < ntop_phot + nxphot; n++)
+  {
+    fprintf (fptr, "n %3d z %2d istate %3d sigma %8.2e freq[0] %8.2e nlev %2d uplev %2d macro %2d  %2d %2d use %2d\n",
+             n, phot_top[n].z, phot_top[n].istate, phot_top[n].sigma, phot_top[n].freq[0],
+             phot_top[n].nlev, phot_top[n].uplev, phot_top[n].macro_info, phot_top[n].down_index, phot_top[n].up_index, phot_top[n].use);
+  }
+
+  /* Write the ground fraction data to the file */
+  fprintf (fptr, "Ground frac data (just first and last fracs here as a check):\n");
+
+  for (n = 0; n < NIONS; n++)
+  {
+    fprintf (fptr, "%3d %3d %6.3f %6.3f\n", ground_frac[n].z, ground_frac[n].istate, ground_frac[n].frac[0], ground_frac[n].frac[19]);
+  }
+
+  fclose (fptr);
+
+  return (0);
+}
 
 
 /**********************************************************/
@@ -3354,13 +3426,13 @@ double q21_a, q21_t_old;
  * @return    The collisional de-excitiation coefficient
  *
  * @details
- * This routine uses stored coefficients if we have them, or the Van Regemortor
+ * This routine uses stored coefficients if we have them, or the Van Regemorter
  * approximation if we do not.
  *
  * ### Notes ###
- * the relevant paper to consult here is Van Regemorter 1962. We use an effective gaunt
- * factor to calculate collision strengths. There is one regime in which kt < hnu. For that
- * consult equation 4.20 and 4.21 of Hazy.
+ * the relevant paper to consult here is Van Regemorter 1962 (ApJ 136 906). We use an effective gaunt
+ * factor to calculate collision strengths. There is one regime in which kt < hnu. 
+ * 
 ************************************************************/
 
 double
@@ -3452,7 +3524,7 @@ double a21_a;
 
 /**********************************************************/
 /**
- * @brief      Calculate the Einstein A coefficient for aline
+ * @brief      Calculate the Einstein A coefficient for a line
  *
  * @param [in out] struct lines *  line_ptr   The structure that describes a single line
  * @return     The Einstein A coefficient
@@ -3486,8 +3558,8 @@ a21 (line_ptr)
 /**
  * @brief      calculates the thermally averaged collision strength thermally excited line emission.
  *
- * @param [in out] int  n_coll   the index of the collision strength record we are working with
- * @param [in out] double  u0  - kT_e/hnu - where nu is the transition frequency for the line of interest and T_e is the electron temperature
+ * @param [in] int  n_coll   the index of the collision strength record we are working with
+ * @param [in] double  u0  - kT_e/hnu - where nu is the transition frequency for the line of interest and T_e is the electron temperature
  * @return     upsilon - the thermally averaged collision strength for a given line at a given temp
  *
  * @details
@@ -3507,7 +3579,7 @@ upsilon (n_coll, u0)
      double u0;
 {
   double x;                     //The scaled temperature
-  double y;                     //The scaled collision sterngth
+  double y;                     //The scaled collision strength
   double upsilon;               //The actual collision strength
   int linterp ();
 

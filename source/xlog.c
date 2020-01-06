@@ -19,18 +19,18 @@
  * file is opened for each thread.  With some exceptions, messages to the screen arise from thread 0.  
  * 		
  *  The routines that control what files are open and closed for logging are as follows.
- * 	- Log_init(filename)			Open a logfile
- * 	- Log_append(filename)			Repoane an existing log file (so that one can continue to log to it)
- * 	- Log_close()					Close the current logfile
+ * - Log_init(filename)			Open a logfile
+ * - Log_append(filename)			Reopen an existing log file (so that one can continue to log to it)
+ * - Log_close()				Close the current logfile
  *
  *   The routines that write to the log files (and optionally the screen) for informational reasons are:
  *  - Log ( char *format, ...)			Send a message to the screen and logfile
- * 	- Log_silent ( char *format, ...)		Send a message to the logfile
+ *  - Log_silent ( char *format, ...)		Send a message to the logfile
  *
- * 	The routines that are designed to report errors are as follows: 
- * 	- Shout( char *format, ...)	   Send a message to the screen and logfile that cannot be suppressed.
- *  - Error ( char *format, ...)			Send a message prefaced by the word "Error:" to the screen and to the logfile.
- * 	- Error_silent ( char *format, ...)		Send a message prefaced by the word "Error:" to
+ * The routines that are designed to report errors are as follows: 
+ * - Shout( char *format, ...)	   Send a message to the screen and logfile that cannot be suppressed.
+ * - Error ( char *format, ...)			Send a message prefaced by the word "Error:" to the screen and to the logfile.
+ * - Error_silent ( char *format, ...)		Send a message prefaced by the word "Error:" to
  * 										the logfile
  *
  *  One can control how much information is printed to the screen and how many times a specific error message is logged 
@@ -38,6 +38,10 @@
  *  - Log_set_verbosity(vlevel)			Set the verbosity of the what is printed to the screen and the log file
  *  - Log_print_max(print_max)			Set the number of times a single error will be 
  * 	    output to the screen and the log file
+ *
+ *  The amount printed out is controlled by a command line switch -v (in Python).   The default value causes Shout, Log, 
+ *  and Error to be printed and logged, but not Log_silent Error_silent.  The default value is 5. If the value is raised 
+ *  more data will be printed or logged.  
  *
  *  In most cases, it is sufficient to log to the screen only from thread 0.  there are a few times, one might want to 
  *  send a message to the screen from any thread. For this purpose there is a specific command:
@@ -61,14 +65,14 @@
  *  routines associated with this.
  *
  *
- *  - error_summary(char *format)			Summarize all of the erors that have been
- * 								logged to this point in time
+ *  - error_summary(char *format)	Summarize all of the erors that have been
+ * 					logged to this point in time
  *
  *
  *  In addition there are several routines that largely internal
  *
  *  - Log_set_mpi_rank(rank, n_mpi)		Tells  the rank of the parallel process in parallel mode,
- * 								and divides max errors by n_mpi
+ * 						and divides max errors by n_mpi
  *     
  *
  *
@@ -91,14 +95,14 @@
 #define LINELENGTH 256
 #define NERROR_MAX 500          // Number of different errors that are recorded
 
-/* definitions of what is logged at what verboisty level */
+/* definitions of what is logged at what verbosity level */
 
-#define SHOW_PARALLEL		  1
-#define SHOW_LOG  		    2
-#define SHOW_ERROR		    2
-#define SHOW_DEBUG	  	  4
-#define SHOW_LOG_SILENT  	5
-#define SHOW_ERROR_SILENT	5
+#define SHOW_PARALLEL	    1
+#define SHOW_LOG  	    2
+#define SHOW_ERROR	    2
+#define SHOW_DEBUG	    4
+#define SHOW_LOG_SILENT     5
+#define SHOW_ERROR_SILENT   5
 
 
 int my_rank = 0;                // rank of mpi process, set to zero
@@ -132,6 +136,8 @@ int log_verbosity = 5;          // A parameter which can be used to suppress wha
  * @return     Always returns 0
  *
  * ###Notes###
+ *
+ * The routine will exit is log the file can not be opened
  *
  *
  **********************************************************/
@@ -205,7 +211,7 @@ Log_append (filename)
 
 /**********************************************************/
 /** 
- * @brief      Close a log file 
+ * @brief      Close the log file 
  *
  * @return     Always returns 0
  *
@@ -234,11 +240,19 @@ Log_close ()
 /** 
  * @brief      Control the range of messages which are logged to the command line
  *
- * @param [in] int  vlevel   An integer which controls what level of loggng goes to the screen
+ * @param [in] int  vlevel   An integer which controls what level of 
+ *    logging goes to the screen or to a file
  * @return     Always returns 0
  *
  *
  * ###Notes###
+ * The default value of the verbosity is 5.  Setting the
+ * verbosity to a higher valued will cause more data to
+ * be printed or logged.  Setting it to a lower value
+ * will cause less.
+ *
+ * This routine is accessed via the command line with the 
+ * swithc -v
  *
  *
  **********************************************************/
@@ -254,7 +268,6 @@ Log_set_verbosity (vlevel)
 
 
 
-
 /**********************************************************/
 /** 
  * @brief      Limit the number of times an error is printed out
@@ -266,6 +279,10 @@ Log_set_verbosity (vlevel)
  *
  *
  * ###Notes###
+ * Even if the error is not printed out, occurences are counted
+ *
+ * The number (which be default is 100) can be modified ont he
+ * commandline with the switch -e_write
  *
  *
  **********************************************************/
@@ -293,7 +310,7 @@ Log_print_max (print_max)
  *
  * ###Notes###
  *
- * The current default is 1e6.
+ * The current default is 1e5.
  *
  *
  **********************************************************/
