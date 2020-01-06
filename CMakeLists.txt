@@ -24,6 +24,7 @@ link_directories(lib)
 
 # Define the executables
 add_executable(python
+        source/tau_diag.c
         source/rdpar_init.c
         source/bb.c
         source/get_atomicdata.c
