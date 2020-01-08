@@ -5,7 +5,7 @@ Central_object.mass(msol)                  0.8
 Central_object.radius(cm)                  7e+08
 Central_object.radiation(yes,no)                  yes
 Central_object.rad_type_to_make_wind(bb,models)               models
-Input_spectra.model_file                   models/kurucz91.ls
+Input_spectra.model_file                   data/kurucz91.ls
 Central_object.temp                        40000
 Binary.mass_sec(msol)                      0.6
 Binary.period(hr)                          5.57
