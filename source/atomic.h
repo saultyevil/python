@@ -441,7 +441,7 @@ typedef struct total_rr
 {
   int nion;                     //Internal cross reference to the ion that this refers to
   double params[T_RR_PARAMS];   /*There are up to six parameters. If the last two are zero, we still
-                                  the data in the same way, but they have no effect - NB - 
+                                   the data in the same way, but they have no effect - NB - 
                                    important to zero these! */
   /* NSH 23/7/2012 - This array will double up for Shull parameters */
   int type;                     /* NSH 23/7/2012 - What type of parampeters we have for this ion */
