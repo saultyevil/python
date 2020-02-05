@@ -191,7 +191,7 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
    * Write the file header - nothing fancy
    */
 
-  fprintf (tau_spec_file, "# Lambda Freq. ");
+  fprintf (tau_spec_file, "Freq. Lambda ");
   for (ispec = 0; ispec < N_ANGLES; ispec++)
     fprintf (tau_spec_file, "%s ", OBSERVERS[ispec].name);
   fprintf (tau_spec_file, "\n");
@@ -205,7 +205,7 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
   for (ifreq = 0; ifreq < NWAVE; ifreq++)
   {
     wavelength = VLIGHT / frequency / ANGSTROM;
-    fprintf (tau_spec_file, "%e %e ", wavelength, frequency);
+    fprintf (tau_spec_file, "%e %e ", frequency, wavelength);
 
     for (ispec = 0; ispec < N_ANGLES; ispec++)
       fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + ifreq]);
