@@ -109,7 +109,7 @@ extract (w, p, itype)
 
     yep = 1;                    // Start by assuming it is a good photon for extraction
 
-    if ((mscat = xxspec[n].nscat) > MAXSCAT || p->nscat == mscat || (mscat < 0 && p->nscat >= (-mscat)))
+    if ((mscat = xxspec[n].nscat) > MAXSCAT - 1 || p->nscat == mscat || (mscat < 0 && p->nscat >= (-mscat)))
       yep = 1;
     else
       yep = 0;
