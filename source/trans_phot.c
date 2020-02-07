@@ -109,8 +109,7 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
       else
         Log ("Spec. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.pcycle + 1, geo.pcycles, basename, nphot, NPHOT,
              nphot * 100. / NPHOT);
-      check_time (files.root);  // EP 22/19: I'm putting this here for Iridis, so we can mid-cycle and still get a report TODO: remove for master/dev branch
-    }
+      }
 
     Log_flush ();
 
