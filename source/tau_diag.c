@@ -183,7 +183,7 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
 
   if ((tau_spec_file = fopen (tau_spec_filename, "w")) == NULL)
   {
-    Error ("%s:%s:%i: unable to open tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Error ("%s : %i : unable to open tau spectrum diag file\n", __FILE__, __LINE__);
     Exit (1);
   }
 
@@ -217,7 +217,7 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
 
   if (fclose (tau_spec_file))
   {
-    Error ("%s:%s:%i: could not close tau spectrum diag file\n", __FILE__, __func__, __LINE__);
+    Error ("%s : %i : could not close tau spectrum diag file\n", __FILE__, __LINE__);
     Exit (1);
   }
 }
@@ -270,7 +270,7 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
 
   if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
   {
-    Error ("%s:%s:%i: pextract is not in grid\n", __FILE__, __func__, __LINE__);
+    Error ("%s : %i : pextract is not in grid\n", __FILE__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -292,7 +292,7 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
   smax = find_smax (pextract);
   if (smax < 0)
   {
-    Error ("%s:%s:%i: abnormal value of smax for photon\n", __FILE__, __func__, __LINE__);
+    Error ("%s : %i : abnormal value of smax for photon\n", __FILE__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -423,7 +423,7 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
       translate_in_space (&pextract);
       if (++n_trans_space > max_trans_space)
       {
-        Error ("%s:%s:%i: tau_extract photon transport ended due to too many translate_in_space\n", __FILE__, __func__, __LINE__);
+        Error ("%s : %i : tau_extract photon transport ended due to too many translate_in_space\n", __FILE__, __LINE__);
         return EXIT_FAILURE;
       }
     }
@@ -438,7 +438,7 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
     }
     else
     {
-      Error ("%s:%s:%i: photon in unknown location, grid stat %i\n", __FILE__, __func__, __LINE__, pextract.grid);
+      Error ("%s : %i : photon in unknown location, grid stat %i\n", __FILE__, __LINE__, pextract.grid);
       pextract.istat = -1;
       return EXIT_FAILURE;
     }
@@ -453,7 +453,7 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
 
   if (istat == P_HIT_STAR || istat == P_HIT_DISK)
   {
-    Error ("%s:%s:%i: photon hit central source or disk incorrectly istat = %i\n", __FILE__, __func__, __LINE__, istat);
+    Error ("%s : %i : photon hit central source or disk incorrectly istat = %i\n", __FILE__, __LINE__, istat);
     return EXIT_FAILURE;
   }
 
@@ -561,7 +561,7 @@ create_tau_diag_phot (PhotPtr pout, double nu, double *lmn)
 
   if (nu < 0)
   {
-    Error ("%s:%s:%i: photon can't be created with negative nu\n", __FILE__, __func__, __LINE__);
+    Error ("%s : %i : photon can't be created with negative nu\n", __FILE__, __LINE__);
     return EXIT_FAILURE;
   }
 
@@ -625,7 +625,7 @@ init_tau_diag_angles (void)
     if (OBSERVERS == NULL)
     {
       memory_req = geo.nangles * sizeof *OBSERVERS;
-      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
+      Error ("%s : %i : cannot allocate %d bytes for observers array\n", __FILE__, __LINE__, memory_req);
       Exit (1);
     }
     else
@@ -653,7 +653,7 @@ init_tau_diag_angles (void)
     if (OBSERVERS == NULL)
     {
       memory_req = n_default_angles * sizeof *OBSERVERS;
-      Error ("%s:%s:%i: cannot allocate %d bytes for observers array\n", __FILE__, __func__, __LINE__, memory_req);
+      Error ("%s : %i : cannot allocate %d bytes for observers array\n", __FILE__, __LINE__, memory_req);
       Exit (1);
     }
     else
@@ -718,7 +718,7 @@ create_tau_spectrum (WindPtr w)
   if (tau_spectrum == NULL)
   {
     memory_req = N_ANGLES * NWAVE * sizeof *tau_spectrum;
-    Error ("%s:%s:%i: cannot allocate %d bytes for tau_spectrum\n", __FILE__, __func__, __LINE__, memory_req);
+    Error ("%s : %i : cannot allocate %d bytes for tau_spectrum\n", __FILE__, __LINE__, memory_req);
     Exit (1);
   }
 
@@ -827,7 +827,7 @@ tau_integrate_angles (WindPtr w)
   if (tau_store == NULL)
   {
     memory_req = N_ANGLES * N_TAU * sizeof *tau_store;
-    Error ("%s:%s:%i: cannot allocate %d bytes for tau_store\n", __FILE__, __func__, __LINE__, memory_req);
+    Error ("%s : %i : cannot allocate %d bytes for tau_store\n", __FILE__, __LINE__, memory_req);
     Exit (1);
   }
 
@@ -835,7 +835,7 @@ tau_integrate_angles (WindPtr w)
   if (column_store == NULL)
   {
     memory_req = N_ANGLES * sizeof *tau_store;
-    Error ("%s:%s:%i: cannot allocate %d bytes for col_den_store\n", __FILE__, __func__, __LINE__, memory_req);
+    Error ("%s : %i : cannot allocate %d bytes for col_den_store\n", __FILE__, __LINE__, memory_req);
     Exit (1);
   }
 
