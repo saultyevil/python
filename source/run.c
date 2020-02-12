@@ -505,6 +505,18 @@ make_spectra (restart_stat)
     }
   }
 
+  /*
+   * Change NPHOT to be NPHOT_SPECTRAL for the spectrum cycles and resize the
+   * photon array if required
+   */
+
+  if (NPHOT != NPHOT_SPECTRAL)
+  {
+    NPHOT = NPHOT_SPECTRAL;
+    photmain = p = realloc (p, NPHOT * sizeof (p_dummy));
+  }
+
+
   /* BEGIN CYCLES TO CREATE THE DETAILED SPECTRUM */
 
   /* the next section initializes the spectrum array in two cases, for the
@@ -572,7 +584,7 @@ make_spectra (restart_stat)
 
      */
 
-    NPHOT = NPHOT_MAX;          // Assure that we really are creating as many photons as we expect.
+//    NPHOT = NPHOT_SPECTRAL;     // Assure that we really are creating as many photons as we expect.
 
     nphot_to_define = (long) NPHOT *(long) geo.pcycles;
     define_phot (p, freqmin, freqmax, nphot_to_define, 1, iwind, 0);

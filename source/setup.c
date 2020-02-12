@@ -529,17 +529,17 @@ init_photons ()
      (in scientific notation) */
 
 
-  double nphot = 1e5;
-  rddoub ("Photons_per_cycle", &nphot); // NPHOT is photons/cycle
+  double nphot = 1e6;
+  rddoub ("Photons_per_ionization_cycle", &nphot);      // NPHOT is photons/cycle
   if ((NPHOT = (int) nphot) <= 0)
   {
-    Error ("%1.2e is invalid choice for NPHOT; NPHOT > 0 required.", (double) NPHOT);
+    Error ("%1.2e is invalid choice for Photons_per_ionization_cycle; Photons_per_ionization_cycle > 0 required.", (double) NPHOT);
     Exit (1);
   }
 
 
 #ifdef MPI_ON
-  Log ("Photons per cycle per MPI task will be %d\n", NPHOT / np_mpi_global);
+  Log ("Photons per ionization cycle per MPI task will be %d\n", NPHOT / np_mpi_global);
   NPHOT /= np_mpi_global;
 #endif
 
@@ -550,6 +550,19 @@ init_photons ()
    * so we need to record this number. If this is not a restart, then
    * geo.pcycles_renorm will not be used.
    */
+
+  rddoub ("Photons_per_spectrum_cycle", &nphot);
+  if ((NPHOT_SPECTRAL = (int) nphot) <= 0)
+  {
+    Error ("%1.2e is invalid choice for Photons_per_spectrum_cycle; Photons_per_spectrum_cycle > 0 required.", (double) NPHOT_SPECTRAL);
+    Exit (1);
+  }
+
+#ifdef MPI_ON
+  Log ("Photons per spectrum cycle per MPI task will be %d\n", NPHOT_SPECTRAL / np_mpi_global);
+  NPHOT_SPECTRAL /= np_mpi_global;
+#endif
+
 
   geo.pcycles_renorm = geo.pcycles;
 
@@ -565,6 +578,7 @@ init_photons ()
   /* Allocate the memory for the photon structure now that NPHOT is established */
 
   photmain = p = (PhotPtr) calloc (sizeof (p_dummy), NPHOT);
+
   /* If the number of photons per cycle is changed, NPHOT can be less, so we define NPHOT_MAX
    * to the maximum number of photons that one can create.  NPHOT is used extensively with
    * Python.  It is the NPHOT in a particular cycle, in a given thread.

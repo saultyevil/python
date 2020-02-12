@@ -99,6 +99,7 @@ double PHOT_RANGE;              /* When a variable number of photons are called 
                                  */
 int NPHOT_MAX;                  /* The maximum number of photon bundles created per cycle */
 int NPHOT;                      /* The number of photon bundles created, defined in setup.c */
+int NPHOT_SPECTRAL;
 
 #define NWAVE  			  10000 //This is the number of wavelength bins in spectra that are produced
 #define MAXSCAT 			2000
