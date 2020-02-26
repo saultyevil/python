@@ -261,3 +261,29 @@ import_rho (ndom, x)
 
   return (rho);
 }
+
+/* ************************************************************************** */
+/**
+ * @brief  Get the temperature of an imported model at the given position x.
+ *
+ * @param[in]    int ndom       The domain of interest
+ *
+ * @param[in]    double x[3]    The position of interest
+ *
+ * @return       t_r            The radiation temperature at the position x
+ *
+ * @details
+ *
+ * The purpose of this function is to simply look up the temperature at a given
+ * grid cell for an imported wind model. In some cases this will be the
+ * temperature which is given by the model, however, we also allow one to not
+ * provide a cell temperature. In these cases, a default temperature value is
+ * used which at writing this function header is 10,000 K.
+ *
+ * ************************************************************************** */
+
+double
+model_temp (int ndom, double x[])
+{
+  return zdom[ndom].twind;
+}

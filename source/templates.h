@@ -32,7 +32,7 @@ double ds_to_wind(PhotPtr pp, int *ndom_current);
 double find_smax(PhotPtr p);
 int translate_in_wind(WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell(int ndom, PhotPtr p);
-int walls (PhotPtr pnew, PhotPtr pold, double *normal);
+int walls(PhotPtr pnew, PhotPtr pold, double *normal);
 /* photon_gen.c */
 int define_phot(PhotPtr p, double f1, double f2, long nphot_tot, int ioniz_or_final, int iwind, int freq_sampling);
 double populate_bands(int ioniz_or_final, int iwind, struct xbands *band);
@@ -295,7 +295,6 @@ double dvwind_ds(PhotPtr p);
 int dvds_ave(void);
 /* reposition.c */
 int reposition(PhotPtr p);
-void reposition_lost_disk_photon(PhotPtr p);
 /* anisowind.c */
 int randwind_thermal_trapping(PhotPtr p, int *nnscat);
 /* wind_util.c */
@@ -491,6 +490,7 @@ int import_make_grid(WindPtr w, int ndom);
 double import_velocity(int ndom, double *x, double *v);
 int get_import_wind_params(int ndom);
 double import_rho(int ndom, double *x);
+double model_temp(int ndom, double x[]);
 /* import_spherical.c */
 int import_1d(int ndom, char *filename);
 int spherical_make_grid_import(WindPtr w, int ndom);
@@ -562,23 +562,14 @@ double logg(double mass, double rwd);
 /* tau_diag.c */
 void print_tau_angles(const double *tau_store, const double *col_den_store);
 void write_tau_spectrum_to_file(const double *tau_spectrum, double freq_min, double dfreq);
-int calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
-int tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau);
+int calculate_tau(WindPtr w, PhotPtr pextract, double *col_den, double *tau);
+int tau_extract(WindPtr w, PhotPtr porig, double *col_den, double *tau);
 void reposition_tau_photon(PhotPtr pout);
-int create_tau_diag_phot (PhotPtr pout, double nu, double *lmn);
+int create_tau_diag_phot(PhotPtr pout, double nu, double *lmn);
 void init_tau_diag_angles(void);
 void create_tau_spectrum(WindPtr w);
 void tau_integrate_angles(WindPtr w);
 void tau_diag_main(WindPtr w);
-/* mean_opacities.c */
-int allocate_opacity_arrays(int ncells);
-void free_opacity_arrays(void);
-double dB_nu_dT(double nu);
-void set_ross_integ_temp(double temperature);
-void compute_rosseland_opacity(void);
-void compute_planck_opacity(void);
-int create_test_photon(PhotPtr pout, double nu, double x[3]);
-int init_mean_opacities(void);
 /* py_wind_sub.c */
 int zoom(int direction);
 int overview(WindPtr w, char rootname[]);

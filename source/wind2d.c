@@ -334,6 +334,10 @@ be optional which variables beyond here are moved to structures othere than Wind
     {
       plasmamain[n].t_r = hydro_temp (x);       //NSH 151126 - slight tidy up here - we now set t_e and t_r to hydro temp, t_e change is below//
     }
+    else if (zdom[ndom].wind_type == IMPORT)
+    {
+      plasmamain[n].t_r = model_temp (ndom, x);
+    }
     else
     {
       plasmamain[n].t_r = zdom[ndom].twind;
