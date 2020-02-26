@@ -5,17 +5,18 @@
  * @date   May, 2018
  *
  * @brief
- * General purpose routines for reading in an arbitray wind model
- * in spherical coordinates
+ * General purpose routines for reading in an arbitrary wind model
+ * in 1D spherical coordinates
  *
- * The basic data we need to read in are
-
- * i r v_r rho (and optionally T)
-
+ * The basic data we need to read in are:
+ *
+ *     i r v_r rho (and optionally T)
+ *
+ * TODO: this is confusing - what do we mean here?
  * We assume that all of the variables are centered, that is
  * we are not assuming that we are giving rho at the center of
  * a cell, but that r and v_r are at the edges of a cell.
- * This is someghing that would presumable be easy to change
+ * This is something that would presumable be easy to change
  ***********************************************************/
 
 #include <stdio.h>
@@ -40,33 +41,32 @@ struct
 
 /**********************************************************/
 /**
- * @brief      Read the an arbitray wind model intended to mimic a stellar
- * wind or shell.
+ * @brief      Read an arbitrary spherically symmetric wind model.
  *
  * @param [in out] int  ndom   The domain number for the imported model
  * @param [in out] char *  filename   The file containing the model to import
  * @return     Always returns 0
  *
  * @details
- * This routine just reads in the data and stores it in arrays
+ * This routine reads in the data and stores it in arrays
  *
  * ### Notes ###
- * The basic data we need to read in are
+ * The basic data we need to read in are,
  *
  *     i r v_r rho (and optionally T)
  *
- *  where
+ *  where,
  *
- *  * i is the element (increaing outwards
- *  * r is the radial coordiante
+ *  * i is the element number (increasing outwards)
+ *  * r is the radial coordinate
  *  * v_r is the velocity in the radial direction
- *  * rho is the density in cgs unites
+ *  * rho is the mass density in cgs units
  *
+ * TODO: this is confusing - what do we mean here?
  * We assume that all of the variables are centered, that is
  * we are not assuming that we are giving rho at the center of
  * a cell, but that r and v_r are at the edges of a cell.
- * This is someghing that would presumable be easy to change
- *
+ * This is something that would presumable be easy to change
  **********************************************************/
 
 int
@@ -74,7 +74,7 @@ import_1d (ndom, filename)
      int ndom;
      char *filename;
 {
-  FILE *fopen (), *fptr;
+  FILE *fptr;
   char line[LINELEN];
   int n, icell, ncell;
   double q1, q2, q3, q4;
@@ -91,9 +91,9 @@ import_1d (ndom, filename)
 
 
   ncell = 0;
-  while (fgets (line, 512, fptr) != NULL)
+  while (fgets (line, LINELEN, fptr) != NULL)
   {
-    n = sscanf (line, " %d %le %le %le %le", &icell, &q1, &q2, &q3, &q4);
+    n = sscanf (line, "%d %le %le %le %le", &icell, &q1, &q2, &q3, &q4);
     if (n < 4)
     {
       continue;
@@ -120,7 +120,7 @@ import_1d (ndom, filename)
 
   xx_1d.ndim = ncell;
 
-  /* Although much of the initialization of zdom can be postponeed
+  /* Although much of the initialization of zdom can be postponed,
    * one has to define mdim and ndim of zdom here, so that the correct
    * number of wind cells will be allocated */
 
@@ -207,17 +207,14 @@ spherical_make_grid_import (w, ndom)
 
 
 /* The next section calculates velocities.
- *
  * One could follow the zeus_hydro approach of getting those velocities from the original grid.
  * but for consistency with the 2d case we get it by interpolating on values in the cells
- *
- *
  */
 
 
 /**********************************************************/
 /**
- * @brief      The velocity at any positiion in an imported spherical
+ * @brief      The velocity at any position in an imported spherical
  * model
  *
  *
@@ -227,14 +224,14 @@ spherical_make_grid_import (w, ndom)
  * @return     The speeed at x
  *
  * @details
- * This routine interpolates on the values read in for the
- * imported model to give one a velocity
  *
+ * This routine interpolates on the values read in for the
+ * imported model to calculate the velocity
  *
  * ### Notes ###
- * Note that v_r is stored in v_0
+ * Note that v_r is stored in v[0]
  *
- * Not also that In practice this routine is only used to initallize v in
+ * Not also that In practice this routine is only used to initialize v in
  * wind structure.  This is consistent with the way velocities
  * are treated throughout Python
  *
@@ -249,20 +246,21 @@ velocity_1d (ndom, x, v)
   double r;
   int nelem, nn, nnn[4];
   double frac[4];
+
   r = length (x);
 
-
   coord_fraction (ndom, 0, x, nnn, frac, &nelem);
+
   speed = 0;
   for (nn = 0; nn < nelem; nn++)
   {
     speed += wmain[zdom[ndom].nstart + nnn[nn]].v[0] * frac[nn];
   }
 
-
   v[0] = x[0] / r * speed;
   v[1] = x[1] / r * speed;
   v[2] = x[2] / r * speed;
+
   return (speed);
 }
 
@@ -275,7 +273,7 @@ velocity_1d (ndom, x, v)
  *
  * @param [in] int  ndom   The domain for the imported model
  * @param [in] double *  x   A position (3d)
- * @return     The density in cgs units is returned
+ * @return     The mass density in cgs units is returned
  *
  * @details
  * This routine finds rho from the imported model
@@ -284,8 +282,8 @@ velocity_1d (ndom, x, v)
  *
  *
  * ### Notes ###
- * This routine is really only used to intialize rho in the
- * Plasma structure.  In reality, once the Plasma structure is
+ * This routine is really only used to initialize rho in the
+ * Plasma structure. In reality, once the Plasma structure is
  * initialized we always interpolate within the plasma structure
  * and do not access the original data.
  *
@@ -302,9 +300,8 @@ rho_1d (ndom, x)
   double rho = 0;
   double r;
   int n;
+
   r = length (x);
-
-
 
   n = 0;
   while (r >= xx_1d.r[n] && n < xx_1d.ndim)
@@ -322,7 +319,5 @@ rho_1d (ndom, x)
     rho = xx_1d.rho[xx_1d.ndim - 1];
   }
 
-
-  Log ("ZZZZ %d %.3e %.3e rho %e \n", n, r, xx_1d.r[n], rho);
   return (rho);
 }

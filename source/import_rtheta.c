@@ -6,6 +6,7 @@
  * @brief
  * These are general routines to read in a model that
  * is in polar or rtheta coordinates.
+ *
  * ###Notes###
  *
  * There a various possibilities for how the
@@ -15,7 +16,7 @@
  * polar coordinates.
 
  * However, internally, python uses xyz coordinates
- * for velocites (as measured in the xz plane),
+ * for velocities (as measured in the xz plane),
  * and that is the model followed, here.  This also
  * makes these routines similar to those used
  * in imported cylindrical models.
@@ -68,25 +69,26 @@ struct
  * only purpose is to read in the data
  *
  * ### Notes ###
- * The basic data we need to read in are
+ * The basic data we need to read in are,
  *
- * icell, jcell, r theta inwind v_x v_y v_z  rho (and optionally T)
+ * i j r theta inwind v_x v_y v_z rho (and optionally T)
  *
- * where
+ * where,
  *
- * * r is the radial coordianate
- * * theta is the angular coordinate measured from the z axis
+ * * r is the radial coordinate
+ * * theta is the angular coordinate measured from the z axis in degrees
  * * v_x, v_y, and v_z is the velocity in cartesian coordinates
- *      as measured in the x,z plane
- * * rho is the density in cgs units
+ *   as measured in the x,z plane
+ * * rho is the mass density in cgs units
  * * inwind defines whether or not a particular cell is actually
- * in the wind
+ *   in the wind
  *
- * Guard cells are required at the outer boundaries. 
+ * Guard cells are required at the outer boundaries (inwind < 0).
  *
  * This routine assumes the same conventions as used elsewhere
  * in Python, that is that the positions and velocities are given
- * at the edges of a cell, but that rho is given at the center.
+ * at the edges (inner vertex) of a cell, but that rho is given at the
+ * center.
  *
  **********************************************************/
 
@@ -95,7 +97,7 @@ import_rtheta (ndom, filename)
      int ndom;
      char *filename;
 {
-  FILE *fopen (), *fptr;
+  FILE *fptr;
   char line[LINELEN];
   int n, icell, jcell, ncell, inwind;
   int jz, jx;
@@ -308,12 +310,13 @@ rtheta_make_grid_import (w, ndom)
     {
 
       r_inner = length (w[nn].x);
-
       nn_outer = nn + xx_rtheta.mdim;
 
       if (nn_outer + 1 >= zdom[ndom].ndim2)
       {
-        Error ("rtheta_make_grid_import: Trying to access cell %d > %d outside grid\n", nn_outer + 1, zdom[ndom].ndim2);
+        Error ("rtheta_make_grid_import: Trying to access cell %d > %d outside grid. Grid is not properly specified.\n",
+               nn_outer + 1, zdom[ndom].ndim2);
+        Exit (1);
       }
 
       if (nn_outer < zdom[ndom].ndim2)
@@ -321,37 +324,41 @@ rtheta_make_grid_import (w, ndom)
         r_outer = length (w[nn_outer].x);
       }
 
-
       if (w[nn_outer + 1].x[0] > rho_max)
       {
         rho_max = w[nn_outer + 1].x[0];
       }
+
       if (w[nn_outer].x[2] > zmax)
       {
         zmax = w[nn_outer].x[2];
       }
+
       if (w[nn + 1].x[2] < zmin && w[nn + 1].x[2] > 0)
       {
         zmin = w[nn + 1].x[2];
       }
+
       if (r_outer > rmax)
       {
         rmax = r_outer;
       }
+
       if (rho_min > w[nn].x[0])
       {
         rho_min = w[nn].x[0];
       }
+
       if (rmin > r_inner)
       {
         rmin = r_inner;
       }
     }
   }
+
   Log ("Imported:    rmin    rmax  %e %e\n", rmin, rmax);
   Log ("Imported:    zmin    zmax  %e %e\n", zmin, zmax);
   Log ("Imported: rho_min rho_max  %e %e\n", rho_min, rho_max);
-
 
   zdom[ndom].wind_rho_min = zdom[ndom].rho_min = rho_min;
   zdom[ndom].wind_rho_max = zdom[ndom].rho_max = rho_max;
@@ -361,7 +368,7 @@ rtheta_make_grid_import (w, ndom)
   zdom[ndom].rmin = rmin;
   zdom[ndom].wind_thetamin = zdom[ndom].wind_thetamax = 0.;
 
-  /* The next line is necessary for calculating distances in a cell in rthota coordiatnes */
+  /* The next line is necessary for calculating distances in a cell in rtheta coordinates */
 
   rtheta_make_cones (ndom, w);
 
@@ -369,7 +376,7 @@ rtheta_make_grid_import (w, ndom)
 }
 
 
-/* The next section calculates velocites.  We follow the hydro approach of
+/* The next section calculates velocities. We follow the hydro approach of
  * getting those velocities from the original grid.  This is really only
  * used for setting up the grid
  *
@@ -414,6 +421,7 @@ velocity_rtheta (ndom, x, v)
   double frac[4];
   double vv[3];
   double speed;
+
   coord_fraction (ndom, 0, x, nnn, frac, &nelem);
   for (j = 0; j < 3; j++)
   {
