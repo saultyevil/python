@@ -308,13 +308,14 @@ rtheta_make_grid_import (w, ndom)
 
     if (w[nn].inwind >= 0)
     {
+      wmain[nn].import_t_r = xx_rtheta.t[nn];   // TODO: this is sorta a fudge I don't like
 
       r_inner = length (w[nn].x);
       nn_outer = nn + xx_rtheta.mdim;
 
       if (nn_outer + 1 >= zdom[ndom].ndim2)
       {
-        Error ("rtheta_make_grid_import: Trying to access cell %d > %d outside grid. Grid is not properly specified.\n",
+        Error ("%s : %i : Trying to access cell %d >= %d outside grid. Grid is not properly specified.\n", __FILE__, __LINE__,
                nn_outer + 1, zdom[ndom].ndim2);
         Exit (1);
       }

@@ -285,5 +285,17 @@ import_rho (ndom, x)
 double
 model_temp (int ndom, double x[])
 {
-  return zdom[ndom].twind;
+  int n;
+  double t_r;
+
+  n = where_in_grid (ndom, x);
+  if (n < 0)
+  {
+    Error ("%s : %i : position x = (%e, %e, %e) not in wind grid, returning t.init instead\n", __FILE__, __LINE__, x[0], x[1], x[2]);
+    return zdom[ndom].twind;
+  }
+
+  t_r = wmain[n].import_t_r;
+
+  return t_r;
 }
