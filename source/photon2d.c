@@ -21,7 +21,7 @@
  *
  * ### Notes ###
  *
- * Some of these routines pass the WindPtor for the entire
+ * Some of these routines pass the WindPtr for the entire
  * wind which should not be necessary and had been removed
  * in favor of using wmain.  It would probably be a good idea
  * to that here.
@@ -41,7 +41,7 @@
 
 /**********************************************************/
 /**
- * @brief      a steering routine that either calls _in_space or _in_wind  depending upon the
+ * @brief      a steering routine that either calls translate_in_space or translate_in_wind  depending upon the
  * 	current location of the photon.
  *
  * @param [in] WindPtr  w   A pointer to the wind
@@ -539,13 +539,13 @@ return and record an error */
 
   if ((p->grid = n = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
   {
-    if (translate_in_wind_failure < 1000)
-    {
+//OLD    if (translate_in_wind_failure < 1000)
+//OLD    {
 //OLD     if (modes.save_photons)
 //OLD       {
 //OLD         save_photons (p, "NotInGrid_translate_in_wind");
 //OLD       }
-    }
+//OLD    }
     return (n);                 /* Photon was not in grid */
   }
 
@@ -585,7 +585,7 @@ return and record an error */
   if (geo.rt_mode == RT_MODE_MACRO)
   {                             // Macro-method
     /* In the macro-method, b-f and other continuum processes do not reduce the photon
-       weight, but are treated as as scattering processes.  Therfore most of what was in
+       weight, but are treated as as scattering processes.  Therefore most of what was in
        subroutine radiation can be avoided.
      */
 

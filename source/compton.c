@@ -1,10 +1,10 @@
 
 /***********************************************************/
-/** @file  new_compton.c
+/** @file  compton.c
  * @author ksl
  * @date   January, 2018
  *
- * @brief  These are the routines to handle compton scattering.
+ * @brief  These are the routines to handle Compton scattering.
  *
  * ???
  ***********************************************************/
@@ -21,14 +21,14 @@ PlasmaPtr xplasma;              /// Pointer to current plasma cell
 
 /**********************************************************/
 /** 
- * @brief      computes the effective compton opacity in the cell.
+ * @brief      computes the effective Compton opacity in the cell.
  *
  * @param [in] PlasmaPtr  xplasma   - pointer to the current plasma cell
  * @param [in] double  freq   - the frequency of the current photon packet being tracked
- * @return     kappa - the compton opacity for the cell.
+ * @return     kappa - the Compton opacity for the cell.
  *
  * @details
- * This routine works out the opacity of a cell to compton (Thompson) scattering.
+ * This routine works out the opacity of a cell to Compton (Thompson) scattering.
  * It is designed to give the correct *heating* effect when high frequency photons
  * undergo Compton scattering.
  * We use a fitted cross section given in Hazy 3 to calculate the frequency depedant
@@ -68,21 +68,21 @@ kappa_comp (xplasma, freq)
 
 /**********************************************************/
 /** 
- * @brief      Computes the effective opacity in the cell due to *induced* compton heating.
+ * @brief      Computes the effective opacity in the cell due to *induced* Compton heating.
  *
  * @param [in] PlasmaPtr  xplasma   - pointer to the current plasma cell
  * @param [in] double  freq   - the frequency of the current photon packet being tracked
- * @return     kappa - the inducd compton opacity for the cell.
+ * @return     kappa - the inducd Compton opacity for the cell.
  *
  * @details
  * This routine implements a rather unusual situation, where the mean intensity in
- * a cell exceeds the blackbody value and we get induced compton heating.
+ * a cell exceeds the blackbody value and we get induced Compton heating.
  *
  * ### Notes ###
- * This implements the induced compton term in equation 6.5 in Hazy vol 3 - this is
+ * This implements the induced Compton term in equation 6.5 in Hazy vol 3 - this is
  * the last term in the equation. It will
  * rarely if ever occur in a real model, but was included to give better agreement
- * with cloudy over a wide range of ionization parameters.
+ * with Cloudy over a wide range of ionization parameters.
  *
  **********************************************************/
 
@@ -115,7 +115,7 @@ kappa_ind_comp (xplasma, freq)
 
   x *= zdom[ndom].fill;         // multiply by the filling factor- should cancel with density enhancement
 
-  if (sane_check (x))           //For some reason we have a problem - we will not crash out - induced compton is unlikely to ever be dominant...
+  if (sane_check (x))           //For some reason we have a problem - we will not crash out - induced Compton is unlikely to ever be dominant...
   {
     Error ("kappa_ind_comp:sane_check - undefined value for Kappa_ind_comp - setting to zero\n");
     return (0.0);
@@ -127,21 +127,21 @@ kappa_ind_comp (xplasma, freq)
 
 /**********************************************************/
 /** 
- * @brief      computes the cooling in the cell due to inverse compton scattering.
+ * @brief      computes the cooling in the cell due to inverse Compton scattering.
  *
  * @param [in] WindPtr  one   - pointer to the current wind cell
  * @param [in] double  t_e   - electron temperature that we need the cooling rate for
- * @return     the compton luminosity for the cell.
+ * @return     the Compton luminosity for the cell.
  *
  * @details
- * This routine computes the temperature dependant compton cooling rate in ergs/second.
+ * This routine computes the temperature dependant Compton cooling rate in ergs/s.
  * It is mainly called as part of the search for a new temperature balancing heating
  * and cooling rates after an ionization cycle.
  *
  *
  * ### Notes ##
- * Compton cooling or 'inverse compton scattering' is the process of energy transfer
- * from hot electrons to 'cool' phortons, that is when 4kT > hnu.
+ * Compton cooling or 'inverse Compton scattering' is the process of energy transfer
+ * from hot electrons to 'cool' photons, that is when 4kT > hnu.
  * For each interaction, the fractional energy loss from the electrons is given
  * by \frac{}\delta e}{e} = 4k_BT/mc^2.
  * Where we have a model for the mean intensity of radiation in a cell, we are
@@ -165,11 +165,10 @@ total_comp (one, t_e)
 {
   double x, f1, f2;             //The returned variable
   int nplasma, j;               //The cell number in the plasma array
-//  PlasmaPtr xplasma;            //pointer to the relevant cell in the plasma structure - moved to local variable to allow integration
 
 
   nplasma = one->nplasma;       //Get the correct plasma cell related to this wind cell
-  xplasma = &plasmamain[nplasma];       //copy the plasma structure for that cell to local variable
+  xplasma = &plasmamain[nplasma];       //reference the plasma structure for that cell to local variable
 
   x = 0.0;
 
@@ -181,19 +180,18 @@ total_comp (one, t_e)
       {
         if (xplasma->spec_mod_type[j] != SPEC_MOD_FAIL) //Only bother doing the integrals if we have a model in this band
         {
-          f1 = xplasma->fmin_mod[j];    //NSH 131114 - Set the low frequency limit to the lowest frequency that the model applies to
-          f2 = xplasma->fmax_mod[j];    //NSH 131114 - Set the high frequency limit to the highest frequency that the model applies to
+          f1 = xplasma->fmin_mod[j];    //Set the low frequency limit to the lowest frequency that the model applies to
+          f2 = xplasma->fmax_mod[j];    //Set the high frequency limit to the highest frequency that the model applies to
           if (f1 > 1e18)        //If all the frequencies are lower than 1e18, then the cross section is constant at sigmaT
-//            x += qromb (comp_cool_integrand, f1, f2, 1e-6);
             x += num_int (comp_cool_integrand, f1, f2, 1e-6);
 
           else
-            x += THOMPSON * xplasma->xj[j];     //In the case where we are in the thompson limit, we just multiply the band limited frequency integrated mean intensity by the Thompson cross section
+            x += THOMPSON * xplasma->xj[j];     //If in the Thompson limit, we just multiply the band limited frequency integrated mean intensity by the Thompson cross section
         }
       }
     }
 
-    else                        //If no spectral model - we do the best we can, and multply the mean intensity by the thompson cross section.
+    else                        //If no spectral model - we do the best we can, and multply the mean intensity by the Thompson cross section.
     {
       x = THOMPSON * xplasma->j;
     }
@@ -211,14 +209,16 @@ total_comp (one, t_e)
 
 /**********************************************************/
 /** 
- * @brief      computes the Klein Nishina cross section for a photon of frequency nu.
+ * @brief      computes the (total) Klein Nishina cross section for a photon.
  *
- * @param [in] double  nu   - photon frequency
+ * @param [in] double  nu   photon frequency
  * @return     the KN cross section.
  *
  * @details
  * This routine is used to compute the frequency dependant cross section
- * of a photon to electron scattering. For a frequency of less than
+ * of a photon to electron scattering. 
+ * 
+ * For a frequency of less than
  * 1e18Hz this is just the Thompson scattering cross section. It is currently
  * only used to compute the chance of a photon interacting in this way. The
  * actual eneergy loss when an interaction occurs requires a cross section
@@ -237,10 +237,16 @@ klein_nishina (nu)
   double x1, x2, x3, x4;        //variables to store intermediate results.
   double kn;                    // the final cross section
 
-  kn = THOMPSON;                /* NSH 130605 to remove o3 compile error */
-  x1 = x2 = x3 = x4 = 0.0;      /* NSH 130605 to remove o3 compile error */
-  x = (PLANCK * nu) / (MELEC * VLIGHT * VLIGHT);        //The photon energy relative to the rest mass energy of an electron
-  if (x > 0.0001)               //If the photon energy is high enough - then we need to compute the cross section - otherwise it is just the Thmopson cross section
+  kn = THOMPSON;
+  x1 = x2 = x3 = x4 = 0.0;
+
+  /* x is the photon energey relative to the electron mass */
+  x = (PLANCK * nu) / (MELEC * VLIGHT * VLIGHT);
+
+  /* Use the full KN formula if the photon energy is high enough.  Otherwise just
+   * use the Thompson x-section.
+   */
+  if (x > 0.0001)
   {
     x1 = 1. + x;
     x2 = 1. + (2. * x);
@@ -263,21 +269,25 @@ double x1;                      //The ratio of photon eneergy to electron energy
 
 /**********************************************************/
 /** 
- * @brief      computes a random direction for a photon undergoing compton scattering.
+ * @brief      find a new (random) direction for a photon undergoing Compton scattering.
  *
- * @param [in] PhotPtr  p   - the photon currently being scattered
- * @param [in] PlasmaPtr  xplasma   - the cell in which the scattering is taking place
+ * @param [in,out] PhotPtr  p   - the photon currently being scattered
  * @return     0 if successful - the new direction is returned as part of the photon structure
  *
  * @details
- * This routine computes a new direction (and energy change) for a photon undergoing compton
- * scattering. If the freqiuency is low with respect to the electron rest mass then it is
- * totaslly elastic, isotropic Thompson scattering.
+ * This routine computes a new direction (and energy change) for a photon undergoing Compton
+ * scattering. 
  *
+ * If the frequency is low with respect to the electron rest mass then it is
+ * totally elastic and one obtains isotropic Thompson scattering.
+ *
+ * However if the frequency is highter one needs to do actually find the direction via a zero 
+ * finding routine 
+ * 
  * ### Notes ###
  * EVerything is calculated in the rest frame of the electron.
  * In this frame, the photon energy change is E/E'=1+(hnu/mc^2)(1+cos\theta)
- * where \theta is the angle thruogh which the photon is deflected.
+ * where \theta is the angle through which the photon is deflected.
  * This is a maximum for \theta=180 - E/E'=1+2hnumc^2
  * and minimum for \theta=0 - E/E'=1
  * We compute everything by first drawing a random cross section that our photon packet will see.
@@ -289,9 +299,8 @@ double x1;                      //The ratio of photon eneergy to electron energy
  **********************************************************/
 
 int
-compton_dir (p, xplasma)
+compton_dir (p)
      PhotPtr p;                 // Pointer to the current photon
-     PlasmaPtr xplasma;         // Pointer to current plasma cell
 
 {
   double f_min, f_max, f;       //Fractional energy changes - E_old/E_new - minimum possible, maximum possible, actual as implied by random cross section
@@ -309,7 +318,6 @@ compton_dir (p, xplasma)
   if (x1 < 0.0001)              //If the photon energy is much less than electron rest mass energy, we just have Thompson scattering - scattering is isotropic
   {
     randvec (lmn, 1.0);         //Generate a normal isotropic scatter
-    f = 1.0;                    //There is no energy loss
     stuff_v (lmn, p->lmn);
   }
   else
@@ -318,10 +326,9 @@ compton_dir (p, xplasma)
     f_min = 1.;                 //The minimum energy change - i.e. no energy loss - the scattering angle is zero - the photon does not chage direction
     f_max = 1. + (2. * x1);     //The maximum energy change - this occurs if the scattering angle is 180 degrees (i.e. the photon bounces straight back.) f=e_old/e_new
     sigma_max = sigma_compton_partial (f_max, x1);      //Communicated externally to the integrand function in the zbrent call below, this is the maximum cross section, used to scale the K_N function to lie between 0 and 1. This is essentually the chance of a photon scattering through 180 degrees - or the angle giving the maximum energy loss
-//    f = zbrent (compton_func, f_min, f_max, 1e-8);      //Find the zero point of the function compton_func - this finds the point in the KN function that represents our randomised fractional energy loss z_rand.
     f = zero_find (compton_func, f_min, f_max, 1e-8);   //Find the zero point of the function compton_func - this finds the point in the KN function that represents our randomised fractional energy loss z_rand.
 
-/*We now have the fractional energy change f - we use the 'normal' equation for compton scattering to obtain the angle cosine n=cos(\theta)	for the scattering direction*/
+/*We now have the fractional energy change f - we use the 'normal' equation for Compton scattering to obtain the angle cosine n=cos(\theta)	for the scattering direction*/
 
     n = (1. - ((f - 1.) / x1)); //This is the angle cosine of the new direction in the frame of reference of the photon - this gives a 2D scattering angle
 
@@ -343,19 +350,19 @@ compton_dir (p, xplasma)
     project_from (&nbasis, x, lmn);     /* Project the vector from the FOR of the original photon into the observer frame */
     renorm (lmn, 1.0);          //Make sure the length of the direction vector is equal to 1
     stuff_v (lmn, p->lmn);      //Put the new photon direction into the photon structure
-  }
 
-  p->freq = p->freq / f;        //reduce the photon frequency by the fractional energy change
-  p->w = p->w / f;              //reduce the photon weight by the same ammount to conserve photon numbers
+    p->freq = p->freq / f;      //reduce the photon frequency by the fractional energy change
+    p->w = p->w / f;            //reduce the photon weight by the same ammount to conserve photon numbers
+  }
   return (0);
 }
 
 
 /**********************************************************/
 /** 
- * @brief      Function used to find the fractional energy change for a given cross-section in the compton scattering limit.
+ * @brief      Function used to find the fractional energy change for a given cross-section in the Compton scattering limit.
  *
- * @param [in out] double  f   The fractional energy change of a photon undergoing scattering
+ * @param [in] double  f   The fractional energy change of a photon undergoing scattering
  * @return     the difference between sigma(f) and the randomised cross section we are searching for
  *
  * @details
@@ -402,7 +409,7 @@ compton_func (double f, void *params)
 double
 sigma_compton_partial (f, x)
      double f;                  //This is the fractional energy change, nu/nu'
-     double x;                  //h nu/mec**2 - the energy of the photon divided by the rest energy of an eectron
+     double x;                  //h nu/mec**2 - the energy of the photon divided by the rest energy of an electron
 {
   double term1, term2, term3, tot;
 
@@ -418,13 +425,13 @@ sigma_compton_partial (f, x)
 
 /**********************************************************/
 /** 
- * @brief      The 'heating' cross section correction to Thompson
+ * @brief      The 'heating' cross section correction to Thompson scattering
  *
  * @param [in] double  nu   - frequency
  * @return     alpha- the effective heating cross section relative to sigma_T
  *
  * @details
- * We calculate compton heating due to photons passing through
+ * We calculate Compton heating due to photons passing through
  * a parcel of gas using an opacity. In order to work out the opacity, we
  * need the cross section that the electrons present to the photons, and
  * in order to take proper account of the energy transfer during a scatter
@@ -457,7 +464,7 @@ alpha (nu)
  * @return     beta - the effective cooling cross section relative to sigma_T
  *
  * @details
- * The inverse compton cooling rate in a cell is computed by ingegrating
+ * The inverse Compton cooling rate in a cell is computed by ingegrating
  * the mean intensity in that cell by the frequency dependant cross section.
  * In order to take account of the energy transfer in an interaction, the
  * cross section must be the effective cooling cross section (not just the
@@ -487,7 +494,7 @@ beta (nu)
 
 /**********************************************************/
 /** 
- * @brief      The integrand in the integral to obtain the total cooling rate due to inverse compton scattering.
+ * @brief      The integrand in the integral to obtain the total cooling rate due to inverse Compton scattering.
  *
  * @param [in] double  nu   - frequency
  * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
@@ -495,7 +502,7 @@ beta (nu)
  *
  * @details
  * This is is the integrand sigma x J_nu that is integrated
- * 	to obtain the compton cooling rate in a cell. The sigma in question is the
+ * 	to obtain the Compton cooling rate in a cell. The sigma in question is the
  * effective energy exchange cross section, which for coolnig is /alpha/beta/sigma_T.
  * These alpha and beta terms are computed in ther subroutines, but here we only
  * need to use \beta, because the \alpha term is taken account of when we compute

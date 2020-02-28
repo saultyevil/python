@@ -6,7 +6,6 @@
  * @brief
  * These are general routines to read in a model that
  * is in polar or rtheta coordinates.
- *
  * ###Notes###
  *
  * There a various possibilities for how the
@@ -16,7 +15,7 @@
  * polar coordinates.
 
  * However, internally, python uses xyz coordinates
- * for velocities (as measured in the xz plane),
+ * for velocites (as measured in the xz plane),
  * and that is the model followed, here.  This also
  * makes these routines similar to those used
  * in imported cylindrical models.
@@ -33,27 +32,7 @@
 
 #include "atomic.h"
 #include "python.h"
-
-#define LINELEN 512
-#define NCELLS  512
-
-struct
-{
-  int ndim, mdim, ncell;
-  int i[NDIM_MAX * NDIM_MAX], j[NDIM_MAX * NDIM_MAX], inwind[NDIM_MAX * NDIM_MAX];
-  double r[NDIM_MAX * NDIM_MAX], theta[NDIM_MAX * NDIM_MAX];
-  double v_x[NDIM_MAX * NDIM_MAX], v_y[NDIM_MAX * NDIM_MAX], v_z[NDIM_MAX * NDIM_MAX];
-  double rho[NDIM_MAX * NDIM_MAX], t[NDIM_MAX * NDIM_MAX];
-
-  /* Note that the variables below look to be in xy, coordiantes
-   * but they are really r, theta
-   */
-
-  double wind_x[NDIM_MAX], wind_z[NDIM_MAX], wind_midx[NDIM_MAX], wind_midz[NDIM_MAX];
-
-} xx_rtheta;
-
-
+#include "import.h"
 
 
 /**********************************************************/
@@ -69,26 +48,25 @@ struct
  * only purpose is to read in the data
  *
  * ### Notes ###
- * The basic data we need to read in are,
+ * The basic data we need to read in are
  *
- * i j r theta inwind v_x v_y v_z rho (and optionally T)
+ * icell, jcell, r theta inwind v_x v_y v_z  rho (and optionally T)
  *
- * where,
+ * where
  *
- * * r is the radial coordinate
- * * theta is the angular coordinate measured from the z axis in degrees
+ * * r is the radial coordianate
+ * * theta is the angular coordinate measured from the z axis
  * * v_x, v_y, and v_z is the velocity in cartesian coordinates
- *   as measured in the x,z plane
- * * rho is the mass density in cgs units
+ *      as measured in the x,z plane
+ * * rho is the density in cgs units
  * * inwind defines whether or not a particular cell is actually
- *   in the wind
+ * in the wind
  *
- * Guard cells are required at the outer boundaries (inwind < 0).
+ * Guard cells are required at the outer boundaries. 
  *
  * This routine assumes the same conventions as used elsewhere
  * in Python, that is that the positions and velocities are given
- * at the edges (inner vertex) of a cell, but that rho is given at the
- * center.
+ * at the edges of a cell, but that rho is given at the center.
  *
  **********************************************************/
 
@@ -98,11 +76,11 @@ import_rtheta (ndom, filename)
      char *filename;
 {
   FILE *fptr;
-  char line[LINELEN];
+  char line[LINELENGTH];
   int n, icell, jcell, ncell, inwind;
   int jz, jx;
   double delta;
-  double q1, q2, q3, q4, q5, q6, q7;
+  double r, theta, v_x, v_y, v_z, rho, t_r;
 
 
   Log ("Reading a model %s in polar (r,theta) coordinates \n", filename);
@@ -116,31 +94,33 @@ import_rtheta (ndom, filename)
 
 
   ncell = 0;
-  while (fgets (line, 512, fptr) != NULL)
+  while (fgets (line, LINELENGTH, fptr) != NULL)
   {
-    n = sscanf (line, " %d %d %d %le %le %le %le %le %le %le", &icell, &jcell, &inwind, &q1, &q2, &q3, &q4, &q5, &q6, &q7);
-    if (n < 4)
+    n = sscanf (line, " %d %d %d %le %le %le %le %le %le %le", &icell, &jcell, &inwind, &r, &theta, &v_x, &v_y, &v_z, &rho, &t_r);
+
+    if (n < READ_NO_TEMP)
     {
       continue;
     }
     else
     {
-      xx_rtheta.i[ncell] = icell;
-      xx_rtheta.j[ncell] = jcell;
-      xx_rtheta.inwind[ncell] = inwind;
-      xx_rtheta.r[ncell] = q1;
-      xx_rtheta.theta[ncell] = q2;
-      xx_rtheta.v_x[ncell] = q3;
-      xx_rtheta.v_y[ncell] = q4;
-      xx_rtheta.v_z[ncell] = q5;
-      xx_rtheta.rho[ncell] = q6;
-      if (n > 9)
+      import_model_2d.i[ncell] = icell;
+      import_model_2d.j[ncell] = jcell;
+      import_model_2d.inwind[ncell] = inwind;
+      import_model_2d.r[ncell] = r;
+      import_model_2d.theta[ncell] = theta;
+      import_model_2d.v_x[ncell] = v_x;
+      import_model_2d.v_y[ncell] = v_y;
+      import_model_2d.v_z[ncell] = v_z;
+      import_model_2d.mass_rho[ncell] = rho;
+
+      if (n >= READ_RAD_TEMP)
       {
-        xx_rtheta.t[ncell] = q7;
+        import_model_2d.t_r[ncell] = t_r;
       }
       else
       {
-        xx_rtheta.t[ncell] = 10000.;
+        import_model_2d.t_r[ncell] = DEFAULT_IMPORT_TEMPERATURE;
       }
       ncell++;
 
@@ -154,53 +134,53 @@ import_rtheta (ndom, filename)
    * defines the dimensions of the entire grid.
    */
 
-  zdom[ndom].ndim = xx_rtheta.ndim = icell + 1;
-  zdom[ndom].mdim = xx_rtheta.mdim = jcell + 1;
-  xx_rtheta.ncell = ncell;
+  zdom[ndom].ndim = import_model_2d.ndim = icell + 1;
+  zdom[ndom].mdim = import_model_2d.mdim = jcell + 1;
+  import_model_2d.ncell = ncell;
   zdom[ndom].ndim2 = zdom[ndom].ndim * zdom[ndom].mdim;
 
   /* Check that the number of cells read in matches the number that was expected */
 
-  if (ncell != xx_rtheta.ndim * xx_rtheta.mdim)
+  if (ncell != import_model_2d.ndim * import_model_2d.mdim)
   {
-    Error ("import_rtheta: The dimensions of the imported grid seem wrong % d x %d != %d\n", xx_rtheta.ndim, xx_rtheta.mdim,
-           xx_rtheta.ncell);
+    Error ("import_rtheta: The dimensions of the imported grid seem wrong % d x %d != %d\n", import_model_2d.ndim, import_model_2d.mdim,
+           import_model_2d.ncell);
     exit (1);
   }
 
 
   jz = jx = 0;
-  for (n = 0; n < xx_rtheta.ncell; n++)
+  for (n = 0; n < import_model_2d.ncell; n++)
   {
-    if (xx_rtheta.i[n] == 0)
+    if (import_model_2d.i[n] == 0)
     {
-      xx_rtheta.wind_z[jz] = xx_rtheta.theta[n];
+      import_model_2d.wind_z[jz] = import_model_2d.theta[n];
       jz++;
     }
-    if (xx_rtheta.j[n] == 0)
+    if (import_model_2d.j[n] == 0)
     {
-      xx_rtheta.wind_x[jx] = xx_rtheta.r[n];
+      import_model_2d.wind_x[jx] = import_model_2d.r[n];
       jx++;
     }
   }
 
   for (n = 0; n < jz - 1; n++)
   {
-    xx_rtheta.wind_midz[n] = 0.5 * (xx_rtheta.wind_z[n] + xx_rtheta.wind_z[n + 1]);
+    import_model_2d.wind_midz[n] = 0.5 * (import_model_2d.wind_z[n] + import_model_2d.wind_z[n + 1]);
   }
 
 
-  delta = (xx_rtheta.wind_z[n - 1] - xx_rtheta.wind_z[n - 2]);
-  xx_rtheta.wind_midz[n] = xx_rtheta.wind_z[n - 1] + 0.5 * delta;
+  delta = (import_model_2d.wind_z[n - 1] - import_model_2d.wind_z[n - 2]);
+  import_model_2d.wind_midz[n] = import_model_2d.wind_z[n - 1] + 0.5 * delta;
 
   for (n = 0; n < jx - 1; n++)
   {
-    xx_rtheta.wind_midx[n] = 0.5 * (xx_rtheta.wind_x[n] + xx_rtheta.wind_x[n + 1]);
+    import_model_2d.wind_midx[n] = 0.5 * (import_model_2d.wind_x[n] + import_model_2d.wind_x[n + 1]);
   }
 
 
-  delta = (xx_rtheta.wind_x[n - 1] - xx_rtheta.wind_x[n - 2]);
-  xx_rtheta.wind_midx[n] = xx_rtheta.wind_x[n - 1] + 0.5 * delta;
+  delta = (import_model_2d.wind_x[n - 1] - import_model_2d.wind_x[n - 2]);
+  import_model_2d.wind_midx[n] = import_model_2d.wind_x[n - 1] + 0.5 * delta;
 
   return (0);
 }
@@ -243,26 +223,26 @@ rtheta_make_grid_import (w, ndom)
    * we can put a lot of information in directly
    */
 
-  for (n = 0; n < xx_rtheta.ncell; n++)
+  for (n = 0; n < import_model_2d.ncell; n++)
   {
-    wind_ij_to_n (ndom, xx_rtheta.i[n], xx_rtheta.j[n], &nn);
-    w[nn].r = xx_rtheta.r[n];
-    w[nn].theta = theta = xx_rtheta.theta[n];
+    wind_ij_to_n (ndom, import_model_2d.i[n], import_model_2d.j[n], &nn);
+    w[nn].r = import_model_2d.r[n];
+    w[nn].theta = theta = import_model_2d.theta[n];
 
     theta /= RADIAN;
 
     w[nn].x[0] = w[nn].r * sin (theta);
     w[nn].x[1] = 0;
     w[nn].x[2] = w[nn].r * cos (theta);
-    w[nn].v[0] = xx_rtheta.v_x[n];
-    w[nn].v[1] = xx_rtheta.v_y[n];
-    w[nn].v[2] = xx_rtheta.v_z[n];
-    w[nn].inwind = xx_rtheta.inwind[n];
+    w[nn].v[0] = import_model_2d.v_x[n];
+    w[nn].v[1] = import_model_2d.v_y[n];
+    w[nn].v[2] = import_model_2d.v_z[n];
+    w[nn].inwind = import_model_2d.inwind[n];
 
-    w[nn].thetacen = xx_rtheta.wind_midz[xx_rtheta.j[n]];
+    w[nn].thetacen = import_model_2d.wind_midz[import_model_2d.j[n]];
     theta = w[nn].thetacen / RADIAN;
 
-    w[nn].rcen = xx_rtheta.wind_midx[xx_rtheta.i[n]];
+    w[nn].rcen = import_model_2d.wind_midx[import_model_2d.i[n]];
 
 
     w[nn].xcen[0] = w[nn].rcen * sin (theta);
@@ -270,7 +250,7 @@ rtheta_make_grid_import (w, ndom)
     w[nn].xcen[2] = w[nn].rcen * cos (theta);
 
     /* Copy across the inwind variable to the wind pointer */
-    w[nn].inwind = xx_rtheta.inwind[n];
+    w[nn].inwind = import_model_2d.inwind[n];
 
 
     /* 1812 - ksl - For imported models, one is either in the wind or not. But we need
@@ -284,14 +264,14 @@ rtheta_make_grid_import (w, ndom)
 
   for (n = 0; n < zdom[ndom].ndim; n++)
   {
-    zdom[ndom].wind_x[n] = xx_rtheta.wind_x[n];
+    zdom[ndom].wind_x[n] = import_model_2d.wind_x[n];
   }
 
 
 
   for (n = 0; n < zdom[ndom].mdim; n++)
   {
-    zdom[ndom].wind_z[n] = xx_rtheta.wind_z[n];
+    zdom[ndom].wind_z[n] = import_model_2d.wind_z[n];
   }
 
   /* Now set up wind boundaries so they are harmless.
@@ -302,22 +282,20 @@ rtheta_make_grid_import (w, ndom)
 
   rmax = rho_max = zmax = 0;
   rmin = rho_min = zmin = VERY_BIG;
-  for (n = 0; n < xx_rtheta.ncell; n++)
+  for (n = 0; n < import_model_2d.ncell; n++)
   {
-    wind_ij_to_n (ndom, xx_rtheta.i[n], xx_rtheta.j[n], &nn);
+    wind_ij_to_n (ndom, import_model_2d.i[n], import_model_2d.j[n], &nn);
 
     if (w[nn].inwind >= 0)
     {
-      wmain[nn].import_t_r = xx_rtheta.t[nn];   // TODO: this is sorta a fudge I don't like
 
       r_inner = length (w[nn].x);
-      nn_outer = nn + xx_rtheta.mdim;
+
+      nn_outer = nn + import_model_2d.mdim;
 
       if (nn_outer + 1 >= zdom[ndom].ndim2)
       {
-        Error ("%s : %i : Trying to access cell %d >= %d outside grid. Grid is not properly specified.\n", __FILE__, __LINE__,
-               nn_outer + 1, zdom[ndom].ndim2);
-        Exit (1);
+        Error ("rtheta_make_grid_import: Trying to access cell %d > %d outside grid\n", nn_outer + 1, zdom[ndom].ndim2);
       }
 
       if (nn_outer < zdom[ndom].ndim2)
@@ -325,41 +303,37 @@ rtheta_make_grid_import (w, ndom)
         r_outer = length (w[nn_outer].x);
       }
 
+
       if (w[nn_outer + 1].x[0] > rho_max)
       {
         rho_max = w[nn_outer + 1].x[0];
       }
-
       if (w[nn_outer].x[2] > zmax)
       {
         zmax = w[nn_outer].x[2];
       }
-
       if (w[nn + 1].x[2] < zmin && w[nn + 1].x[2] > 0)
       {
         zmin = w[nn + 1].x[2];
       }
-
       if (r_outer > rmax)
       {
         rmax = r_outer;
       }
-
       if (rho_min > w[nn].x[0])
       {
         rho_min = w[nn].x[0];
       }
-
       if (rmin > r_inner)
       {
         rmin = r_inner;
       }
     }
   }
-
   Log ("Imported:    rmin    rmax  %e %e\n", rmin, rmax);
   Log ("Imported:    zmin    zmax  %e %e\n", zmin, zmax);
   Log ("Imported: rho_min rho_max  %e %e\n", rho_min, rho_max);
+
 
   zdom[ndom].wind_rho_min = zdom[ndom].rho_min = rho_min;
   zdom[ndom].wind_rho_max = zdom[ndom].rho_max = rho_max;
@@ -369,7 +343,7 @@ rtheta_make_grid_import (w, ndom)
   zdom[ndom].rmin = rmin;
   zdom[ndom].wind_thetamin = zdom[ndom].wind_thetamax = 0.;
 
-  /* The next line is necessary for calculating distances in a cell in rtheta coordinates */
+  /* The next line is necessary for calculating distances in a cell in rthota coordiatnes */
 
   rtheta_make_cones (ndom, w);
 
@@ -377,7 +351,7 @@ rtheta_make_grid_import (w, ndom)
 }
 
 
-/* The next section calculates velocities. We follow the hydro approach of
+/* The next section calculates velocites.  We follow the hydro approach of
  * getting those velocities from the original grid.  This is really only
  * used for setting up the grid
  *
@@ -422,7 +396,6 @@ velocity_rtheta (ndom, x, v)
   double frac[4];
   double vv[3];
   double speed;
-
   coord_fraction (ndom, 0, x, nnn, frac, &nelem);
   for (j = 0; j < 3; j++)
   {
@@ -485,22 +458,22 @@ rho_rtheta (ndom, x)
   angle = acos (ctheta) * RADIAN;
 
   i = 0;
-  while (angle > xx_rtheta.wind_z[i] && i < xx_rtheta.mdim)
+  while (angle > import_model_2d.wind_z[i] && i < import_model_2d.mdim)
   {
     i++;
   }
   i--;
 
   j = 0;
-  while (r > xx_rtheta.wind_x[j] && j < xx_rtheta.ndim)
+  while (r > import_model_2d.wind_x[j] && j < import_model_2d.ndim)
   {
     j++;
   }
   j--;
 
-  n = j * xx_rtheta.mdim + i;
+  n = j * import_model_2d.mdim + i;
 
-  rho = xx_rtheta.rho[n];
+  rho = import_model_2d.mass_rho[n];
 
   return (rho);
 }

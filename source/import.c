@@ -19,6 +19,7 @@
  * We then map these models into the structures that Python uses.
  * Most of the mapping is one-to-one, but Python wants the densities
  * to be a the cell centers and not at the corners.
+ *
  ***********************************************************/
 
 #include <stdio.h>
@@ -27,9 +28,8 @@
 
 #include "atomic.h"
 #include "python.h"
+#include "import.h"
 
-#define LINELEN 512
-#define NCELLS  512
 
 /* Read in a model of in various coordiante systems, using the coord_type
  * to specify the type of model */
@@ -45,8 +45,8 @@
  * @details
  *
  * This is a steering routine.  It reads the name of the file
- * to import and depending on the pre-established coordiante
- * system calls one of several coordiante system specific 
+ * to import and depending on the pre-established coordinate
+ * system calls one of several coordinate system specific
  * routines to actually read in the model
  *
  * ### Notes ###
@@ -57,9 +57,11 @@ int
 import_wind (ndom)
      int ndom;
 {
-  char filename[LINELEN];
+  char filename[LINELENGTH];
 
   rdstr ("Wind.model2import", filename);
+
+  calloc_import (zdom[ndom].coord_type);
 
   if (zdom[ndom].coord_type == SPHERICAL)
   {
@@ -75,17 +77,110 @@ import_wind (ndom)
   }
   else
   {
-    Error ("import_wind: Do not know how to import a model of coor_type %d\n", zdom[ndom].coord_type);
+    Error ("%s : %i : Do not know how to import a model of coord_type %d\n", __FILE__, __LINE__, zdom[ndom].coord_type);
     Exit (0);
   }
+
   return (0);
 }
 
-
-/* Create the coordinate grids depending on the coord_type 
+/* ************************************************************************** */
+/**
+ * @brief
  *
- * */
+ * ************************************************************************** */
 
+void
+calloc_import (int coord_type)
+{
+  if (coord_type == SPHERICAL)
+  {
+    import_model_1d.element = calloc (sizeof *import_model_1d.element, NDIM_MAX);
+    import_model_1d.r = calloc (sizeof *import_model_1d.r, NDIM_MAX);
+    import_model_1d.v_r = calloc (sizeof *import_model_1d.v_r, NDIM_MAX);
+    import_model_1d.mass_rho = calloc (sizeof *import_model_1d.mass_rho, NDIM_MAX);
+    import_model_1d.t_r = calloc (sizeof *import_model_1d.t_r, NDIM_MAX);
+  }
+  else if (coord_type == CYLIND || coord_type == RTHETA)
+  {
+    import_model_2d.i = calloc (sizeof *import_model_2d.i, NDIM_MAX * NDIM_MAX);
+    import_model_2d.j = calloc (sizeof *import_model_2d.j, NDIM_MAX * NDIM_MAX);
+    import_model_2d.inwind = calloc (sizeof *import_model_2d.inwind, NDIM_MAX * NDIM_MAX);
+    import_model_2d.v_x = calloc (sizeof *import_model_2d.v_x, NDIM_MAX * NDIM_MAX);
+    import_model_2d.v_y = calloc (sizeof *import_model_2d.v_y, NDIM_MAX * NDIM_MAX);
+    import_model_2d.v_z = calloc (sizeof *import_model_2d.v_z, NDIM_MAX * NDIM_MAX);
+    import_model_2d.mass_rho = calloc (sizeof *import_model_2d.mass_rho, NDIM_MAX * NDIM_MAX);
+    import_model_2d.t_r = calloc (sizeof *import_model_2d.t_r, NDIM_MAX * NDIM_MAX);
+    import_model_2d.wind_x = calloc (sizeof *import_model_2d.wind_x, NDIM_MAX * NDIM_MAX);
+    import_model_2d.wind_z = calloc (sizeof *import_model_2d.wind_z, NDIM_MAX * NDIM_MAX);
+    import_model_2d.wind_midx = calloc (sizeof *import_model_2d.wind_midx, NDIM_MAX * NDIM_MAX);
+    import_model_2d.wind_midz = calloc (sizeof *import_model_2d.wind_midz, NDIM_MAX * NDIM_MAX);
+
+    if (coord_type == CYLIND)
+    {
+      import_model_2d.x = calloc (sizeof *import_model_2d.x, NDIM_MAX * NDIM_MAX);
+      import_model_2d.z = calloc (sizeof *import_model_2d.z, NDIM_MAX * NDIM_MAX);
+    }
+    else
+    {
+      import_model_2d.r = calloc (sizeof *import_model_2d.r, NDIM_MAX * NDIM_MAX);
+      import_model_2d.theta = calloc (sizeof *import_model_2d.theta, NDIM_MAX * NDIM_MAX);
+    }
+  }
+  else
+  {
+    Error ("%s: %i: Unknown coord_type %i\n", __FILE__, __LINE__, coord_type);
+    Exit (1);
+  }
+}
+
+
+/* ************************************************************************** */
+/**
+ * @brief
+ *
+ * ************************************************************************** */
+
+void
+free_import (int coord_type)
+{
+  if (coord_type == SPHERICAL)
+  {
+    free (import_model_1d.element);
+    free (import_model_1d.r);
+    free (import_model_1d.v_r);
+    free (import_model_1d.mass_rho);
+    free (import_model_1d.t_r);
+  }
+  else if (coord_type == CYLIND || coord_type == RTHETA)
+  {
+    free (import_model_2d.i);
+    free (import_model_2d.j);
+    free (import_model_2d.inwind);
+    free (import_model_2d.v_x);
+    free (import_model_2d.v_y);
+    free (import_model_2d.v_z);
+    free (import_model_2d.mass_rho);
+    free (import_model_2d.t_r);
+    free (import_model_2d.wind_x);
+    free (import_model_2d.wind_z);
+    free (import_model_2d.wind_midx);
+    free (import_model_2d.wind_midz);
+    free (import_model_2d.x);
+    free (import_model_2d.z);
+    free (import_model_2d.r);
+    free (import_model_2d.theta);
+  }
+  else
+  {
+    Error ("%s: %i: Unknown coord_type %i\n", __FILE__, __LINE__, coord_type);
+    Exit (1);
+  }
+}
+
+/*
+ * Create the coordinate grids depending on the coord_type
+ */
 
 /**********************************************************/
 /** 
@@ -206,7 +301,7 @@ int
 get_import_wind_params (ndom)
      int ndom;
 {
-  Log ("get_import_wind_params is currently a NOP\n");
+//  Log ("get_import_wind_params is currently a NOP\n");
   return (0);
 }
 
@@ -283,7 +378,7 @@ import_rho (ndom, x)
  * ************************************************************************** */
 
 double
-model_temp (int ndom, double x[])
+model_temp (int ndom, double *x)
 {
   int n;
   double t_r;
@@ -295,7 +390,25 @@ model_temp (int ndom, double x[])
     return zdom[ndom].twind;
   }
 
-  t_r = wmain[n].import_t_r;
+  /*
+   * TODO:
+   * Will need to double check that the element number in the imported model
+   * does not change order between the import_model structs and the element
+   * number in the wmain grid...
+   */
+
+  if (zdom[ndom].coord_type == SPHERICAL)
+  {
+    t_r = import_model_1d.t_r[n];
+  }
+  else if (zdom[ndom].coord_type == CYLIND || zdom[ndom].coord_type == RTHETA)
+  {
+    t_r = import_model_2d.t_r[n];
+  }
+  else
+  {
+    t_r = zdom[ndom].twind;
+  }
 
   return t_r;
 }
