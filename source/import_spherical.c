@@ -106,7 +106,16 @@ import_1d (ndom, filename)
       {
         import_model_1d.t_r[ncell] = DEFAULT_IMPORT_TEMPERATURE;
       }
+
       ncell++;
+
+      if (ncell > NDIM_MAX)
+      {
+        Error ("%s : %i : trying to read in more grid points than allowed (%i). Try changing NDIM_MAX and recompiling.\n", __FILE__,
+               __LINE__, NDIM_MAX);
+        Exit (1);
+      }
+
     }
   }
 

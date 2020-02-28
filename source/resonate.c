@@ -192,7 +192,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * If we want true fidelity, perhaps we could compute the cross section
  * for every little path section between resonances */
 
-  mean_freq = 0.5* (freq_inner + freq_outer);
+  mean_freq = 0.5 * (freq_inner + freq_outer);
 
 
 
@@ -226,7 +226,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  */
 
   /*Compute the angle averaged electron scattering cross section.  Note the es is always
-   treated as a scattering event. */
+     treated as a scattering event. */
 
   kap_es = klein_nishina (mean_freq) * xplasma->ne * zdom[ndom].fill;
 
@@ -245,8 +245,8 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   if (geo.rt_mode == RT_MODE_MACRO)
   {
 
-    freq_av = freq_inner;       
-    
+    freq_av = freq_inner;
+
     //(freq_inner + freq_outer) * 0.5;  //need to do better than this perhaps but okay for star - comoving frequency (SS)
 
 
@@ -1272,7 +1272,7 @@ scatter (p, nres, nnscat)
   if (*nres == -1)              //Its an electron scatter
   {
     p->freq = freq_comoving;    // The photon frequency in the electron rest frame 
-    compton_dir (p);   // Get a new direction using the KN formula
+    compton_dir (p);            // Get a new direction using the KN formula
     v_dop = dot (p->lmn, v);    // Find the dot product of the new direction with the wind velocity 
     p->freq = p->freq / (1. - v_dop / VLIGHT);  //Transform back to the observer frame
 

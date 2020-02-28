@@ -86,7 +86,19 @@ import_wind (ndom)
 
 /* ************************************************************************** */
 /**
- * @brief
+ * @brief   Allocate memory for the import_model structures
+ *
+ * @param[in]   int coord_type     The coordinate system of the imported grid
+ *
+ * @details
+ *
+ * This function is simply a wrapper around a lot of calloc () calls to allocate
+ * memory for the different arrays in the structure. It was opted to do this way
+ * rather than static memory to avoid storing the raw imported grid details
+ * when it isn't required.
+ *
+ * NDIM_MAX (or NDIM_MAX * NDIM_MAX) elements are allocated for each array, as
+ * at this point we do not know how many elements comprise the grid. Note that
  *
  * ************************************************************************** */
 
