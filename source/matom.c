@@ -1,6 +1,6 @@
 /***********************************************************/
 /** @file  matom.c
- * @author SWM
+ * @author SS,JM,SWM
  * @date   February, 2004
  * @brief  Macro-atom functions
  *
@@ -47,19 +47,18 @@
  * make it easier to add new processes, I suspect. 
  * 
  * CK20180801: 
+ * in non-macro atom mode, the only continuum process treates as scattering is 
+ * electron scattering, and this is assigned nres = -1. The only valid values 
+ * of nres in non-macro-atom mode are therefore nres = -1 and 0 <= nres <= nlines-1
+ * (with the lattter range covering the lines).
  * 
- *           in non-macro atom mode, the only continuum process treates as scattering is 
- *           electron scattering, and this is assigned nres = -1. The only valid values 
- *           of nres in non-macro-atom mode are therefore nres = -1 and 0 <= nres <= nlines-1
- *           (with the lattter range covering the lines).
+ * in macro atom mode, nres = -1 indicates electron scattering, 
+ * nres = -2 indicates ff, and nres > NLINES indicates bound-free. 
+ * [nres == NLINES is never used. Note also that NLINES is the *max* number of lines, whereas nlines
+ * is the *actual* number of lines. So, actually, it's not just nres = NLINES that's never used, but 
+ * the entire range of nlines <= nres <= NLINES]
  * 
- *           in macro atom mode, nres = -1 indicates electron scattering, 
- *           nres = -2 indicates ff, and nres > NLINES indicates bound-free. 
- * 	     [nres == NLINES is never used. Note also that NLINES is the *max* number of lines, whereas nlines
- *	     is the *actual* number of lines. So, actually, it's not just nres = NLINES that's never used, but 
- *	     the entire range of nlines <= nres <= NLINES]
- * 
- * It would be possible to convert the for loop to a while statement.  This would avoid the
+ * It would be possible to convert the for loop to a while statement. This would avoid the
  * break statement in the middle.  
  * 
  * History:
@@ -116,6 +115,7 @@ matom (p, nres, escape)
   struct lines *line_ptr;
   struct topbase_phot *cont_ptr;
   int uplvl, uplvl_old;
+  int icheck;
   double jprbs[2 * (NBBJUMPS + NBFJUMPS)];
   double eprbs[NBBJUMPS + NBFJUMPS];
   double pjnorm, penorm;
@@ -408,21 +408,26 @@ matom (p, nres, escape)
     }
 
     /* n now identifies the jump that occurs - now set the new level. */
+    icheck = 0;
     if (n < nbbd)
     {                           /* bb downwards jump */
       uplvl = line[config[uplvl].bbd_jump[n]].nconfigl;
+      icheck = 1;
     }
     else if (n < (nbbd + nbfd))
     {                           /* bf downwards jump */
       uplvl = phot_top[config[uplvl].bfd_jump[n - nbbd]].nlev;
+      icheck = 2;
     }
     else if (n < (nbbd + nbfd + nbbu))
     {                           /* bb upwards jump */
       uplvl = line[config[uplvl].bbu_jump[n - nbbd - nbfd]].nconfigu;
+      icheck = 3;
     }
     else if (n < (nbbd + nbfd + nbbu + nbfu))
     {                           /* bf upwards jump */
       uplvl = phot_top[config[uplvl].bfu_jump[n - nbbd - nbfd - nbbu]].uplev;
+      icheck = 4;
     }
     else
     {
@@ -435,7 +440,12 @@ matom (p, nres, escape)
 /* ksl: Check added to verify that the level actually changed */
     if (uplvl_old == uplvl)
     {
-      Error ("matom: uplvl did not change with jump: %d %d\n", uplvl, n);
+      Error ("matom: uplvl did not change with jump: %d %d z %d state %d type %d\n", uplvl, n, config[uplvl].z, config[uplvl].istate,
+             icheck);
+      Error ("matom: %10.4e %10.4e %10.4f\n", line[config[uplvl].bbd_jump[n]].el, line[config[uplvl].bbd_jump[n]].eu,
+             line[config[uplvl].bbd_jump[n]].f);
+      Error ("matom: %1d %1d %d %d\n", line[config[uplvl].bbd_jump[n]].levl, line[config[uplvl].bbd_jump[n]].levu,
+             line[config[uplvl].bbd_jump[n]].nconfigl, line[config[uplvl].bbd_jump[n]].nconfigu);
 
     }
 
@@ -558,11 +568,8 @@ matom (p, nres, escape)
 * @param struct lines line_ptr line pointer to calculate
 * 
 * ###Notes### 
-* History:
-* 2004feb       coded by S Sim
 * ksl OK, Probably should be moved to lines.c for consistency, but that can be done
 * later.
-* Define B12_CONSTANT
 ***********************************/
 
 #define B12_CONSTANT 5.01983e25
@@ -602,7 +609,7 @@ int temp_choice;                //choice of type of calcualation for alpha_sp
 
 /**********************************************************/
 /**  
- *  @brief the matom estimator for the spontaneous recombination rate.
+ * @brief the matom estimator for the spontaneous recombination rate.
  * 
  * The rate is given by 
  * 
@@ -621,6 +628,8 @@ int temp_choice;                //choice of type of calcualation for alpha_sp
  * 					and spontaneous
  * 
  * 	06may	ksl	57+ -- Modified to use plasma structure
+ *  Energy weighted means that the integrand has an extra factor nu/nu_threshold
+ *  The difference case is (nu-nu_threshold)/nu_threhold 
 ***********************************************************/
 #define ALPHA_SP_CONSTANT 5.79618e-36
 
@@ -669,6 +678,10 @@ alpha_sp (cont_ptr, xplasma, ichoice)
 /**********************************************************/
 /** 
  *  @brief This returns the integrand for alpha_sp at a chosen frequency - 
+ *
+ * Note:
+ *  The peculiar variable *params is needed by the gsl routine
+ *  that does the integration.
 ***********************************************************/
 
 double
@@ -690,10 +703,10 @@ alpha_sp_integrand (double freq, void *params)
 
 
   if (temp_choice == 1)
-    return (integrand * freq / fthresh);        //energy weighed case
+    return (integrand * freq / fthresh);        //energy weighted case
   if (temp_choice == 2)
     return (integrand * (freq - fthresh) / fthresh);    // difference case
-  return (integrand);           //spontanoues case
+  return (integrand);           //spontaneous case
 }
 
 
@@ -708,10 +721,9 @@ alpha_sp_integrand (double freq, void *params)
  * that destroys the k-packet and the packet information has been updated in the same
  * way as at the end of matom
  *
- * @param [in]     WindPtr w   the ptr to the structure defining the wind
  * @param [in,out]  PhotPtr p   the packet at the point of activation and deactivation
  * @param [in,out]  int nres    the process which activates and deactivates the Macro Atom
- * @param [in,out]  int escape  to tell us whether the matom de-activation
+ * @param [out]  int escape  to tell us whether the matom de-activation
  *                             is via an r-packet (1) or a k-packet (0)
  * @param [in] int mode         switch which allows photon to be deactivated by a non-radiative
  * term.  (non_zero is true)
@@ -797,7 +809,7 @@ kpkt (p, nres, escape, mode)
     freqmax = 1.1 * freqmin;
   }
 
-  /* ksl 091108 - If the kpkt destruction rates for this cell are not known they are calculated here.  This happens
+  /* If the kpkt destruction rates for this cell are not known they are calculated here.  This happens
    * every time the wind is updated */
 
   if (mplasma->kpkt_rates_known != 1)
@@ -808,6 +820,7 @@ kpkt (p, nres, escape, mode)
     cooling_ff = 0.0;
     cooling_bf_coltot = 0.0;
 
+    /* Start of BF calculation */
     /* JM 1503 -- we used to loop over ntop_phot here, 
        but we should really loop over the tabulated Verner Xsections too
        see #86, #141 */
@@ -870,7 +883,7 @@ kpkt (p, nres, escape, mode)
 
     }
 
-    /* end of loop over nphot_total */
+    /* End of BF calculation and beginning of BB calculation */
 
     for (i = 0; i < nlines; i++)
     {
@@ -916,7 +929,7 @@ kpkt (p, nres, escape, mode)
       cooling_normalisation += cooling_bb[i];
     }
 
-    /* end of loop over nlines  */
+    /* end of BB calculation  */
 
 
     /* 57+ -- This might be modified later since we "know" that xplasma cannot be for a grid with zero
@@ -941,7 +954,6 @@ kpkt (p, nres, escape, mode)
 
       cooling_ff = mplasma->cooling_ff = mplasma->cooling_ff_lofreq = 0.0;
       Error ("kpkt: A scattering event in cell %d with vol = 0???\n", one->nwind);
-      //Diagnostic      return(-1);  //57g -- Cannot diagnose with an exit
       *escape = 1;
       p->istat = P_ERROR_MATOM;
       return (0);
@@ -1036,9 +1048,6 @@ kpkt (p, nres, escape, mode)
   cooling_normalisation += cooling_adiabatic;
 
 
-
-
-
   /* The cooling rates for the recombination and collisional processes are now known. 
      Choose which process destroys the k-packet with a random number. */
 
@@ -1063,7 +1072,7 @@ kpkt (p, nres, escape, mode)
     {
       if (destruction_choice < mplasma->cooling_bf[i])
       {
-        /* Having got here we know that desturction of the k-packet was via the process labelled
+        /* Having got here we know that destruction of the k-packet was via the BF process labelled
            by i. Let's just check that i is a sensible number. */
 
         if (i > nphot_total - 1)
@@ -1114,8 +1123,9 @@ kpkt (p, nres, escape, mode)
     }
   }
   else if (destruction_choice < (mplasma->cooling_bftot + mplasma->cooling_bbtot))
-  {                             //this means that a collisional destruction has occurred - this results in 
-    //a macro atom being excited. Choose which macro atom and level to excite
+  {
+    /*this means that a collisional destruction has occurred - this results in 
+       a macro atom being excited. Choose which macro atom and level to excite  */
     destruction_choice = destruction_choice - mplasma->cooling_bftot;
     for (i = 0; i < nlines; i++)
     {
@@ -1152,9 +1162,10 @@ kpkt (p, nres, escape, mode)
     }
   }
 
-  /* consult issues #187, #492 regarding free-free */
   else if (destruction_choice < (mplasma->cooling_bftot + mplasma->cooling_bbtot + mplasma->cooling_ff))
-  {                             //this is a ff destruction
+  {
+    /* If reached this point, it is a FF destruction event */
+    /* consult issues #187, #492 regarding free-free */
     *escape = 1;                //we are making an r-packet not exciting a macro atom
     *nres = -2;
     p->freq = one_ff (one, freqmin, freqmax);   //get frequency of resulting energy packet
@@ -1241,7 +1252,6 @@ kpkt (p, nres, escape, mode)
   p->istat = P_ERROR_MATOM;
   return (0);
 
-  return (0);
 }
 
 
@@ -1250,34 +1260,20 @@ kpkt (p, nres, escape, mode)
  ** 
  * @brief routine for dealing with bound-bound "simple ions" within the hybrid macro-atom framework
  *
+ * @param [in,out] PhotPtr p   the packet at the point of activation
+ * @param [in,out] int nres    the process which activates the Macro Atom
+ * @param [in,out] int escape  in principle this tells us whether de-activation is
+ *                             via an r-packet or a k-packet. For this routine at the 
+ *                             moment only r-packets are possible so it always returns
+ *                             escape = 1
  *
- * fake_matom_bb is the macro atom routine that deals with line events involving
+ * @detail fake_matom_bb is the macro atom routine that deals with line events involving
  * simple ions (i.e. ions for which a full macro atom treatment is not employed.
  * When this routine is called a simple line has absorbed a packet. This routine 
  * creates a fake two-level macro atom and determines whether the packet energy
  * is simply re-emitted in the line or is thermalised. If it is thermalised it
  * turns into a k-packet and the appropriate routine is called. 
- * 
- * 
- * Arguments:
- * 
- *        WindPtr w                   the ptr to the structure defining the wind
- *        PhotPtr p                   the packet at the point of activation
- *        int nres                    the process which activates the Macro Atom
- * 
- * Returns:
- *        int nres                    the process by which deactivation occurs
- *        PhotPtr p                   the packet following deactivation
- *        int escape                  identifies whether the macro atom deactivated via an
- *                                    r-packet (escape = 1) or a k-packet (escape = 0). If
- *                                    a k-packet then the call to this routine should be
- *                                    followed by a call to kpkt.
- * 
- * ###Notes###
- * Apr 04  SS   Coding began.
- * Jun 04  SS   Modified to return escape = 1 for r-packet and 2 for k-packet
- * to avoid call to k-packet within this routine.
- * 06may	ksl	57+ -- Eliminationg passing entire w structure
+ *
 ************************************************************/
 
 int
@@ -1294,7 +1290,7 @@ fake_matom_bb (p, nres, escape)
   double normalisation;
   double choice;
 
-  one = &wmain[p->grid];        //record where we are
+  one = &wmain[p->grid];
   xplasma = &plasmamain[one->nplasma];
 
   line_ptr = lin_ptr[*nres];    //record the line pointer
@@ -1360,41 +1356,26 @@ fake_matom_bb (p, nres, escape)
 
 /************************************************************
  ** 
- *  @brief routine for dealing with bound-free "simple ions" within the hybrid macro-atom framework
+ * @brief routine for dealing with bound-free "simple ions" within the hybrid macro-atom framework
  *
- * fake_matom_bf is the macro atom routine that deals with photoionisation 
+ * @param [in,out] PhotPtr p   the packet at the point of activation
+ * @param [in,out] int nres    the process which activates the Macro Atom
+ * @param [in,out] int escape  in principle this tells us whether de-activation is
+ *                             via an r-packet or a k-packet. For this routine at the 
+ *                             moment only r-packets are possible so it always returns
+ *                             escape = 1
+ *
+ * @details fake_matom_bf is the macro atom routine that deals with photoionisation 
  * events involving simple ions (i.e. ions for which a full macro atom treatment 
- * is not employed).
- * When this routine is called a photoionisation has absorbed a packet. 
+ * is not employed). When this routine is called a photoionisation has absorbed a packet. 
  * The idea of this routine is to deal with the subsequenct
- * by creating a fake two-level atom. 
- * However, in the absense of collisional recombination (or something
- * similar) there's only one thing that can happen - radiative 
+ * by creating a fake two-level atom. However, in the absense of collisional recombination 
+ * (or something similar) there's only one thing that can happen - radiative 
  * recombination. Therefore there's no need to do anything here unless
  * collisional recombination is to be introduced at some point in the
- * future.
- * All this routine does for now is choose a new frequency for the 
+ * future. All this routine does for now is choose a new frequency for the 
  * emitted r-packet.
  * 
- * 
- * Arguments:
- * 
- *        WindPtr w                   the ptr to the structure defining the wind
- *        PhotPtr p                   the packet at the point of activation
- *        int nres                    the process which activates the Macro Atom
- * 
- * Returns:
- *        int nres                    the process by which deactivation occurs
- *        PhotPtr p                   the packet following deactivation
- *        int escape                  in principle this tells us whether de-activation is
- *                                    via an r-packet or a k-packet. For this routine at the 
- *                                    moment only r-packets are possible so it always returns
- *                                    escape = 1
- * ###Notes###:
- * Apr 04  SS   Coding began.
- * Jun 04  SS   Modified to include "escape" being set to 1
- * 06may	ksl	57+ -- Modified for new structure.  Have not fixed the call to fake_atom
- * !!! Currently this assumes hydrogenic shape cross-section - Improve.
 ************************************************************/
 
 int
@@ -1406,7 +1387,7 @@ fake_matom_bf (p, nres, escape)
   WindPtr one;
   PlasmaPtr xplasma;
 
-  one = &wmain[p->grid];        //record where we are
+  one = &wmain[p->grid];
   xplasma = &plasmamain[one->nplasma];
 
   /* All that can happen is radiative recombination (no collisional recombination
@@ -1417,7 +1398,6 @@ fake_matom_bf (p, nres, escape)
 
   p->freq = matom_select_bf_freq (one, *nres - NLINES - 1);
 
-  /* Currently this assumes hydrogenic shape cross-section - Improve */
 
   return (0);
 
@@ -1439,8 +1419,6 @@ fake_matom_bf (p, nres, escape)
  * emit_matom is a scaled down version of matom which deals with the emission due
  * to deactivating macro atoms in the detailed spectrum part of the calculation.
  * 
- *
- * ###Notes###
 ***********************************************************/
 
 int
@@ -1592,16 +1570,9 @@ emit_matom (w, p, nres, upper)
     Error ("Trying to emit from Macro Atom but no available route (emit_matom). Abort.");
     Exit (0);
   }
+  /* The frequency and the value of nres have been set correctly. All done. */
   return (0);
 }
-
-/* The frequency and the value of nres have been set correctly. All done. */
-
-
-
-
-
-
 
 /**********************************************************/
 /** 

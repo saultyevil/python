@@ -5,17 +5,24 @@
  * @date   May, 2018
  *
  * @brief
- * General purpose routines for reading in an arbitray wind model
- * in spherical coordinates
+ * General purpose routines for reading in an arbitrary wind model
+ * in spherical coordinates.
  *
- * The basic data we need to read in are
-
- * i r v_r rho (and optionally T)
-
- * We assume that all of the variables are centered, that is
- * we are not assuming that we are giving rho at the center of
- * a cell, but that r and v_r are at the edges of a cell.
- * This is someghing that would presumable be easy to change
+ * The basic data we need to read in are,
+ *
+ *     i r v_r mass_rho (and optionally T_r)
+ *
+ *  where,
+ *
+ *  * i are the element numbers (increasing outwards)
+ *  * r is the radial coordinates
+ *  * v_r is the velocity in the radial direction
+ *  * mass_rho is the density in cgs units
+ *  * T_r is the radiation temperature in Kelvin
+ *
+ * We assume that all of the physical quantities are centered, that is
+ * we are assuming that we are giving mass_rho/T_r at the center of
+ * a cell. However, r and v_r should be given at the edges of a cell.
  ***********************************************************/
 
 #include <stdio.h>
@@ -24,48 +31,38 @@
 
 #include "atomic.h"
 #include "python.h"
-
-#define LINELEN 512
-#define NCELLS  512
-
-/* The next variables have to be external because we need them to be available later on */
-
-struct
-{
-  int ndim;
-  int element[NDIM_MAX];
-  double r[NDIM_MAX], v[NDIM_MAX], rho[NDIM_MAX], t[NDIM_MAX];
-} xx_1d;
+#include "import.h"
 
 
 /**********************************************************/
 /**
- * @brief      Read the an arbitray wind model intended to mimic a stellar
- * wind or shell.
+ * @brief      Read an arbitrary wind model in spherical symmetry.
  *
- * @param [in out] int  ndom   The domain number for the imported model
+ * @param [in out] int     ndom       The domain number for the imported model
  * @param [in out] char *  filename   The file containing the model to import
- * @return     Always returns 0
+ * @return                            Always returns 0
  *
  * @details
+ *
  * This routine just reads in the data and stores it in arrays
  *
  * ### Notes ###
- * The basic data we need to read in are
  *
- *     i r v_r rho (and optionally T)
+ * The basic data we need to read in are,
  *
- *  where
+ *     i r v_r mass_rho (and optionally T_r)
  *
- *  * i is the element (increaing outwards
- *  * r is the radial coordiante
+ *  where,
+ *
+ *  * i are the element numbers (increasing outwards)
+ *  * r is the radial coordinates
  *  * v_r is the velocity in the radial direction
- *  * rho is the density in cgs unites
+ *  * mass_rho is the density in cgs units
+ *  * T_r is the radiation temperature in Kelvin
  *
- * We assume that all of the variables are centered, that is
- * we are not assuming that we are giving rho at the center of
- * a cell, but that r and v_r are at the edges of a cell.
- * This is someghing that would presumable be easy to change
+ * We assume that all of the physical quantities are centered, that is
+ * we are assuming that we are giving mass_rho/T_r at the center of
+ * a cell. However, r and v_r should be given at the edges of a cell.
  *
  **********************************************************/
 
@@ -74,14 +71,12 @@ import_1d (ndom, filename)
      int ndom;
      char *filename;
 {
-  FILE *fopen (), *fptr;
-  char line[LINELEN];
+  FILE *fptr;
+  char line[LINELENGTH];
   int n, icell, ncell;
-  double q1, q2, q3, q4;
-
+  double r, v_r, mass_rho, t_r, t_e;
 
   Log ("Reading a 1d model %s\n", filename);
-
 
   if ((fptr = fopen (filename, "r")) == NULL)
   {
@@ -89,43 +84,58 @@ import_1d (ndom, filename)
     Exit (0);
   }
 
-
   ncell = 0;
-  while (fgets (line, 512, fptr) != NULL)
+  while (fgets (line, LINELENGTH, fptr) != NULL)
   {
-    n = sscanf (line, " %d %le %le %le %le", &icell, &q1, &q2, &q3, &q4);
-    if (n < 4)
+    n = sscanf (line, " %d %le %le %le %le %le", &icell, &r, &v_r, &mass_rho, &t_e, &t_r);
+
+    if (n < READ_NO_TEMP_1D)
     {
       continue;
     }
     else
     {
-      xx_1d.element[ncell] = icell;
-      xx_1d.r[ncell] = q1;
-      xx_1d.v[ncell] = q2;
-      xx_1d.rho[ncell] = q3;
-      if (n > 4)
+      imported_model[ndom].i[ncell] = icell;
+      imported_model[ndom].r[ncell] = r;
+      imported_model[ndom].v_r[ncell] = v_r;
+      imported_model[ndom].mass_rho[ncell] = mass_rho;
+
+      if (n == READ_ELECTRON_TEMP_1D)
       {
-        xx_1d.t[ncell] = q4;
+        imported_model[ndom].t_e[ncell] = t_e;
+        imported_model[ndom].t_r[ncell] = 1.1 * t_e;
+      }
+      else if (n == READ_BOTH_TEMP_1D)
+      {
+        imported_model[ndom].t_e[ncell] = t_e;
+        imported_model[ndom].t_r[ncell] = t_r;
       }
       else
       {
-        xx_1d.t[ncell] = 10000.;
+        imported_model[ndom].t_e[ncell] = DEFAULT_IMPORT_TEMPERATURE;
+        imported_model[ndom].t_r[ncell] = 1.1 * DEFAULT_IMPORT_TEMPERATURE;
       }
+
       ncell++;
+
+      if (ncell > NDIM_MAX)
+      {
+        Error ("%s : %i : trying to read in more grid points than allowed (%i). Try changing NDIM_MAX and recompiling.\n", __FILE__,
+               __LINE__, NDIM_MAX);
+        Exit (1);
+      }
 
     }
   }
 
+  imported_model[ndom].ncell = ncell;
 
-  xx_1d.ndim = ncell;
-
-  /* Although much of the initialization of zdom can be postponeed
+  /* Although much of the initialization of zdom can be postponed
    * one has to define mdim and ndim of zdom here, so that the correct
    * number of wind cells will be allocated */
 
-  zdom[ndom].ndim2 = zdom[ndom].ndim = xx_1d.ndim;
-  zdom[ndom].mdim = 1;
+  imported_model[ndom].ndim = zdom[ndom].ndim2 = zdom[ndom].ndim = imported_model[ndom].ncell;
+  imported_model[ndom].mdim = zdom[ndom].mdim = 1;
 
   return (0);
 }
@@ -167,16 +177,16 @@ spherical_make_grid_import (w, ndom)
   int j, n;
 
   zdom[ndom].wind_rho_min = zdom[ndom].rho_min = 0;
-  zdom[ndom].rmin = xx_1d.r[0];
-  zdom[ndom].wind_rho_max = zdom[ndom].zmax = zdom[ndom].rho_max = zdom[ndom].rmax = xx_1d.r[xx_1d.ndim - 1];
+  zdom[ndom].rmin = imported_model[ndom].r[0];
+  zdom[ndom].wind_rho_max = zdom[ndom].zmax = zdom[ndom].rho_max = zdom[ndom].rmax = imported_model[ndom].r[imported_model[ndom].ncell - 1];
   zdom[ndom].wind_thetamin = zdom[ndom].wind_thetamax = 0.;
 
-  for (j = 0; j < xx_1d.ndim; j++)
+  for (j = 0; j < imported_model[ndom].ncell; j++)
   {
     n = j + zdom[ndom].nstart;
-    w[n].r = xx_1d.r[j];
+    w[n].r = imported_model[ndom].r[j];
     /* Put the radial velocity in v[0] */
-    w[n].v[0] = xx_1d.v[j];
+    w[n].v[0] = imported_model[ndom].v_r[j];
   }
 
   /* Need to define the midpoints of the grid */
@@ -202,6 +212,7 @@ spherical_make_grid_import (w, ndom)
    */
 
   spherical_wind_complete (ndom, w);
+
   return (0);
 }
 
@@ -217,14 +228,14 @@ spherical_make_grid_import (w, ndom)
 
 /**********************************************************/
 /**
- * @brief      The velocity at any positiion in an imported spherical
+ * @brief      The velocity at any position in an imported spherical
  * model
  *
  *
  * @param [in] int  ndom   The domain of the imported model
  * @param [in] double *  x   A position (3d)
  * @param [out] double *  v   The velocity at x
- * @return     The speeed at x
+ * @return     The speed at x
  *
  * @details
  * This routine interpolates on the values read in for the
@@ -249,20 +260,20 @@ velocity_1d (ndom, x, v)
   double r;
   int nelem, nn, nnn[4];
   double frac[4];
+
   r = length (x);
-
-
   coord_fraction (ndom, 0, x, nnn, frac, &nelem);
+
   speed = 0;
   for (nn = 0; nn < nelem; nn++)
   {
     speed += wmain[zdom[ndom].nstart + nnn[nn]].v[0] * frac[nn];
   }
 
-
   v[0] = x[0] / r * speed;
   v[1] = x[1] / r * speed;
   v[2] = x[2] / r * speed;
+
   return (speed);
 }
 
@@ -302,27 +313,24 @@ rho_1d (ndom, x)
   double rho = 0;
   double r;
   int n;
+
   r = length (x);
 
-
-
   n = 0;
-  while (r >= xx_1d.r[n] && n < xx_1d.ndim)
+  while (r >= imported_model[ndom].r[n] && n < imported_model[ndom].ncell)
   {
     n++;
   }
   n--;
 
-  if (n < xx_1d.ndim)
+  if (n < imported_model[ndom].ncell)
   {
-    rho = xx_1d.rho[n];
+    rho = imported_model[ndom].mass_rho[n];
   }
   else
   {
-    rho = xx_1d.rho[xx_1d.ndim - 1];
+    rho = imported_model[ndom].mass_rho[imported_model[ndom].ncell - 1];
   }
 
-
-  Log ("ZZZZ %d %.3e %.3e rho %e \n", n, r, xx_1d.r[n], rho);
   return (rho);
 }

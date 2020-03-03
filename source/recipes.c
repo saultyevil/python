@@ -155,7 +155,7 @@ num_int (func, a, b, eps)
 * @details
 * This routine finds the root  of the function func from a to b. It currently
 * uses the gsl implementation of the BRENT root finding scheme. This replaced the zbrent 
-* numerical recipie, and the call is intended to be indentical
+* numerical recipie, and the call is intended to be identical
 *
 * ### Notes ###
 *

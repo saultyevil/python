@@ -68,6 +68,8 @@ def doit(rootname='sphere',smooth=21,fig_no=2):
     file
 
     141125    ksl    Updated for new formats which use astropy
+    191210  ksl Modified so that what is ploted is nuL_nu, and 
+                did a better job at setting limits for the plot
     '''
     # Make sure we only have the rootname
 
@@ -86,27 +88,48 @@ def doit(rootname='sphere',smooth=21,fig_no=2):
     pylab.figure(fig_no,(6,6))
     pylab.clf()
 
-    pylab.loglog(data['Freq.'],xsmooth(data['Created']),label='Created')
+    created=data['Freq.']*xsmooth(data['Created'])
+    emitted=data['Freq.']*xsmooth(data['Emitted'])
+    hit_surf=data['Freq.']*xsmooth(data['HitSurf'])
+    wind=data['Freq.']*xsmooth(data['Wind'])
+
+    pylab.loglog(data['Freq.'],created,label='Created')
     # pylab.loglog(data['Freq.'],data['Created'],label='Created')
 
-    pylab.loglog(data['Freq.'],xsmooth(data['Emitted']),label='Observed')
+    pylab.loglog(data['Freq.'],emitted,label='Observed')
     # pylab.loglog(data['Freq.'],data['Emitted'],label='Observed')
 
-    pylab.loglog(data['Freq.'],xsmooth(data['HitSurf']),label='Hit Surface')
+    pylab.loglog(data['Freq.'],hit_surf,label='Hit Surface')
     # pylab.loglog(data['Freq.'],data['HitSurf'],label='Hit Surface')
 
-    pylab.loglog(data['Freq.'],xsmooth(data['Wind']),label='Wind Observed')
+    pylab.loglog(data['Freq.'],wind,label='Wind Observed')
     # pylab.loglog(data['Freq.'],data['Wind'],label='Wind Observed')
 
     zz=pylab.axis()
-    pylab.axis((zz[0],zz[1],zz[3]/1e8,zz[3]))
 
-    pylab.text(Lyman,0.9*zz[3],'H',horizontalalignment='center',verticalalignment='top')
-    pylab.text(HeII,0.9*zz[3],'HeII',horizontalalignment='center',verticalalignment='top')
+    # Find the maxium values of all of these arrays
+
+    q=numpy.fmax(created,emitted)
+    qq=numpy.fmax(q,wind)
+    ymax=3*numpy.max(qq)
+    pylab.ylim(ymax/1e8, ymax)
+
+    # make a mask of rom the values of qq
+
+    test=data['Freq.'][qq>ymax/1e8]
+    pylab.xlim(test[0],test[len(test)-1])
+
+    # pylab.xlim(zz[0],zz[1])
+
+
+    # pylab.axis((zz[0],zz[1],zz[3]/1e8,zz[3]))
+
+    pylab.text(Lyman,0.9*ymax,'H',horizontalalignment='center',verticalalignment='top',size=14)
+    pylab.text(HeII,0.9*ymax,'HeII',horizontalalignment='center',verticalalignment='top',size=14)
     pylab.legend(loc='best')
-    pylab.title(rootname)
-    pylab.xlabel(r'$ {\nu} $')
-    pylab.ylabel(r'L$_{\nu}$')
+    pylab.title(rootname,size=16)
+    pylab.xlabel(r'$ {\nu} $',size=16)
+    pylab.ylabel(r'$\nu$L$_{\nu}$',size=16)
 
 
     pylab.draw()
@@ -116,12 +139,30 @@ def doit(rootname='sphere',smooth=21,fig_no=2):
     # integrate over frequency
 
     freq=numpy.array(data['Freq.'])
-    dfreq=freq[1]-freq[0]  # For a linear scale the frequencies are all equally spaced
 
-    lum_created=dfreq*numpy.sum(numpy.array(data['Created']))
-    lum=dfreq*numpy.sum(data['Emitted'])
+    dfreq=[]
+    i=0
+    while i<len(freq):
+        if i==0:
+            dfreq.append(freq[1]-freq[0])
+        elif i==len(freq)-1:
+            dfreq.append(freq[i]-freq[i-1])
+        else:
+            dfreq.append(0.5*(freq[i+1]-freq[i-1]))
+
+        i+=1
+
+    dfreq=numpy.array(dfreq)
+
+    lum_created=numpy.sum(dfreq*data['Created'])
+    lum=numpy.sum(dfreq*data['Emitted'])
+    
+    #dfreq=freq[1]-freq[0]  # For a linear scale the frequencies are all equally spaced
+
+    # lum_created=dfreq*numpy.sum(numpy.array(data['Created']))
+    # lum=dfreq*numpy.sum(data['Emitted'])
     # print(data['Created'])
-    print('The total   luminosity was ',lum_created)
+    print('The Created luminosity was ',lum_created)
     print('The emitted luminosity was ',lum)
 
     return

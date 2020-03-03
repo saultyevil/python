@@ -147,13 +147,13 @@ spectrum_init (f1, f2, nangle, angle, phase, scat_select, top_bot_select, select
     }
   }
 
-  strcpy (xxspec[0].name, "Created");
-  strcpy (xxspec[1].name, "Emitted");
-  strcpy (xxspec[2].name, "CenSrc");
-  strcpy (xxspec[3].name, "Disk");
-  strcpy (xxspec[4].name, "Wind");
-  strcpy (xxspec[5].name, "HitSurf");
-  strcpy (xxspec[6].name, "Scattered");
+  strcpy (xxspec[SPEC_CREATED].name, "Created");
+  strcpy (xxspec[SPEC_EMITTED].name, "Emitted");
+  strcpy (xxspec[SPEC_CENSRC].name, "CenSrc");
+  strcpy (xxspec[SPEC_DISK].name, "Disk");
+  strcpy (xxspec[SPEC_WIND].name, "Wind");
+  strcpy (xxspec[SPEC_HITSURF].name, "HitSurf");
+  strcpy (xxspec[SPEC_SCATTERED].name, "Scattered");
   for (n = 0; n < MSPEC; n++)
   {
     xxspec[n].lmn[0] = xxspec[n].lmn[1] = xxspec[n].lmn[2] = 0.;
@@ -317,7 +317,6 @@ spectrum_create (p, f1, f2, nangle, select_extract)
   lfreqmax = log10 (freqmax);
   ldfreq = (lfreqmax - lfreqmin) / NWAVE;
 
-
   for (nphot = 0; nphot < NPHOT; nphot++)
   {
     if ((j = p[nphot].nscat) < 0 || j > MAXSCAT)
@@ -330,7 +329,8 @@ spectrum_create (p, f1, f2, nangle, select_extract)
     else
       nres[j]++;
 
-    /* Determine whether this is a wind photon, that is was it created in the
+    /*
+     * Determine whether this is a wind photon, that is was it created in the
      * wind or scattered by the wind
      */
 
@@ -362,7 +362,6 @@ spectrum_create (p, f1, f2, nangle, select_extract)
       k1_orig = NWAVE - 1;
     }
 
-
     /* lines to work out where we are in a normal spectrum with linear spacing */
     k = (p[nphot].freq - freqmin) / dfreq;
     if (k < 0)
@@ -393,27 +392,25 @@ spectrum_create (p, f1, f2, nangle, select_extract)
       k_orig = NWAVE - 1;
     }
 
-
-    xxspec[0].f[k_orig] += p[nphot].w_orig;     /* created spectrum with original weights and wavelengths */
-    xxspec[0].lf[k1_orig] += p[nphot].w_orig;   /* logarithmic created spectrum */
+    xxspec[SPEC_CREATED].f[k_orig] += p[nphot].w_orig;  /* created spectrum with original weights and wavelengths */
+    xxspec[SPEC_CREATED].lf[k1_orig] += p[nphot].w_orig;        /* logarithmic created spectrum */
     if (iwind)
     {
-      xxspec[0].f_wind[k_orig] += p[nphot].w_orig;
-      xxspec[0].lf_wind[k1_orig] += p[nphot].w_orig;
+      xxspec[SPEC_CREATED].f_wind[k_orig] += p[nphot].w_orig;
+      xxspec[SPEC_CREATED].lf_wind[k1_orig] += p[nphot].w_orig;
     }
-
 
     if ((i = p[nphot].istat) == P_ESCAPE)
     {
-      xxspec[0].nphot[i]++;
-      xxspec[1].f[k] += p[nphot].w;     /* emitted spectrum */
-      xxspec[1].lf[k1] += p[nphot].w;   /* logarithmic emitted spectrum */
+      xxspec[SPEC_CREATED].nphot[i]++;
+      xxspec[SPEC_EMITTED].f[k] += p[nphot].w;  /* emitted spectrum */
+      xxspec[SPEC_EMITTED].lf[k1] += p[nphot].w;        /* logarithmic emitted spectrum */
       if (iwind)
       {
-        xxspec[1].f_wind[k] += p[nphot].w;      /* emitted spectrum */
-        xxspec[1].lf_wind[k1] += p[nphot].w;    /* logarithmic emitted spectrum */
+        xxspec[SPEC_EMITTED].f_wind[k] += p[nphot].w;   /* emitted spectrum */
+        xxspec[SPEC_EMITTED].lf_wind[k1] += p[nphot].w; /* logarithmic emitted spectrum */
       }
-      xxspec[1].nphot[i]++;
+      xxspec[SPEC_EMITTED].nphot[i]++;
       spectype = p[nphot].origin;
 
       /* When a photon that originated for example in the BL which has a type of PTYPE_BL is scattered in the wind by 
@@ -425,36 +422,36 @@ spectrum_create (p, f1, f2, nangle, select_extract)
 
       if (spectype == PTYPE_STAR || spectype == PTYPE_BL || spectype == PTYPE_AGN)      // Then it came from the bl or the star
       {
-        xxspec[2].f[k] += p[nphot].w;   /* emitted star (+bl) spectrum */
-        xxspec[2].lf[k1] += p[nphot].w; /* logarithmic emitted star (+bl) spectrum */
+        xxspec[SPEC_CENSRC].f[k] += p[nphot].w; /* emitted star (+bl) spectrum */
+        xxspec[SPEC_CENSRC].lf[k1] += p[nphot].w;       /* logarithmic emitted star (+bl) spectrum */
         if (iwind)
         {
-          xxspec[2].f_wind[k] += p[nphot].w;    /* emitted spectrum */
-          xxspec[2].lf_wind[k1] += p[nphot].w;  /* logarithmic emitted spectrum */
+          xxspec[SPEC_CENSRC].f_wind[k] += p[nphot].w;  /* emitted spectrum */
+          xxspec[SPEC_CENSRC].lf_wind[k1] += p[nphot].w;        /* logarithmic emitted spectrum */
         }
-        xxspec[2].nphot[i]++;
+        xxspec[SPEC_CENSRC].nphot[i]++;
       }
       else if (spectype == PTYPE_DISK)  // Then it was a disk photon
       {
-        xxspec[3].f[k] += p[nphot].w;   /* transmitted disk spectrum */
-        xxspec[3].lf[k1] += p[nphot].w; /* logarithmic transmitted disk spectrum */
+        xxspec[SPEC_DISK].f[k] += p[nphot].w;   /* transmitted disk spectrum */
+        xxspec[SPEC_DISK].lf[k1] += p[nphot].w; /* logarithmic transmitted disk spectrum */
         if (iwind)
         {
-          xxspec[3].f_wind[k] += p[nphot].w;    /* emitted spectrum */
-          xxspec[3].lf_wind[k1] += p[nphot].w;  /* logarithmic emitted spectrum */
+          xxspec[SPEC_DISK].f_wind[k] += p[nphot].w;    /* emitted spectrum */
+          xxspec[SPEC_DISK].lf_wind[k1] += p[nphot].w;  /* logarithmic emitted spectrum */
         }
-        xxspec[3].nphot[i]++;
+        xxspec[SPEC_DISK].nphot[i]++;
       }
       else if (spectype == PTYPE_WIND)
       {
-        xxspec[4].f[k] += p[nphot].w;   /* wind spectrum */
-        xxspec[4].lf[k1] += p[nphot].w; /* logarithmic wind spectrum */
+        xxspec[SPEC_WIND].f[k] += p[nphot].w;   /* wind spectrum */
+        xxspec[SPEC_WIND].lf[k1] += p[nphot].w; /* logarithmic wind spectrum */
         if (iwind)
         {
-          xxspec[4].f_wind[k] += p[nphot].w;    /* emitted spectrum */
-          xxspec[4].lf_wind[k1] += p[nphot].w;  /* logarithmic emitted spectrum */
+          xxspec[SPEC_WIND].f_wind[k] += p[nphot].w;    /* emitted spectrum */
+          xxspec[SPEC_WIND].lf_wind[k1] += p[nphot].w;  /* logarithmic emitted spectrum */
         }
-        xxspec[4].nphot[i]++;
+        xxspec[SPEC_WIND].nphot[i]++;
       }
       else
       {
@@ -475,7 +472,6 @@ spectrum_create (p, f1, f2, nangle, select_extract)
           if (((mscat = xxspec[n].nscat) > 999 ||
                p[nphot].nscat == mscat ||
                (mscat < 0 && p[nphot].nscat >= (-mscat))) && ((mtopbot = xxspec[n].top_bot) == 0 || (mtopbot * p[nphot].x[2]) > 0))
-
           {
             if (xxspec[n].mmin < x1 && x1 < xxspec[n].mmax)
             {
@@ -488,44 +484,40 @@ spectrum_create (p, f1, f2, nangle, select_extract)
               }
             }
           }
-
         }
       }
     }
     else if (i == P_HIT_STAR || i == P_HIT_DISK)
     {
-      xxspec[5].f[k] += p[nphot].w;     /*absorbed spectrum */
-      xxspec[5].lf[k1] += p[nphot].w;   /*logarithmic absorbed spectrum */
+      xxspec[SPEC_HITSURF].f[k] += p[nphot].w;  /*absorbed spectrum */
+      xxspec[SPEC_HITSURF].lf[k1] += p[nphot].w;        /*logarithmic absorbed spectrum */
       if (iwind)
       {
-        xxspec[5].f_wind[k] += p[nphot].w;      /* emitted spectrum */
-        xxspec[5].lf_wind[k1] += p[nphot].w;    /* logarithmic emitted spectrum */
+        xxspec[SPEC_HITSURF].f_wind[k] += p[nphot].w;   /* emitted spectrum */
+        xxspec[SPEC_HITSURF].lf_wind[k1] += p[nphot].w; /* logarithmic emitted spectrum */
       }
-      xxspec[5].nphot[i]++;
+      xxspec[SPEC_HITSURF].nphot[i]++;
     }
 
     if (p[nphot].nscat > 0 || p[nphot].nrscat > 0)
-
     {
-      xxspec[6].f[k] += p[nphot].w;     /* j is the number of scatters so this constructs */
-      xxspec[6].lf[k1] += p[nphot].w;   /* logarithmic j is the number of scatters so this constructs */
+      xxspec[SPEC_SCATTERED].f[k] += p[nphot].w;        /* j is the number of scatters so this constructs */
+      xxspec[SPEC_SCATTERED].lf[k1] += p[nphot].w;      /* logarithmic j is the number of scatters so this constructs */
       if (iwind)
       {
-        xxspec[6].f_wind[k] += p[nphot].w;      /* emitted spectrum */
-        xxspec[6].lf_wind[k1] += p[nphot].w;    /* logarithmic emitted spectrum */
+        xxspec[SPEC_SCATTERED].f_wind[k] += p[nphot].w; /* emitted spectrum */
+        xxspec[SPEC_SCATTERED].lf_wind[k1] += p[nphot].w;       /* logarithmic emitted spectrum */
       }
       if (i < 0 || i > NSTAT - 1)
-        xxspec[6].nphot[NSTAT - 1]++;
+        xxspec[SPEC_SCATTERED].nphot[NSTAT - 1]++;
       else
-        xxspec[6].nphot[i]++;   /* scattering spectrum */
+        xxspec[SPEC_SCATTERED].nphot[i]++;      /* scattering spectrum */
     }
 
     if (i < 0 || i > NSTAT - 1)
       nstat[NSTAT - 1]++;
     else
       nstat[i]++;
-
-
   }
 
 

@@ -61,8 +61,8 @@ radiation (PhotPtr p, double ds)
 
   double freq, freq_store;
   double kappa_tot, frac_tot, frac_ff;
-  double frac_z, frac_comp;     /* frac_comp - the heating in the cell due to compton heating */
-  double frac_ind_comp;         /* frac_ind_comp - the heating due to induced compton heating */
+  double frac_z, frac_comp;     /* frac_comp - the heating in the cell due to Compton heating */
+  double frac_ind_comp;         /* frac_ind_comp - the heating due to induced Compton heating */
   double frac_auger;
   double frac_tot_abs, frac_auger_abs, z_abs;
   double kappa_ion[NIONS];
@@ -121,11 +121,11 @@ radiation (PhotPtr p, double ds)
   /* take the average of the frequencies at original position and original+ds */
   freq = 0.5 * (freq_inner + freq_outer);
 
-  /* calculate free-free, compton and ind-compton opacities 
+  /* calculate free-free, Compton and ind-Compton opacities 
      note that we also call these with the average frequency along ds */
 
   kappa_tot = frac_ff = kappa_ff (xplasma, freq);       /* Add ff opacity */
-  kappa_tot += frac_comp = kappa_comp (xplasma, freq);  /* Calculate compton opacity, 
+  kappa_tot += frac_comp = kappa_comp (xplasma, freq);  /* Calculate Compton opacity, 
                                                            store it in kappa_comp and also add it to kappa_tot, 
                                                            the total opacity for the photon path */
 
@@ -341,8 +341,8 @@ radiation (PhotPtr p, double ds)
 
   }
 
-  /* Calculate the reduction in weight - compton scattering is not included, it is now included at scattering
-     however induced compton heating is not implemented at scattering, so it should remain here for the time being
+  /* Calculate the reduction in weight - Compton scattering is not included, it is now included at scattering
+     however induced Compton heating is not implemented at scattering, so it should remain here for the time being
      to maimtain consistency. */
 
   tau = (kappa_tot - frac_comp) * ds;
@@ -436,13 +436,13 @@ radiation (PhotPtr p, double ds)
     xplasma->heat_tot += z * frac_ff;
     xplasma->abs_tot += z * frac_ff;    /* The energy absorbed from the photon field in this cell */
 
-    xplasma->heat_comp += z * frac_comp;        /* Calculate the heating in the cell due to compton heating */
-    xplasma->heat_tot += z * frac_comp; /* Add the compton heating to the total heating for the cell */
+    xplasma->heat_comp += z * frac_comp;        /* Calculate the heating in the cell due to Compton heating */
+    xplasma->heat_tot += z * frac_comp; /* Add the Compton heating to the total heating for the cell */
     xplasma->abs_tot += z * frac_comp;  /* The energy absorbed from the photon field in this cell */
     xplasma->abs_tot += z * frac_ind_comp;      /* The energy absorbed from the photon field in this cell */
 
-    xplasma->heat_tot += z * frac_ind_comp;     /* Calculate the heating in the celldue to induced compton heating */
-    xplasma->heat_ind_comp += z * frac_ind_comp;        /* Increment the induced compton heating counter for the cell */
+    xplasma->heat_tot += z * frac_ind_comp;     /* Calculate the heating in the cell due to induced Compton heating */
+    xplasma->heat_ind_comp += z * frac_ind_comp;        /* Increment the induced Compton heating counter for the cell */
     if (freq > phot_freq_min)
     {
       xplasma->abs_photo += z * frac_tot_abs;   //Here we store the energy absorbed from the photon flux - different from the heating by the binding energy
@@ -455,10 +455,6 @@ radiation (PhotPtr p, double ds)
       xplasma->heat_tot += z * frac_tot;        //All of the photoinization opacities
       xplasma->heat_auger += z * frac_auger;
       xplasma->heat_tot += z * frac_auger;      //All the inner shell opacities
-
-      /* Calculate the number of H ionizing photons, see #255 */
-      if (freq > (RYD2ERGS / PLANCK))
-        xplasma->nioniz++;
 
       q = (z) / (PLANCK * freq * xplasma->vol);
       /* So xplasma->ioniz for each species is just 
@@ -949,6 +945,14 @@ update_banded_estimators (xplasma, p, ds, w_ave)
   if (HEV * p->freq > 13.6)     // only record if above H ionization edge
   {
 
+    /*
+     * Calculate the number of H ionizing photons, see #255
+     * EP 11-19: moving the number of ionizing photons counter into this
+     * function so it will be incremented for both macro and non-macro modes
+     */
+
+    xplasma->nioniz++;
+
     /* IP needs to be radiation density in the cell. We sum contributions from
        each photon, then it is normalised in wind_update. */
     xplasma->ip += ((w_ave * ds) / (PLANCK * p->freq));
@@ -1001,7 +1005,7 @@ update_banded_estimators (xplasma, p, ds, w_ave)
  * ### Notes ###
  * This subroutine was produced
  * when we started to use a spectral model to populate the upper state of a
- * two level atom, as well as to calculate induced compton heating. 
+ * two level atom, as well as to calculate induced Compton heating. 
  *
  * @bug   The routine refers to a mode 5, which does not appear to 
  * exist, or at least it is not one that is included in python.h
@@ -1061,7 +1065,7 @@ mean_intensity (xplasma, freq, mode)
               /* We have a spectral model, but it doesnt apply to the frequency 
                  in question. clearly this is a slightly odd situation, where last
                  time we didnt get a photon of this frequency, but this time we did. 
-                 Still this should only happen in very sparse cells, so induced compton 
+                 Still this should only happen in very sparse cells, so induced Compton 
                  is unlikely to be important in such cells. We generate a warning, just 
                  so we can see if this is happening a lot */
               J = 0.0;
@@ -1096,7 +1100,7 @@ mean_intensity (xplasma, freq, mode)
         J *= 1 / (exp (expo) - 1);
         J *= xplasma->w;
       }
-      else                      //A guess is not a good idea (i.e. we need the model for induced compton), so we return zero.
+      else                      //A guess is not a good idea (i.e. we need the model for induced Compton), so we return zero.
       {
         J = 0.0;
       }

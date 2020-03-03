@@ -276,7 +276,7 @@ calculate_ionization (restart_stat)
     }
     Log ("!!python: luminosity lost by being completely absorbed  %18.12e \n", zz_abs);
     Log ("!!python: luminosity lost by too many scatters          %18.12e \n", zz_scat);
-    Log ("!!python: luminosity lost by hitting the star           %18.12e \n", zz_star);
+    Log ("!!python: luminosity lost by hitting the central object %18.12e \n", zz_star);
     Log ("!!python: luminosity lost by hitting the disk           %18.12e \n", zz_disk);
     Log ("!!python: luminosity lost by errors                     %18.12e \n", zz_err);
     Log ("!!python: luminosity lost by the unknown                %18.12e \n", zz_else);
@@ -683,7 +683,7 @@ make_spectra (restart_stat)
 
 
   xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
-  Log ("\nBrief Run Summary\nAt program comppletion, the elapsed TIME was %f\n", timer ());
+  Log ("\nBrief Run Summary\nAt program completion, the elapsed TIME was %f\n", timer ());
   Log ("There were %d of %d ionization cycles and %d of %d spectral cycles run\n", geo.wcycle, geo.wcycles, geo.pcycle, geo.pcycles);
   Log ("Convergence statistics for the wind after the ionization calculation:\n");
   check_convergence ();

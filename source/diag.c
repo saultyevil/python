@@ -400,6 +400,8 @@ save_photons (p, comment)
            geo.wcycle, p->np, p->freq, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
            p->lmn[2], p->grid, p->istat, p->origin, p->nres, comment);
 
+  fflush (epltptr);
+
   return (0);
 }
 
@@ -430,6 +432,8 @@ track_scatters (p, nplasma, comment)
 
   fprintf (epltptr, "Scattter %i %.2e %.2e %.2e  %i %e %e %i %s\n", p->np,
            p->x[0], p->x[1], p->x[2], p->grid, p->freq, p->w, nplasma, comment);
+
+  fflush (epltptr);
 
   return (0);
 }

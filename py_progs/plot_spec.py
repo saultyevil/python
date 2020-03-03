@@ -143,7 +143,7 @@ def do_all_angles_ev(rootname='sv',smooth=21,emin=1000,emax=9000,fmax=0,fig_no=1
         data=ascii.read(filename)
     except IOError:
         print('Error: Could not find %s' % filename)
-        return
+        return 'None'
 
 
     print(data.colnames)
@@ -178,8 +178,8 @@ def do_all_angles_ev(rootname='sv',smooth=21,emin=1000,emax=9000,fmax=0,fig_no=1
         xlabel=col+'$^{\circ}$'
         q=convolve(flux,boxcar(smooth)/float(smooth),mode='same')
         pylab.semilogx(data['Freq.']*HEV,q*data['Freq.'],'-',label=xlabel)
-    pylab.xlabel(r'Energy (eV)')
-    pylab.ylabel(r'$\nu F_{\nu}$')
+    pylab.xlabel(r'Energy (eV)',size=16)
+    pylab.ylabel(r'$\nu F_{\nu}$',size=16)
     z=pylab.axis()
     if fmax==0:
         pylab.axis((emin,emax,0,z[3]))
@@ -189,8 +189,9 @@ def do_all_angles_ev(rootname='sv',smooth=21,emin=1000,emax=9000,fmax=0,fig_no=1
     pylab.title(root)
     pylab.legend(loc='best')
     pylab.draw()
-    pylab.savefig(root+'.png')
-    return
+    plotfile=root+'.png'
+    pylab.savefig(plotfile)
+    return plotfile
 
 
 
@@ -214,7 +215,7 @@ def do_all_angles(rootname='sv',smooth=21,wmin=850,wmax=1850,fmax=0,fig_no=1, ti
         data=ascii.read(filename)
     except IOError:
         print('Error: Could not find %s' % filename)
-        return
+        return 'None'
 
     # print(data.colnames)
 
@@ -260,8 +261,8 @@ def do_all_angles(rootname='sv',smooth=21,wmin=850,wmax=1850,fmax=0,fig_no=1, ti
         xlabel=col+'$^{\circ}$'
         q=convolve(flux,boxcar(smooth)/float(smooth),mode='same')
         pylab.plot(data['Lambda'],q,'-',label=xlabel)
-    pylab.xlabel(r'Wavelength ($\AA$)')
-    pylab.ylabel('Flux')
+    pylab.xlabel(r'Wavelength ($\AA$)',size=16)
+    pylab.ylabel('Flux',size=16)
     z=pylab.axis()
     if fmax==0:
         pylab.axis((wmin,wmax,0,z[3]))
@@ -270,11 +271,12 @@ def do_all_angles(rootname='sv',smooth=21,wmin=850,wmax=1850,fmax=0,fig_no=1, ti
 
     if title == None:
         title = root
-    pylab.title(title)
+    pylab.title(title,size=16)
     pylab.legend(loc='best')
     pylab.draw()
-    pylab.savefig(root+'.png')
-    return
+    plotfile=root+'.png'
+    pylab.savefig(plotfile)
+    return plotfile
 
 
 def steer(argv):

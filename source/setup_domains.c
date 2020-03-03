@@ -240,14 +240,14 @@ get_wind_params (ndom)
   {
     Error ("get_wind_params: zdom[ndom].rmax 0 for wind type %d\n", zdom[ndom].wind_type);
 
-
-    zdom[ndom].rmax = 1e12;
-
     if (geo.system_type == SYSTEM_TYPE_AGN || geo.system_type == SYSTEM_TYPE_BH)
     {
       zdom[ndom].rmax = 50. * geo.rstar;
     }
-
+    else
+    {
+      zdom[ndom].rmax = 1e12;
+    }
 
     rddoub ("Wind.radmax(cm)", &zdom[ndom].rmax);
   }

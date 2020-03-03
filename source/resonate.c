@@ -192,12 +192,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * If we want true fidelity, perhaps we could compute the cross section
  * for every little path section between resonances */
 
-  mean_freq = (freq_inner + freq_outer) / 2.0;
-
-  /*Compute the angle averaged cross section */
-
-  kap_es = klein_nishina (mean_freq) * xplasma->ne * zdom[ndom].fill;
-
+  mean_freq = 0.5 * (freq_inner + freq_outer);
 
 
 
@@ -230,11 +225,17 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * are set by limit_lines()
  */
 
+  /*Compute the angle averaged electron scattering cross section.  Note the es is always
+     treated as a scattering event. */
 
-/* Next part deals with computation of bf opacity. In the macro atom method
- * this is needed.  For the two level approximation it is not.. This section activates
- * if geo.rt_mode==RT_MODE_MACRO (switch for macro atom method). If the
- * macro atom method is not used just get kap_bf to 0 and move on). SS
+  kap_es = klein_nishina (mean_freq) * xplasma->ne * zdom[ndom].fill;
+
+/* If in macro-atom mode, calculate the bf and ff opacities, becuase in macro-atom mode
+ * everthing including bf is calculated as a scattering process.  The routine
+ * kappa_bound stores the individual opacities as well as the total, because when
+ * there is more than one opacity contributin to the total, these are needed to choose
+ * which particular bound-free transition to activate.  
+ * For the two level approximation, none of this needed. 
  */
 
   kap_bf_tot = 0;
@@ -243,13 +244,10 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (geo.rt_mode == RT_MODE_MACRO)
   {
-/* Potentially several continuum may contribute in a given frequency
- * range so the kap_bf is an array.
- * Also need to store the total - kap_bf_tot.
- */
 
+    freq_av = freq_inner;
 
-    freq_av = freq_inner;       //(freq_inner + freq_outer) * 0.5;  //need to do better than this perhaps but okay for star - comoving frequency (SS)
+    //(freq_inner + freq_outer) * 0.5;  //need to do better than this perhaps but okay for star - comoving frequency (SS)
 
 
     kap_bf_tot = kappa_bf (xplasma, freq_av, 0);
@@ -263,6 +261,8 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
     kap_bf_tot = kap_ff = 0.0;
     Error_silent ("ds_calculate vol = 0: cell %d position %g %g %g\n", p->grid, p->x[0], p->x[1], p->x[2]);
   }
+
+
 
 
   kap_cont = kap_es + kap_bf_tot + kap_ff;      //total continuum opacity
@@ -467,7 +467,6 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   cds_v2_old = v2;              // and the velocity along the line of sight
 
   return (ds_current);
-
 }
 
 
@@ -493,7 +492,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  *
  * @details
  * This routine is called to determine which of several continuum proceseses
- * cause a photon to be scattered or absorpbed.  In addition to electron scattering
+ * cause a photon to be scattered or absorbed.  In addition to electron scattering
  * and free-free absorption, the routine can identify which photoionization process
  * is implicated.
  *
@@ -506,10 +505,10 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * which of the processes was responsible.  Data for the opacity due to
  * photonionization is passed remotely via the PlasmaPtr.
  *
- * In a program running in the two level approxiamtion, electron scattering
- * and ff emission are treated as scattering processes, but photionionization
- * is not.  In macro-atom mode, photoionization is treated as a scattering 
- * process.
+ * In a program running in the two level approximation, only electron scattering
+ * and ff and bf are treated as absorption processes.  In macro atom, ff and
+ * photoionization are treated as a scattering 
+ * processes.
  *
  **********************************************************/
 
@@ -575,6 +574,8 @@ Just do a check that all is well - this can be removed eventually (SS)
  * @return     The bf opacity
  *
  * @details
+ *
+ * The routine calculates the bf 
  *
  * ### Notes ###
  * The routine allows for clumping, reducing kappa_bf by the filling
@@ -1037,10 +1038,6 @@ scatter (p, nres, nnscat)
   stuff_phot (p, &pold);
   n = where_in_grid (ndom, pold.x);     // Find out where we are
 
-  vwind_xyz (ndom, p, v);       //get the local velocity at the location of the photon
-  v_dop = dot (p->lmn, v);      //get the dot product of the photon direction with the wind, to get the doppler velocity
-  freq_comoving = p->freq * (1. - v_dop / VLIGHT);      //This is the photon frequency in the comoving frame
-
   if (n < 0)
   {
     Error ("scatter: Trying to scatter a photon in grid cell %d\n", n);
@@ -1058,14 +1055,14 @@ scatter (p, nres, nnscat)
      absorption (flagged by +ve integer < NLINES), bf absorption
      (flagged by +ve integer > NLINES) and ff absorption (flagged -2). (SS) */
 
-  /* If the macro atom method is being used then the following section must be
+  /* BEGINNING OF SECTION FOR HANDLING MACRO-ATOMS 
+     If the macro atom method is being used then the following section must be
      performed to select a macro atom deactivation process. If not then the
      deactivation process is always the same as the activation process and so
      nothing needs to be done. */
 
   if (geo.rt_mode == RT_MODE_MACRO)     //check if macro atom method in use
   {
-
 
     mplasma = &macromain[xplasma->nplasma];
 
@@ -1084,12 +1081,12 @@ scatter (p, nres, nnscat)
 
     else if (*nres > NLINES)
     {
-      /* This means that it was a photoionisation process.
+      /* It was a photoionisation process.
          For this case we need to decide first whether to excite
          a macro atom directly or to create a k-packet. */
 
       /*
-         The probability if creating a k-packet is given by the
+         The probability of creating a k-packet is given by the
          mc estimators gamma, gamma_e, alpha_st, alpha_st_e.
          Start by identifying which estimators we want and then
          by computing gamma_twiddle (in Leon's notation -
@@ -1106,7 +1103,9 @@ scatter (p, nres, nnscat)
 
       if (phot_top[*nres - NLINES - 1].macro_info == 1 && geo.macro_simple == 0)
       {
-        /* Macro ion case (SS) */
+        /* Macro ion case (SS) This is the case bound free interaction for a 
+           xsection that is part of a macro atom (and we have not defaulted 
+           to the simplifed approach) */
 
         /* Note:  NLINES-1 in the lines below is correct.  This is becasue
            the 1st bf is identified by nres = NLINES+1 and this is
@@ -1176,14 +1175,21 @@ scatter (p, nres, nnscat)
         {
           macro_gov (p, nres, 1, &which_out);   //routine to deal with macro atom excitation
         }
+
+        /* This ends the calculation for dealing with free-bound absorption of a macro atom */
       }
       else if (phot_top[*nres - NLINES - 1].macro_info == 0 || geo.macro_simple == 1)
       {
-        // Simple ion case //
-        /* Need to make decision about making a k-packet. Get the fraction of the energy
+        /* Simple ion case.  It's a bf interaction in a calculation involving macro-atoms, 
+           but this photoionization x-section is is associated with one of the levels
+           a simple atom, not one that is part of a full blown macro atom.
+
+           (Alternatively we are treating all atoms in a simplfied mode)
+
+           Need to make decision about making a k-packet. Get the fraction of the energy
            that goes into the electron rather than being stored as ionisation energy: this
-           fraction gives the selection probability for the packet. It's given by the
-           (photon frequency / edge frequency - 1) (SS) */
+           fraction gives the selection probability for creating a k packet. It's given by 
+           (1 - ionization edge frequecy / photon frequency)  */
 
         prob_kpkt = 1. - (phot_top[*nres - NLINES - 1].freq[0] / freq_comoving);
 
@@ -1198,7 +1204,6 @@ scatter (p, nres, nnscat)
           prob_kpkt = 0.0;
         }
 
-
         /* Now choose whether or not to make a k-packet. */
 
         kpkt_choice = random_number (0.0, 1.0); //random number for kpkt choice
@@ -1207,13 +1212,26 @@ scatter (p, nres, nnscat)
            altered mode for bound-free in "simple-macro mode". If we do,
            then the photon weight gets multiplied down by a factor (nu-nu_0)/nu
            and we force a kpkt to be created */
+
 #if BF_SIMPLE_EMISSIVITY_APPROACH
+        /* This is the new approach which does not explicityly conserve energy.
+           Re record the amount of energy going into the simple ion ionization pool.  This
+           version does not produce nan if prob_kpt is 0 and then reduce the photon weight
+           to allow for the portion of the energy that went into the ionization pool before
+           generating a kpkt.  In this approach we always generate a kpkt */
+
+        xplasma->bf_simple_ionpool_in += p->w * (1 - prob_kpkt);
         p->w *= prob_kpkt;
 
-        /* record the amount of energy going into the simple ion ionization pool */
-        xplasma->bf_simple_ionpool_in += (p->w / prob_kpkt) - p->w;
+//OLD        /* record the amount of energy going into the simple ion ionization pool */
+//OLD        xplasma->bf_simple_ionpool_in += (p->w / prob_kpkt) - p->w;
         macro_gov (p, nres, 2, &which_out);     //routine to deal with kpkt
 #else
+        /* This is the old apporach.  Process the BF photon for a simple atom.  In this
+           approach we generate a kpkt or an r-packet depending on whether the probility
+           of creating a kpkt, namely prob_kpkt
+         */
+
         if (prob_kpkt > kpkt_choice)
         {
           macro_gov (p, nres, 2, &which_out);   //routine to deal with kpkt
@@ -1239,14 +1257,10 @@ scatter (p, nres, nnscat)
     }
   }
 
-  /* So at this point we have completed all the bits that are specific to the macro approach. 54b--ksl */
+  /* END OF SECTION FOR HANDLING ASPECTS OF SCATTERING PROCESSES THAT ARE SPECIFIC TO MACRO-ATOMS. */
 
-  /* SS Apr 04: I've moved this next block up so that nres is set correctly for the call to randvec */
+  /* Set nres  correctly for the call to randvec */
 
-  /* Since the error check is commented out for good reason, we should just assign
-   * *nres to p->nres,  and be done with it.  ?? Stuart, assuming you agree just
-   * eliminate all the clutter here.  KSL  ??
-   */
   p->nres = *nres;              // Update the resonance number on a scatter
 
   /* SS July 04
@@ -1256,20 +1270,20 @@ scatter (p, nres, nnscat)
      For macro atoms the code above decides that emission will occur in the line - we now just need
      to use the thermal trapping model to choose the direction. */
 
-  if (*nres == -1)              //Its an electron scatter, so we will call compton to get a direction
+  if (*nres == -1)              //Its an electron scatter
   {
-    p->freq = freq_comoving;    //This is the photon frequency in the electron rest frame calculated earlier in the routine
-    compton_dir (p, xplasma);   //Get a new direction using the KN formula
-    v_dop = dot (p->lmn, v);    //Find the dot product of the new velocity with the wind
-    p->freq = p->freq / (1. - v_dop / VLIGHT);  //Transform back to the observers frame
+    p->freq = freq_comoving;    // The photon frequency in the electron rest frame 
+    compton_dir (p);            // Get a new direction using the KN formula
+    v_dop = dot (p->lmn, v);    // Find the dot product of the new direction with the wind velocity 
+    p->freq = p->freq / (1. - v_dop / VLIGHT);  //Transform back to the observer frame
 
   }
-
   else if (*nres == -2 || *nres > NLINES || geo.scatter_mode == SCATTER_MODE_ISOTROPIC)
   {
-    /*  It was either an electron scatter, bf emission or ff emission so the  distribution is isotropic,
-       or it was a line photon but we want isotropic scattering anyway.  */
-    randvec (z_prime, 1.0);     /* Get a new direction for the photon */
+    /*  ff emission (-2) , bf emission (>NLINES) or 
+       or it was a line photon but we want isotropic scattering anyway. Note
+       that ff and bf are only treated as scattering processes in macro-atom mode */
+    randvec (z_prime, 1.0);
     stuff_v (z_prime, p->lmn);
   }
   else
@@ -1286,46 +1300,38 @@ scatter (p, nres, nnscat)
 
 
 
-  vwind_xyz (ndom, p, v);       /* Get the velocity vector for the wind */
+//OLD (We already calculated this)  vwind_xyz (ndom, p, v);       /* Get the velocity vector for the wind */
 
   if (*nres != -1)              //Only do this if its not an electron scatter, otherwise we have already dealt with this
     doppler (&pold, p, v, *nres);
 
 
 
-/* We estimate velocities by interpolating between the velocities at the edges of the cell based
-on the photon direction.  We have now changed the direction of the photon, and so we may not
-be at the resoance as calculated this way.  reposition moves the photon to the resonance using
-the new velocity
-
-Note that one cannot fudge the frequencies, e.g. for some kind of thermal
-broadening  before this or else one will defeat the purpose of reposition.
-
-*/
-
-
-
 /*Now calculate the momentum transfer.  What follows appears to be
 correct only if there was no energy absorbed at the scattering site.
-?? The rest of this is only needed in the ionization cycle.  Need to eliminate in the
-detailed spectrum calculation ??
+The rest of this is only needed during ionization cycles, before the wind itself
+if fixed.  
 */
 
-  stuff_v (pold.lmn, p_init);
-  renorm (p_init, pold.w / VLIGHT);
-  stuff_v (p->lmn, p_final);
-  renorm (p_final, p->w / VLIGHT);
-  vsub (p_final, p_init, dp);
-
-  project_from_xyz_cyl (pold.x, dp, dp_cyl);
-
-
-
-  if (pold.x[2] < 0)
-    dp_cyl[2] *= (-1);
-  for (i = 0; i < 3; i++)
+  if (geo.pcycle == 0)
   {
-    xplasma->dmo_dt[i] += dp_cyl[i];
+    stuff_v (pold.lmn, p_init);
+    renorm (p_init, pold.w / VLIGHT);
+    stuff_v (p->lmn, p_final);
+    renorm (p_final, p->w / VLIGHT);
+    vsub (p_final, p_init, dp);
+
+    project_from_xyz_cyl (pold.x, dp, dp_cyl);
+
+
+
+    if (pold.x[2] < 0)
+      dp_cyl[2] *= (-1);
+    for (i = 0; i < 3; i++)
+    {
+      xplasma->dmo_dt[i] += dp_cyl[i];
+    }
+
   }
 
 

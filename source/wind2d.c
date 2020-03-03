@@ -107,9 +107,11 @@ define_wind ()
     {
       import_make_grid (w, ndom);
     }
-    else if (zdom[ndom].wind_type == SHELL)     /* nsh: This is the mode where we want the wind and the grid carefully
-                                                   controlled to allow a very thin shell. We ensure that the coordinate type is spherical.
-                                                 */
+    /* nsh: This is the mode where we want the wind and the grid carefully
+     * controlled to allow a very thin shell. We ensure that the coordinate
+     * type is spherical.
+     */
+    else if (zdom[ndom].wind_type == SHELL)
     {
       Log
         ("We are making a thin shell type grid to match a thin shell wind. This is totally aphysical and should only be used for testing purposes\n");
@@ -125,10 +127,11 @@ define_wind ()
     }
     else if (zdom[ndom].coord_type == RTHETA)
     {
-      if (zdom[ndom].wind_type == HYDRO)        /* 13jun -- nsh - 76 - This is a switch to allow one to use the
-                                                   actual zeus grid in the special case of a 'proga' wind in rtheta
-                                                   coordinates
-                                                 */
+      /* 13jun -- nsh - 76 - This is a switch to allow one to use the
+       *  actual zeus grid in the special case of a 'proga' wind in rtheta
+       * coordinates
+       */
+      if (zdom[ndom].wind_type == HYDRO)
       {
         rtheta_make_hydro_grid (w, ndom);
       }
@@ -144,7 +147,9 @@ define_wind ()
     else
     {
       Error ("define_wind: Don't know how to make coordinate type %d\n", zdom[ndom].coord_type);
+      Exit (1);
     }
+
     for (n = zdom[ndom].nstart; n < zdom[ndom].nstop; n++)
     {
       /* For imported models we we have already set the velocities
@@ -158,6 +163,7 @@ define_wind ()
     }
 
   }
+
   wind_complete (w);
 
   /* Now determine the valid volumes of each cell and also determine whether the cells are in all
@@ -165,7 +171,6 @@ define_wind ()
    */
 
   for (ndom = 0; ndom < geo.ndomain; ndom++)
-
   {
     if (zdom[ndom].coord_type == SPHERICAL)
     {
@@ -315,7 +320,7 @@ be optional which variables beyond here are moved to structures othere than Wind
                                                    set this number to the hottest part of the model -
                                                    this should define where any exponential dropoff becomes important */
       plasmamain[n].exp_w[nn] = 0.0;    /* 120817 Who knows what this should be! */
-      plasmamain[n].pl_alpha[nn] = geo.alpha_agn;       /*As an initial guess we assume the whole wind is
+      plasmamain[n].pl_alpha[nn] = geo.alpha_agn;       /*Awind2d: For domains an initial guess we assume the whole wind is
                                                            optically thin and so the spectral index for a PL illumination will be the
                                                            same everywhere.  */
       plasmamain[n].pl_log_w[nn] = -1e99;       /*131114 - a tiny weight - just to fill the variable */
@@ -334,6 +339,10 @@ be optional which variables beyond here are moved to structures othere than Wind
     {
       plasmamain[n].t_r = hydro_temp (x);       //NSH 151126 - slight tidy up here - we now set t_e and t_r to hydro temp, t_e change is below//
     }
+    else if (zdom[ndom].wind_type == IMPORT)
+    {
+      plasmamain[n].t_r = model_temp (ndom, x, FALSE);
+    }
     else
     {
       plasmamain[n].t_r = zdom[ndom].twind;
@@ -350,13 +359,19 @@ be optional which variables beyond here are moved to structures othere than Wind
 	  a fixed temprature calculation,then the wind temperature is set to be the wind temperature so the
 	  user gets what they are expecting */
 
-    if (modes.fixed_temp == 0 && modes.zeus_connect == 0)       //NSH 151126 - dont multply by 0.9 in zeus connect or fixed temp modes
+    if (zdom[ndom].wind_type == IMPORT)
+    {
+      plasmamain[n].t_e = model_temp (ndom, x, TRUE);
+    }
+    else if (modes.fixed_temp == FALSE && modes.zeus_connect == FALSE)  //NSH 151126 - dont multply by 0.9 in zeus connect or fixed temp modes
+    {
       plasmamain[n].t_e = plasmamain[n].t_e_old = 0.9 * plasmamain[n].t_r;      //Lucy guess
+    }
     else
+    {
       plasmamain[n].t_e = plasmamain[n].t_e_old = plasmamain[n].t_r;
+    }
     //If we want to fix the temperature, we set it to tr which has previously been set to twind.
-
-
 
 /* Calculate an initial guess for the weight of the PL spectrum (constant / area of a sphere / 4pi) */
 
@@ -495,6 +510,17 @@ be optional which variables beyond here are moved to structures othere than Wind
     }
   }
 
+  /*
+   * We have finished with imported models here, so free the memory to clear
+   * up the memory space for stuff we don't need anymore.
+   */
+
+  for (n = 0; n < geo.ndomain; n++)
+  {
+    if (zdom[n].wind_type == IMPORT)
+      free_import (zdom[n].coord_type, n);
+  }
+
   return (0);
 }
 
@@ -515,6 +541,7 @@ double wig_x, wig_y, wig_z;
  * of the domains,
  * a negative number -1 will be returned if the position is inside athe grid,
  * -2 if it is outside the grid for that domain
+ *  TODO: ??? this is confusing documentation
  *
  * @details
  *

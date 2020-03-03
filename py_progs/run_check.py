@@ -265,7 +265,7 @@ def make_html(root,converge_plot,te_plot,tr_plot,spec_tot_plot,spec_plot,complet
     Make an html file that collates all the results
     '''
 
-    string=xhtml.begin('Evaluation of how well the python run of %s succeeded' % root)
+    string=xhtml.begin('%s: How well did the Python run go?' % root)
 
     string+=xhtml.paragraph('Provide an overview of whether the run of %s has succeeded' % root)
 
@@ -293,7 +293,10 @@ def make_html(root,converge_plot,te_plot,tr_plot,spec_tot_plot,spec_plot,complet
     string+=xhtml.image('file:%s' % (spec_tot_plot))
     string+=xhtml.hline()
     string+=xhtml.h2('What do the final spectra look like (somewhat smoothed)?')
-    string+=xhtml.image('file:%s' % (spec_plot))
+    if spec_plot != 'None':
+        string+=xhtml.image('file:%s' % (spec_plot))
+    else:
+        string+=xhtml.paragraph('There is no plot of a detailed spectrum, probably because detailed spectra were not created')
     string+=xhtml.hline()
 
     string+=xhtml.h2('Errors and Warnings')
@@ -386,8 +389,8 @@ def doit(root='ixvel',outputfile='out.txt'):
     plot_tot.doit(root)
     spec_tot_plot=root+'.spec_tot.png'
 
-    plot_spec.do_all_angles(root,wmin=0,wmax=0)
-    spec_plot=root+'.png'
+    spec_plot=plot_spec.do_all_angles(root,wmin=0,wmax=0)
+    # spec_plot=root+'.png'
 
     errors=py_error(root)
      

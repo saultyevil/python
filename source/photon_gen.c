@@ -192,6 +192,7 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
     p[n].freq_orig = p[n].freq;
     p[n].origin_orig = p[n].origin;
     p[n].np = n;
+    p[n].ds = 0;
     if (geo.reverb != REV_NONE && p[n].path < 0.0)      // SWM - Set path lengths for disk, star etc.
       simple_paths_gen_phot (&p[n]);
   }
@@ -397,10 +398,11 @@ iwind = -1 	Don't generate any wind photons at all
 
   if (geo.matom_radiation)
   {
-    /* JM 1408 -- only calculate macro atom emissivity if first cycle.
-       Otherwise have restarted run and can use saved emissivities */
-    /* This returns the specific luminosity
+    /* Only calculate macro atom emissivity during ionization cycles ant
+       at the beginning of the spectral cycles.  Otherwise we can 
+       can use the saved emissivities.  The routine  returns the specific luminosity
        in the spectral band of interest */
+
     if (geo.pcycle == 0)
     {
       geo.f_matom = get_matom_f (CALCULATE_MATOM_EMISSIVITIES);
@@ -412,7 +414,7 @@ iwind = -1 	Don't generate any wind photons at all
     geo.f_kpkt = get_kpkt_f (); /* This returns the specific luminosity
                                    in the spectral band of interest */
 
-    matom_emiss_report ();      // function which logs the macro atom level emissivites
+    matom_emiss_report ();      // Log the macro atom level emissivites
   }
 
   geo.f_tot = geo.f_star + geo.f_disk + geo.f_bl + geo.f_wind + geo.f_kpkt + geo.f_matom + geo.f_agn;
@@ -453,26 +455,32 @@ iwind = -1 	Don't generate any wind photons at all
 int
 phot_status ()
 {
-  if (geo.adiabatic)
-    Log ("!! xdefine_phot: heating & cooling  due to adiabatic processes:         %8.2e %8.2e \n", geo.heat_adiabatic, geo.cool_adiabatic);
 
   Log
-    ("!! xdefine_phot: lum_tot %8.2e lum_star %8.2e lum_disk %8.2e lum_bl %8.2e lum_agn %8.2e lum_wind %8.2e\n",
-     geo.lum_tot, geo.lum_star, geo.lum_disk, geo.lum_bl, geo.lum_agn, geo.lum_wind);
+    ("!! xdefine_phot: lum_tot %8.2e lum_star %8.2e lum_bl %8.2e lum_bh %8.2e lum_disk %8.2e lum_wind %8.2e\n",
+     geo.lum_tot, geo.lum_star, geo.lum_bl, geo.lum_agn, geo.lum_disk, geo.lum_wind);
 
   Log
-    ("!! xdefine_phot:   f_tot %8.2e   f_star %8.2e   f_disk %8.2e   f_bl %8.2e   f_agn %8.2e   f_wind %8.2e   f_matom %8.2e   f_kpkt %8.2e \n",
-     geo.f_tot, geo.f_star, geo.f_disk, geo.f_bl, geo.f_agn, geo.f_wind, geo.f_matom, geo.f_kpkt);
+    ("!! xdefine_phot:   f_tot %8.2e   f_star %8.2e   f_bl %8.2e   f_bh %8.2e   f_disk %8.2e   f_wind %8.2e   f_matom %8.2e   f_kpkt %8.2e \n",
+     geo.f_tot, geo.f_star, geo.f_bl, geo.f_agn, geo.f_disk, geo.f_wind, geo.f_matom, geo.f_kpkt);
 
   Log
     ("!! xdefine_phot: wind ff %8.2e       fb %8.2e   lines  %8.2e  for freq %8.2e %8.2e\n",
      geo.lum_ff, geo.lum_rr, geo.lum_lines, geo.f1, geo.f2);
-  Log
-    ("!! xdefine_phot: star  tstar  %8.2e   %8.2e   lum_star %8.2e %8.2e  %8.2e \n",
-     geo.tstar, geo.tstar_init, geo.lum_star, geo.lum_star_init, geo.lum_star_back);
-  Log
-    ("!! xdefine_phot: disk                               lum_disk %8.2e %8.2e  %8.2e \n",
-     geo.lum_disk, geo.lum_disk_init, geo.lum_disk_back);
+  if (geo.lum_star > 0)
+  {
+    Log
+      ("!! xdefine_phot: star  tstar  %8.2e   %8.2e   lum_star %8.2e %8.2e  %8.2e \n",
+       geo.tstar, geo.tstar_init, geo.lum_star, geo.lum_star_init, geo.lum_star_back);
+  }
+  if (geo.lum_disk > 0)
+  {
+    Log
+      ("!! xdefine_phot: disk                               lum_disk %8.2e %8.2e  %8.2e \n",
+       geo.lum_disk, geo.lum_disk_init, geo.lum_disk_back);
+  }
+  if (geo.adiabatic)
+    Log ("!! xdefine_phot: heating & cooling  due to adiabatic processes:         %8.2e %8.2e \n", geo.heat_adiabatic, geo.cool_adiabatic);
 
   return (0);
 }
@@ -1421,9 +1429,9 @@ bl_init (lum_bl, t_bl, freqmin, freqmax, ioniz_or_final, f)
  * photons.  It is not entirely clear why this is where this is done
  *
  * 181009 - ksl - Previously, this routine caused Python to exit 
- * if phtoon_checks produced more than a small number of errors. I
- * have removed this exterme measure but that toes not mean that
- * photon checks should be igrnored.
+ * if photon_checks produced more than a small number of errors. I
+ * have removed this extreme measure but that does not mean that
+ * photon checks should be ignored.
  *
  **********************************************************/
 
@@ -1440,6 +1448,7 @@ photon_checks (p, freqmin, freqmax, comment)
   nnn = 0;
   nlabel = 0;
 
+
   /* Next two lines are to allow for fact that photons generated in
    * a frequency range may be Doppler shifted out of that range, especially
    * if they are disk photons generated right up against one of the frequency
@@ -1453,14 +1462,15 @@ photon_checks (p, freqmin, freqmax, comment)
 
   freqmax *= (1.8);
   freqmin *= (0.6);
+
   for (nn = 0; nn < NPHOT; nn++)
   {
-//OLD    p[nn].np = nn;
     if (PLANCK * p[nn].freq > ion[0].ip)
     {
       geo.cool_tot_ioniz += p[nn].w;
       geo.n_ioniz += p[nn].w / (PLANCK * p[nn].freq);
     }
+
     if (sane_check (p[nn].freq) != 0 || sane_check (p[nn].w))
     {
       if (nlabel == 0)
@@ -1468,8 +1478,8 @@ photon_checks (p, freqmin, freqmax, comment)
         Error ("photon_checks:   nphot  origin  freq     freqmin    freqmax\n");
         nlabel++;
       }
-      Error ("photon_checks: %id %5d %5d %10.4e %10.4e %10.4e freq out of range\n", nn, p[nn].origin, p[nn].nres, p[nn].freq, freqmin,
-             freqmax);
+      Error ("photon_checks: %id %5d %5d %10.4e %10.4e %10.4e freq or weight are not sane\n", nn, p[nn].origin, p[nn].nres, p[nn].freq,
+             freqmin, freqmax);
       p[nn].freq = freqmax;
       nnn++;
     }
@@ -1477,7 +1487,7 @@ photon_checks (p, freqmin, freqmax, comment)
     {
       if (nlabel == 0)
       {
-        Error ("photon_checks:   nphot  origin  nres  freq     freqmin    freqmax\n");
+        Error ("photon_checks:   nphot  origin  freq     freqmin    freqmax\n");
         nlabel++;
       }
       Error ("photon_checks: %id %5d %5d %10.4e %10.4e %10.4e freq out of range\n", nn, p[nn].origin, p[nn].nres, p[nn].freq, freqmin,
@@ -1493,13 +1503,6 @@ photon_checks (p, freqmin, freqmax, comment)
   {
     Log ("photon_checks: %d of %d or %e per cent of photons failed checks\n", nnn, NPHOT, nnn * 100. / NPHOT);
   }
-
-//OLD  if (nnn > max_errors)
-//OLD  {
-//OLD    error_summary ("Exiting because too many bad photons generated");
-//OLD Avoide the exit      Exit (0);
-//OLD  }
-
 
   return (0);
 }
