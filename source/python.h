@@ -1382,7 +1382,12 @@ int nfb;                        // Actual number of freqency intervals calculate
 #include "templates.h"
 #include "recipes.h"
 
-// 04apr ksl -- made kap_bf external so can be passed around variables
+/* kap_bf stores opacities for a single cell and as calculated by the routine kappa_bf. 
+ * It was made an external array to avoid having to pass it between various calling routines
+ * but this means that one has to be careful that data is not stale.  It is required for 
+ * macro-atoms where bf is a scattering process, but not for the simple case.
+ */
+
 double kap_bf[NLEVELS];
 
 
@@ -1515,8 +1520,6 @@ int xxxbound;
  * for each input variable.  At present, this is only
  * used for the selection of spec_types
  */
-
-
 
 typedef struct rdpar_choices
 {

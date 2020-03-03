@@ -192,12 +192,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * If we want true fidelity, perhaps we could compute the cross section
  * for every little path section between resonances */
 
-  mean_freq = (freq_inner + freq_outer) / 2.0;
-
-  /*Compute the angle averaged cross section */
-
-  kap_es = klein_nishina (mean_freq) * xplasma->ne * zdom[ndom].fill;
-
+  mean_freq = 0.5 * (freq_inner + freq_outer);
 
 
 
@@ -230,11 +225,17 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * are set by limit_lines()
  */
 
+  /*Compute the angle averaged electron scattering cross section.  Note the es is always
+     treated as a scattering event. */
 
-/* Next part deals with computation of bf opacity. In the macro atom method
- * this is needed.  For the two level approximation it is not.. This section activates
- * if geo.rt_mode==RT_MODE_MACRO (switch for macro atom method). If the
- * macro atom method is not used just get kap_bf to 0 and move on). SS
+  kap_es = klein_nishina (mean_freq) * xplasma->ne * zdom[ndom].fill;
+
+/* If in macro-atom mode, calculate the bf and ff opacities, becuase in macro-atom mode
+ * everthing including bf is calculated as a scattering process.  The routine
+ * kappa_bound stores the individual opacities as well as the total, because when
+ * there is more than one opacity contributin to the total, these are needed to choose
+ * which particular bound-free transition to activate.  
+ * For the two level approximation, none of this needed. 
  */
 
   kap_bf_tot = 0;
@@ -243,13 +244,10 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (geo.rt_mode == RT_MODE_MACRO)
   {
-/* Potentially several continuum may contribute in a given frequency
- * range so the kap_bf is an array.
- * Also need to store the total - kap_bf_tot.
- */
 
+    freq_av = freq_inner;
 
-    freq_av = freq_inner;       //(freq_inner + freq_outer) * 0.5;  //need to do better than this perhaps but okay for star - comoving frequency (SS)
+    //(freq_inner + freq_outer) * 0.5;  //need to do better than this perhaps but okay for star - comoving frequency (SS)
 
 
     kap_bf_tot = kappa_bf (xplasma, freq_av, 0);
@@ -263,6 +261,8 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
     kap_bf_tot = kap_ff = 0.0;
     Error_silent ("ds_calculate vol = 0: cell %d position %g %g %g\n", p->grid, p->x[0], p->x[1], p->x[2]);
   }
+
+
 
 
   kap_cont = kap_es + kap_bf_tot + kap_ff;      //total continuum opacity
@@ -492,7 +492,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  *
  * @details
  * This routine is called to determine which of several continuum proceseses
- * cause a photon to be scattered or absorpbed.  In addition to electron scattering
+ * cause a photon to be scattered or absorbed.  In addition to electron scattering
  * and free-free absorption, the routine can identify which photoionization process
  * is implicated.
  *
@@ -505,10 +505,10 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * which of the processes was responsible.  Data for the opacity due to
  * photonionization is passed remotely via the PlasmaPtr.
  *
- * In a program running in the two level approxiamtion, electron scattering
- * and ff emission are treated as scattering processes, but photionionization
- * is not.  In macro-atom mode, photoionization is treated as a scattering 
- * process.
+ * In a program running in the two level approximation, only electron scattering
+ * and ff and bf are treated as absorption processes.  In macro atom, ff and
+ * photoionization are treated as a scattering 
+ * processes.
  *
  **********************************************************/
 
@@ -574,6 +574,8 @@ Just do a check that all is well - this can be removed eventually (SS)
  * @return     The bf opacity
  *
  * @details
+ *
+ * The routine calculates the bf 
  *
  * ### Notes ###
  * The routine allows for clumping, reducing kappa_bf by the filling
@@ -1270,7 +1272,7 @@ scatter (p, nres, nnscat)
   if (*nres == -1)              //Its an electron scatter
   {
     p->freq = freq_comoving;    // The photon frequency in the electron rest frame 
-    compton_dir (p, xplasma);   // Get a new direction using the KN formula
+    compton_dir (p);            // Get a new direction using the KN formula
     v_dop = dot (p->lmn, v);    // Find the dot product of the new direction with the wind velocity 
     p->freq = p->freq / (1. - v_dop / VLIGHT);  //Transform back to the observer frame
 

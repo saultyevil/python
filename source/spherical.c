@@ -138,37 +138,35 @@ spherical_make_grid (w, ndom)
 
   for (j = 0; j < ndim; j++)
   {
-    {
-      n = j + zdom[ndom].nstart;        // This is the element in wmain
+    n = j + zdom[ndom].nstart;  // This is the element in wmain
 
-      /*Define the grid points */
-      if (zdom[ndom].log_linear == 1)
-      {                         // linear intervals
+    /*Define the grid points */
+    if (zdom[ndom].log_linear == 1)
+    {                           // linear intervals
 
-        dr = (zdom[ndom].rmax - zdom[ndom].rmin) / (ndim - 3);
-        w[n].r = zdom[ndom].rmin + j * dr;
-        w[n].rcen = w[n].r + 0.5 * dr;
-      }
-      else
-      {                         //logarithmic intervals
-
-        dlogr = (log10 (zdom[ndom].rmax / zdom[ndom].rmin)) / (ndim - 3);
-        w[n].r = zdom[ndom].rmin * pow (10., dlogr * (j - 1));
-        w[n].rcen = 0.5 * zdom[ndom].rmin * (pow (10., dlogr * (j)) + pow (10., dlogr * (j - 1)));
-        Log_silent ("New W.r = %e, w.rcen = %e\n", w[n].r, w[n].rcen);
-      }
-
-      /* Now calculate the positions of these points in the xz plane.
-         There is a choice about how one does this.  Here we  have elected
-         to calculate this at a 45 degree angle.  in the hopes this will
-         be a reasonable portion of the wind in a biconical flow.
-       */
-
-      w[n].x[1] = w[n].xcen[1] = 0.0;
-      w[n].x[0] = w[n].x[2] = w[n].r * sin (PI / 4.);
-      w[n].xcen[0] = w[n].xcen[2] = w[n].rcen * sin (PI / 4.);
-
+      dr = (zdom[ndom].rmax - zdom[ndom].rmin) / (ndim - 3);
+      w[n].r = zdom[ndom].rmin + j * dr;
+      w[n].rcen = w[n].r + 0.5 * dr;
     }
+    else
+    {                           //logarithmic intervals
+
+      dlogr = (log10 (zdom[ndom].rmax / zdom[ndom].rmin)) / (ndim - 3);
+      w[n].r = zdom[ndom].rmin * pow (10., dlogr * (j - 1));
+      w[n].rcen = 0.5 * zdom[ndom].rmin * (pow (10., dlogr * (j)) + pow (10., dlogr * (j - 1)));
+      Log_silent ("New W.r = %e, w.rcen = %e\n", w[n].r, w[n].rcen);
+    }
+
+    /* Now calculate the positions of these points in the xz plane.
+       There is a choice about how one does this.  Here we  have elected
+       to calculate this at a 45 degree angle.  in the hopes this will
+       be a reasonable portion of the wind in a biconical flow.
+     */
+
+    w[n].x[1] = w[n].xcen[1] = 0.0;
+    w[n].x[0] = w[n].x[2] = w[n].r * sin (PI / 4.);
+    w[n].xcen[0] = w[n].xcen[2] = w[n].rcen * sin (PI / 4.);
+
   }
 
   return (0);
@@ -275,63 +273,59 @@ spherical_volumes (ndom, w)
 
   for (i = 0; i < ndim; i++)
   {
+    n = i + nstart;             /* nstart is the offset into the wind structure */
+    rmin = zdom[ndom].wind_x[i];
+    rmax = zdom[ndom].wind_x[i + 1];
+
+    w[n].vol = 4. / 3. * PI * (rmax * rmax * rmax - rmin * rmin * rmin);
+
+    if (i == ndim - 1)
     {
-      n = i + nstart;           /* nstart is the offset into the wind structure */
-      rmin = zdom[ndom].wind_x[i];
-      rmax = zdom[ndom].wind_x[i + 1];
-
-      w[n].vol = 4. / 3. * PI * (rmax * rmax * rmax - rmin * rmin * rmin);
-
-      if (i == ndim - 1)
+      fraction = 0.0;           /* Force outside edge volues to zero */
+      jj = 0;
+      kk = RESOLUTION;
+    }
+    else if (i == ndim - 2)
+    {
+      fraction = 0.0;           /* Force outside edge volues to zero */
+      jj = 0;
+      kk = RESOLUTION;
+    }
+    else
+    {                           /* Determine whether the cell is in the wind */
+      num = denom = 0;
+      jj = kk = 0;
+      dr = (rmax - rmin) / RESOLUTION;
+      dtheta = (thetamax - thetamin) / RESOLUTION;
+      for (r = rmin + dr / 2; r < rmax; r += dr)
       {
-        fraction = 0.0;         /* Force outside edge volues to zero */
-        jj = 0;
-        kk = RESOLUTION;
-      }
-      else if (i == ndim - 2)
-      {
-        fraction = 0.0;         /* Force outside edge volues to zero */
-        jj = 0;
-        kk = RESOLUTION;
-      }
-      else
-      {                         /* Determine whether the cell is in the wind */
-        num = denom = 0;
-        jj = kk = 0;
-        dr = (rmax - rmin) / RESOLUTION;
-        dtheta = (thetamax - thetamin) / RESOLUTION;
-        for (r = rmin + dr / 2; r < rmax; r += dr)
+        for (theta = thetamin + dtheta / 2; theta < thetamax; theta += dtheta)
         {
-          for (theta = thetamin + dtheta / 2; theta < thetamax; theta += dtheta)
+          denom += r * r * sin (theta);;
+          kk++;
+          x[0] = r * sin (theta);
+          x[1] = 0;
+          x[2] = r * cos (theta);;
+          if (where_in_wind (x, &ndomain) == W_ALL_INWIND)
           {
-            denom += r * r * sin (theta);;
-            kk++;
-            x[0] = r * sin (theta);
-            x[1] = 0;
-            x[2] = r * cos (theta);;
-            if (where_in_wind (x, &ndomain) == W_ALL_INWIND)
-            {
-              num += r * r * sin (theta);
-              jj++;
-            }
+            num += r * r * sin (theta);
+            jj++;
           }
         }
-        fraction = num / denom;
       }
-      if (jj == 0)
-      {
-        w[n].inwind = W_NOT_INWIND;     // The cell is not in the wind
-        w[n].vol = 0.0;
-      }
-      else if (jj == kk)
-        w[n].inwind = W_ALL_INWIND;     // The cell is completely in the wind
-      else
-      {
-        w[n].inwind = W_PART_INWIND;    //The cell is partially in the wind
-        w[n].vol *= fraction;
-      }
-
-
+      fraction = num / denom;
+    }
+    if (jj == 0)
+    {
+      w[n].inwind = W_NOT_INWIND;       // The cell is not in the wind
+      w[n].vol = 0.0;
+    }
+    else if (jj == kk)
+      w[n].inwind = W_ALL_INWIND;       // The cell is completely in the wind
+    else
+    {
+      w[n].inwind = W_PART_INWIND;      //The cell is partially in the wind
+      w[n].vol *= fraction;
     }
   }
 

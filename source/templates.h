@@ -413,7 +413,7 @@ double kappa_comp(PlasmaPtr xplasma, double freq);
 double kappa_ind_comp(PlasmaPtr xplasma, double freq);
 double total_comp(WindPtr one, double t_e);
 double klein_nishina(double nu);
-int compton_dir(PhotPtr p, PlasmaPtr xplasma);
+int compton_dir(PhotPtr p);
 double compton_func(double f, void *params);
 double sigma_compton_partial(double f, double x);
 double alpha(double nu);
@@ -491,6 +491,7 @@ int import_make_grid(WindPtr w, int ndom);
 double import_velocity(int ndom, double *x, double *v);
 int get_import_wind_params(int ndom);
 double import_rho(int ndom, double *x);
+double model_temp (int ndom, double x[], int return_t_e);
 /* import_spherical.c */
 int import_1d(int ndom, char *filename);
 int spherical_make_grid_import(WindPtr w, int ndom);
@@ -559,6 +560,9 @@ double wdrad(double m);
 double diskrad(double m1, double m2, double period);
 double roche2(double q, double a);
 double logg(double mass, double rwd);
+/* import_calloc.c */
+void calloc_import (int coord_type, int ndom);
+void free_import (int coord_type, int ndom);
 /* tau_diag.c */
 void print_tau_angles(const double *tau_store, const double *col_den_store);
 void write_tau_spectrum_to_file(const double *tau_spectrum, double freq_min, double dfreq);

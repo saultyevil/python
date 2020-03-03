@@ -25,6 +25,7 @@ link_directories(lib)
 # Define the executables
 add_executable(python
         source/tau_diag.c
+        source/import_calloc.c
         source/rdpar_init.c
         source/bb.c
         source/get_atomicdata.c
@@ -116,8 +117,7 @@ add_executable(python
         source/setup_line_transfer.c
         source/cv.c
         source/wind_util.c
-        source/tau_diag.c
-        )
+        source/import.h)
 
 add_executable(py_wind
         source/bb.c

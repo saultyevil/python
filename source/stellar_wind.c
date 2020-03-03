@@ -24,7 +24,7 @@
  * @brief      gets input data which is necessary for a Castor and Larmors'
  * 	(1979) description of an O star wind, 
  *
- * @param [in] int  ndom   The domaain number
+ * @param [in] int  ndom   The domain number
  * @return     Always returns zero
  *
  *
