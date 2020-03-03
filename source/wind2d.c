@@ -341,7 +341,7 @@ be optional which variables beyond here are moved to structures othere than Wind
     }
     else if (zdom[ndom].wind_type == IMPORT)
     {
-      plasmamain[n].t_r = model_temp (ndom, x);
+      plasmamain[n].t_r = model_temp (ndom, x, FALSE);
     }
     else
     {
@@ -359,13 +359,19 @@ be optional which variables beyond here are moved to structures othere than Wind
 	  a fixed temprature calculation,then the wind temperature is set to be the wind temperature so the
 	  user gets what they are expecting */
 
-    if (modes.fixed_temp == 0 && modes.zeus_connect == 0)       //NSH 151126 - dont multply by 0.9 in zeus connect or fixed temp modes
+    if (zdom[ndom].wind_type == IMPORT)
+    {
+      plasmamain[n].t_e = model_temp (ndom, x, TRUE);
+    }
+    else if (modes.fixed_temp == FALSE && modes.zeus_connect == FALSE)  //NSH 151126 - dont multply by 0.9 in zeus connect or fixed temp modes
+    {
       plasmamain[n].t_e = plasmamain[n].t_e_old = 0.9 * plasmamain[n].t_r;      //Lucy guess
+    }
     else
+    {
       plasmamain[n].t_e = plasmamain[n].t_e_old = plasmamain[n].t_r;
+    }
     //If we want to fix the temperature, we set it to tr which has previously been set to twind.
-
-
 
 /* Calculate an initial guess for the weight of the PL spectrum (constant / area of a sphere / 4pi) */
 
@@ -512,7 +518,7 @@ be optional which variables beyond here are moved to structures othere than Wind
   for (n = 0; n < geo.ndomain; n++)
   {
     if (zdom[n].wind_type == IMPORT)
-      free_import (zdom[n].coord_type);
+      free_import (zdom[n].coord_type, n);
   }
 
   return (0);
