@@ -561,7 +561,7 @@ double diskrad(double m1, double m2, double period);
 double roche2(double q, double a);
 double logg(double mass, double rwd);
 /* tau_diag.c */
-void tau_log_edges (const double *tau_store, const double *col_den_store);
+void tau_log_edges (const double *optical_depths, const double *column_densities);
 void tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, double dfreq);
 int tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
 int tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau);

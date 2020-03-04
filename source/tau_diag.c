@@ -40,7 +40,7 @@
 #include "python.h"
 
 /*
- * OBSERVERS
+ * SIGHTLINES
  * This is the global variable type used to track the name and cosine direction
  * vectors of the inclinations of which observers are placed. Hence, the members
  * of this type will be the various inclination angles for integrated optical
@@ -129,11 +129,10 @@ init_array (double *arr, int len)
  * ************************************************************************** */
 
 void
-tau_log_edges (const double *tau_store, const double *col_den_store)
+tau_log_edges (const double *optical_depths, const double *column_densities)
 {
   int itau, ispec;
   int line_len;
-  double tau, column;
   char tmp_str[LINELENGTH];
   char observer_name[LINELENGTH];
 
@@ -147,18 +146,12 @@ tau_log_edges (const double *tau_store, const double *col_den_store)
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
     strcpy (observer_name, SIGHTLINES[ispec].name);
-
-    Log ("%s: ", observer_name);
-
-    column = col_den_store[ispec];
-    Log ("Hydrogen column density: %3.2e cm^-2\n", column / MPROT);
+    Log ("%s: Hydrogen column density: %3.2e cm^-2\n", observer_name, column_densities[ispec] / MPROT);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
     {
-      tau = tau_store[ispec * N_TAU + itau];
-      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", OPACITY_EDGES[itau].name, tau);
-
+      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", OPACITY_EDGES[itau].name, optical_depths[ispec * N_TAU + itau]);
       if (line_len > MAX_COL)
       {
         line_len = 0;
@@ -775,7 +768,7 @@ tau_create_spectra (WindPtr w)
       ierr = tau_create_phot (&ptau, freq, current_observer);
       if (ierr == EXIT_FAILURE)
       {
-        Log ("%s : %i : skipping photon of frequency %e\n", __FILE__, __LINE__, freq);
+        Log ("%s : %i : skipping photon of frequency %e when creating spectrum\n", __FILE__, __LINE__, freq);
         continue;
       }
 
