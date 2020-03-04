@@ -561,15 +561,15 @@ double diskrad(double m1, double m2, double period);
 double roche2(double q, double a);
 double logg(double mass, double rwd);
 /* tau_diag.c */
-void print_tau_angles(const double *tau_store, const double *col_den_store);
-void write_tau_spectrum_to_file(const double *tau_spectrum, double freq_min, double dfreq);
-int calculate_tau(WindPtr w, PhotPtr pextract, double *col_den, double *tau);
-int tau_extract(WindPtr w, PhotPtr porig, double *col_den, double *tau);
-void reposition_tau_photon(PhotPtr pout);
-int create_tau_diag_phot(PhotPtr pout, double nu, double *lmn);
-void init_tau_diag_angles(void);
-void create_tau_spectrum(WindPtr w);
-void tau_integrate_angles(WindPtr w);
+void tau_log_edges (const double *tau_store, const double *col_den_store);
+void tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, double dfreq);
+int tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
+int tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau);
+void tau_reposition_photon (PhotPtr pout);
+int tau_create_phot (PhotPtr pout, double nu, double *lmn);
+void init_tau_observers (void);
+void tau_create_spectra (WindPtr w);
+void tau_evaluate_photo_edges (WindPtr w);
 void tau_diag_main(WindPtr w);
 /* import_calloc.c */
 void calloc_import(int coord_type, int ndom);
