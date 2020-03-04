@@ -483,7 +483,7 @@ int create_master_table(int ndom, char rootname[]);
 int create_heat_table(int ndom, char rootname[]);
 int create_convergence_table(int ndom, char rootname[]);
 int create_ion_table(int ndom, char rootname[], int iz, int ion_switch);
-double *get_ion(int ndom, int element, int istate, int iswitch);
+double *get_ion(int ndom, int element, int istate, int iswitch, char *name);
 double *get_one(int ndom, char variable_name[]);
 /* import.c */
 int import_wind(int ndom);
@@ -657,5 +657,5 @@ int create_master_table(int ndom, char rootname[]);
 int create_heat_table(int ndom, char rootname[]);
 int create_convergence_table(int ndom, char rootname[]);
 int create_ion_table(int ndom, char rootname[], int iz, int ion_switch);
-double *get_ion(int ndom, int element, int istate, int iswitch);
+double *get_ion(int ndom, int element, int istate, int iswitch, char *name);
 double *get_one(int ndom, char variable_name[]);

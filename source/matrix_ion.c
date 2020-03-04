@@ -178,7 +178,7 @@ matrix_ion_populations (xplasma, mode)
 
 
   /* This next line sets the partition function for each ion. This has always been the place here python calculates the
-     partition funcions and sets the level densities for each ion. It needs to be done, or other parts of the code which rely
+     partition functions and sets the level densities for each ion. It needs to be done, or other parts of the code which rely
      on sensible level populations don't work properly. In the case of the dilute blackbody, the code works well, however we do
      not currently (v78) have a procedure to calucate the levels for a spectral model case. We therefore call partition
      functions with mode 4 - this is a special mode which forces the ions to be in the ground state. This is reasonable for a

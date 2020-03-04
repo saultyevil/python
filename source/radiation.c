@@ -174,7 +174,6 @@ radiation (PhotPtr p, double ds)
     if (DENSITY_PHOT_MIN > 0)
     {                           // Initialize during ionization cycles only
 
-
       /* Loop over all photoionization xsections */
       for (n = 0; n < nphot_total; n++)
       {
@@ -830,9 +829,13 @@ pop_kappa_ff_array ()
  * in which the spectra are constructed are in geo.xfreq. This information
  * is used in different ways (or not at all) depending on the ionization mode.
  *
- * It also records the values of IP.
+ * It also records the various parameters intended to describe the radiation field, 
+ * including the IP.
  *
  * ### Notes ###
+ *
+ * The term direct refers to photons that have not been scattered by the wind.
+ * 
  * In non macro atom mode, w_ave
  * this is an average weight (passed as w_ave), but 
  * in macro atom mode weights are never reduced (so p->w 
@@ -844,7 +847,15 @@ pop_kappa_ff_array ()
  * to be called in all cases, though clearly it is only provides diagnostic
  * information in some of them.
  *
+ * 
  **********************************************************/
+
+
+/* A couple of external variables to improve the counting of ionizing
+   photons coming into a cell
+*/
+int nioniz_nplasma = -1;
+int nioniz_np = -1;
 
 int
 update_banded_estimators (xplasma, p, ds, w_ave)
@@ -859,6 +870,7 @@ update_banded_estimators (xplasma, p, ds, w_ave)
   struct photon phot_mid;
 
   /*photon weight times distance in the shell is proportional to the mean intensity */
+
   xplasma->j += w_ave * ds;
 
   if (p->nscat == 0)
@@ -951,7 +963,12 @@ update_banded_estimators (xplasma, p, ds, w_ave)
      * function so it will be incremented for both macro and non-macro modes
      */
 
-    xplasma->nioniz++;
+    if (xplasma->nplasma != nioniz_nplasma || p->np != nioniz_np)
+    {
+      xplasma->nioniz++;
+      nioniz_nplasma = xplasma->nplasma;
+      nioniz_np = p->np;
+    }
 
     /* IP needs to be radiation density in the cell. We sum contributions from
        each photon, then it is normalised in wind_update. */
