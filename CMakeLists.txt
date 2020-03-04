@@ -26,6 +26,7 @@ link_directories(lib)
 add_executable(python
         source/tau_diag.c
         source/import_calloc.c
+        source/tau_diag.c
         source/rdpar_init.c
         source/bb.c
         source/get_atomicdata.c

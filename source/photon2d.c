@@ -775,7 +775,7 @@ walls (PhotPtr pnew, PhotPtr pold, double *normal)
    * coordinate grid.
    */
 
-  r = dot (pnew->x, pnew->x);
+  r = dot (p->x, p->x);
   s = ds_to_sphere (geo.rstar, pold);
 
   if (r < geo.rstar_sq || pnew->ds > s)

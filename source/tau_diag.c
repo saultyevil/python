@@ -29,12 +29,6 @@
  *
  * If none of this makes sense, just try to follow how everything else is done!
  *
- * ### Programming Notes ###
- *
- * The macro __func__ is used in here for error reporting usage, but it is only
- * defined since the C99 standard... but what if people use C90? oh no! Not
- * sure if I should really care?
- *
  * ************************************************************************** */
 
 #include <math.h>
@@ -430,11 +424,13 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)   // Move the photon in the wind
     {
       ierr = calculate_tau (w, &pextract, col_den, tau);
+
       if (ierr)
       {
         pextract.istat = -1;
         return EXIT_FAILURE;
       }
+
     }
     else
     {
@@ -448,6 +444,7 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
      * This should return istat != P_INWIND when the photon has escaped or smt
      */
 
+    pextract.ds = 0;
     istat = walls (&pextract, porig, norm);
   }
 
@@ -514,18 +511,6 @@ reposition_tau_photon (PhotPtr pout)
 
   if (pout->lmn[0] == 0 && pout->lmn[1] == 0 && pout->lmn[2] == 1)
     pout->x[0] = upward_x_loc;
-
-  /*
-   * When the photon is pointing in the negative x-direction, i.e. when
-   * ptau.lmn[0] < 0, then it's very likely that the photon will hit the
-   * central object and also not travel through the base of this wind. In
-   * this case, the photon is simply placed on the negative side of the
-   * x-axis which is absolutely fine due to the rotational symmetry in
-   * Python
-   */
-
-  if (pout->lmn[0] < 0)
-    pout->x[0] *= -1;
 }
 
 /* ************************************************************************* */
@@ -573,10 +558,8 @@ create_tau_diag_phot (PhotPtr pout, double nu, double *lmn)
   pout->w = pout->w_orig = geo.f_tot;
   pout->tau = 0.0;
 
-  theta = acos (lmn[2]);
-  pout->x[0] = geo.rstar + EPSILON;
-  pout->x[1] = 0.0;
-  pout->x[2] = geo.rstar * sin (theta) + EPSILON;
+  pout->x[0] = pout->x[1] = pout->x[2] = 0;
+  move_phot (pout, geo.rstar + DFUDGE);
 
   return EXIT_SUCCESS;
 }
@@ -606,9 +589,9 @@ init_tau_diag_angles (void)
   int iangle;
   int memory_req;
 
-  double default_phase = 0.5;
-  double default_angles[] = { 0.0, 10.0, 30.0, 45.0, 60.0, 75.0, 85.0, 90.0 };
-  int const n_default_angles = sizeof default_angles / sizeof default_angles[0];
+  const double default_phase = 0.5;
+  const double default_angles[] = { 0.0, 10.0, 30.0, 45.0, 60.0, 75.0, 85.0, 90.0 };
+  const int n_default_angles = sizeof default_angles / sizeof default_angles[0];
 
   /*
    * Use the angles specified for by the user for spectrum generation, this
@@ -760,7 +743,7 @@ create_tau_spectrum (WindPtr w)
       ierr = create_tau_diag_phot (&ptau, freq, current_observer);
       if (ierr == EXIT_FAILURE)
       {
-        Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, freq);
+        Log ("%s : %i : skipping photon of frequency %e\n", __FILE__, __LINE__, freq);
         continue;
       }
 
@@ -860,7 +843,7 @@ tau_integrate_angles (WindPtr w)
       ierr = create_tau_diag_phot (&ptau, nu, current_observer);
       if (ierr == EXIT_FAILURE)
       {
-        Log ("%s:%s:%i: skipping photon of frequency %e\n", __FILE__, __func__, __LINE__, nu);
+        Log ("%s : %i : skipping photon of frequency %e\n", __FILE__, __LINE__, nu);
         tau_store[ispec * N_TAU + itau] = -1;
         column_store[ispec] = -1;
         continue;
