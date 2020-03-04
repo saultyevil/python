@@ -40,7 +40,7 @@
 #include "python.h"
 
 /*
- * OBSERVERS
+ * SIGHTLINES
  * This is the global variable type used to track the name and cosine direction
  * vectors of the inclinations of which observers are placed. Hence, the members
  * of this type will be the various inclination angles for integrated optical
@@ -51,10 +51,10 @@ struct observer_angles
 {
   char name[50];
   double lmn[3];
-} *OBSERVERS;
+} *SIGHTLINES;
 
 /*
- * TAU_DIAG_OPACS
+ * OPACITY_EDGES
  * This is the global variable type used to track the name of opacities for the
  * optical depth diagnostics. This includes the frequency of each photon, nu,
  * and the name of the opacity.
@@ -66,16 +66,46 @@ typedef struct tau_diag_opacities
   char name[50];
 } Opacities;
 
-Opacities TAU_DIAG_OPACS[] = {
+Opacities OPACITY_EDGES[] = {
   {3.387485e+15, "LymanEdge_885A"},
   {8.293014e+14, "BalmerEdge_3615A"},
   {1.394384e+16, "HeIIEdge_215A"}
 };
 
-int const N_TAU = sizeof TAU_DIAG_OPACS / sizeof *TAU_DIAG_OPACS;       // The number of optical depths for the simple calculation
+int const N_TAU = sizeof OPACITY_EDGES / sizeof *OPACITY_EDGES; // The number of optical depths for the simple calculation
 
 int N_ANGLES;                   // The number of inclination angles
 #define DEFAULT_DOMAIN 0        // For now, assume we only care about photons starting in domain 0
+
+/* ************************************************************************* */
+/**
+ * @brief     Initialise an array to a failure value
+ *
+ * @param    double *arr      The array to initialise
+ * @param    int len          The length of the array
+ *
+ * @details
+ *
+ * The purpose of this function is to simply initialise the values of the
+ * array to a number which will indicate a failure in the output.
+ *
+ * ### Programming Notes ###
+ *
+ * This function has been declared as static to ensure that it only has scope
+ * in this file.
+ *
+ * ************************************************************************** */
+
+#define ARR_FAIL -1.0
+
+static void
+init_array (double *arr, int len)
+{
+  int i;
+
+  for (i = 0; i < len; ++i)
+    arr[i] = ARR_FAIL;
+}
 
 /* ************************************************************************* */
 /**
@@ -99,14 +129,14 @@ int N_ANGLES;                   // The number of inclination angles
  * ************************************************************************** */
 
 void
-print_tau_angles (const double *tau_store, const double *col_den_store)
+tau_log_edges (const double *optical_depths, const double *column_densities)
 {
   int itau, ispec;
   int line_len;
-  int const MAX_COL = 120;
-  double tau, column;
   char tmp_str[LINELENGTH];
   char observer_name[LINELENGTH];
+
+  const int MAX_COL = 120;
 
   if (rank_global != 0)
     return;
@@ -115,19 +145,13 @@ print_tau_angles (const double *tau_store, const double *col_den_store)
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    strcpy (observer_name, OBSERVERS[ispec].name);
-
-    Log ("%s: ", observer_name);
-
-    column = col_den_store[ispec];
-    Log ("Hydrogen column density: %3.2e cm^-2\n", column / MPROT);
+    strcpy (observer_name, SIGHTLINES[ispec].name);
+    Log ("%s: Hydrogen column density: %3.2e cm^-2\n", observer_name, column_densities[ispec] / MPROT);
 
     line_len = 0;
     for (itau = 0; itau < N_TAU; itau++)
     {
-      tau = tau_store[ispec * N_TAU + itau];
-      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", TAU_DIAG_OPACS[itau].name, tau);
-
+      line_len += sprintf (tmp_str, "tau_%-9s: %3.2e  ", OPACITY_EDGES[itau].name, optical_depths[ispec * N_TAU + itau]);
       if (line_len > MAX_COL)
       {
         line_len = 0;
@@ -160,7 +184,7 @@ print_tau_angles (const double *tau_store, const double *col_den_store)
  * ************************************************************************** */
 
 void
-write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double dfreq)
+tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, double dfreq)
 {
   int ispec;
   int ifreq;
@@ -187,7 +211,7 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
 
   fprintf (tau_spec_file, "Freq. Lambda ");
   for (ispec = 0; ispec < N_ANGLES; ispec++)
-    fprintf (tau_spec_file, "%s ", OBSERVERS[ispec].name);
+    fprintf (tau_spec_file, "%s ", SIGHTLINES[ispec].name);
   fprintf (tau_spec_file, "\n");
 
   /*
@@ -247,7 +271,7 @@ write_tau_spectrum_to_file (const double *tau_spectrum, double freq_min, double 
  * ************************************************************************** */
 
 int
-calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
+tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
 {
   int istat;
   int ndom, nplasma;
@@ -395,7 +419,7 @@ calculate_tau (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
  * ************************************************************************** */
 
 int
-tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
+tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau)
 {
   int ierr;
   int ndom;
@@ -423,7 +447,7 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
     }
     else if ((pextract.grid = where_in_grid (ndom, pextract.x)) >= 0)   // Move the photon in the wind
     {
-      ierr = calculate_tau (w, &pextract, col_den, tau);
+      ierr = tau_calculate_tau_path (w, &pextract, col_den, tau);
 
       if (ierr)
       {
@@ -473,7 +497,7 @@ tau_extract (WindPtr w, PhotPtr porig, double *col_den, double *tau)
  * ************************************************************************** */
 
 void
-reposition_tau_photon (PhotPtr pout)
+tau_reposition_photon (PhotPtr pout)
 {
   int icell;
   int wind_index, plasma_index;
@@ -510,7 +534,10 @@ reposition_tau_photon (PhotPtr pout)
   }
 
   if (pout->lmn[0] == 0 && pout->lmn[1] == 0 && pout->lmn[2] == 1)
+  {
     pout->x[0] = upward_x_loc;
+    pout->x[2] = DFUDGE;
+  }
 }
 
 /* ************************************************************************* */
@@ -540,7 +567,7 @@ reposition_tau_photon (PhotPtr pout)
  * ************************************************************************** */
 
 int
-create_tau_diag_phot (PhotPtr pout, double nu, double *lmn)
+tau_create_phot (PhotPtr pout, double nu, double *lmn)
 {
   double theta;
 
@@ -560,6 +587,8 @@ create_tau_diag_phot (PhotPtr pout, double nu, double *lmn)
 
   pout->x[0] = pout->x[1] = pout->x[2] = 0;
   move_phot (pout, geo.rstar + DFUDGE);
+
+  tau_reposition_photon (pout);
 
   return EXIT_SUCCESS;
 }
@@ -584,7 +613,7 @@ create_tau_diag_phot (PhotPtr pout, double nu, double *lmn)
  * ************************************************************************** */
 
 void
-init_tau_diag_angles (void)
+init_tau_observers (void)
 {
   int iangle;
   int memory_req;
@@ -598,16 +627,14 @@ init_tau_diag_angles (void)
    * requires for xxspec to be initialised.
    */
 
-  if (geo.nangles && xxspec != NULL)
+  if (geo.nangles && xxspec)
   {
-    Log_silent ("Using inclinations provided for spectrum cycles as defined in xxspec\n");
-
     N_ANGLES = geo.nangles;
-    OBSERVERS = calloc (geo.nangles, sizeof *OBSERVERS);
+    SIGHTLINES = calloc (geo.nangles, sizeof *SIGHTLINES);
 
-    if (OBSERVERS == NULL)
+    if (SIGHTLINES == NULL)
     {
-      memory_req = geo.nangles * sizeof *OBSERVERS;
+      memory_req = geo.nangles * sizeof *SIGHTLINES;
       Error ("%s : %i : cannot allocate %d bytes for observers array\n", __FILE__, __LINE__, memory_req);
       Exit (1);
     }
@@ -615,8 +642,8 @@ init_tau_diag_angles (void)
     {
       for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
       {
-        strcpy (OBSERVERS[iangle - MSPEC].name, xxspec[iangle].name);
-        stuff_v (xxspec[iangle].lmn, OBSERVERS[iangle - MSPEC].lmn);
+        strcpy (SIGHTLINES[iangle - MSPEC].name, xxspec[iangle].name);
+        stuff_v (xxspec[iangle].lmn, SIGHTLINES[iangle - MSPEC].lmn);
       }
     }
   }
@@ -631,11 +658,11 @@ init_tau_diag_angles (void)
     Log_silent ("As there are no spectrum cycles or observers defined, a set of default angles will be used instead\n");
 
     N_ANGLES = n_default_angles;
-    OBSERVERS = calloc (n_default_angles, sizeof *OBSERVERS);
+    SIGHTLINES = calloc (n_default_angles, sizeof *SIGHTLINES);
 
-    if (OBSERVERS == NULL)
+    if (SIGHTLINES == NULL)
     {
-      memory_req = n_default_angles * sizeof *OBSERVERS;
+      memory_req = n_default_angles * sizeof *SIGHTLINES;
       Error ("%s : %i : cannot allocate %d bytes for observers array\n", __FILE__, __LINE__, memory_req);
       Exit (1);
     }
@@ -643,10 +670,10 @@ init_tau_diag_angles (void)
     {
       for (iangle = 0; iangle < n_default_angles; iangle++)
       {
-        sprintf (OBSERVERS[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
-        OBSERVERS[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-        OBSERVERS[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-        OBSERVERS[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
+        sprintf (SIGHTLINES[iangle].name, "A%02.0fP%04.2f", default_angles[iangle], default_phase);
+        SIGHTLINES[iangle].lmn[0] = sin (default_angles[iangle] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
+        SIGHTLINES[iangle].lmn[1] = sin (default_angles[iangle] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
+        SIGHTLINES[iangle].lmn[2] = cos (default_angles[iangle] / RADIAN);
       }
     }
   }
@@ -679,17 +706,14 @@ init_tau_diag_angles (void)
  * ************************************************************************** */
 
 void
-create_tau_spectrum (WindPtr w)
+tau_create_spectra (WindPtr w)
 {
   int ierr;
   int ispec, ifreq;
-  int memory_req;
-
   double tau, column;
   double freq;
   double freq_min, freq_max, dfreq;
   double wave_min, wave_max;
-
   double *current_observer;
   double *tau_spectrum;
 
@@ -697,19 +721,20 @@ create_tau_spectrum (WindPtr w)
 
   Log ("Creating optical depth spectra:\n");
 
-  tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum);
-  if (tau_spectrum == NULL)
+  if (!(tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum)))
   {
-    memory_req = N_ANGLES * NWAVE * sizeof *tau_spectrum;
-    Error ("%s : %i : cannot allocate %d bytes for tau_spectrum\n", __FILE__, __LINE__, memory_req);
+
+    Error ("%s : %i : cannot allocate %d bytes for tau_spectrum\n", __FILE__, __LINE__, N_ANGLES * NWAVE * sizeof *tau_spectrum);
     Exit (1);
   }
+
+  init_array (tau_spectrum, N_ANGLES * NWAVE);
 
   /*
    * Define the limits of the spectra in both wavelength and frequency. The
    * size of the frequency and wavelength bins is also defined. Note that the
    * wavelength limits MUST be in units of Angstroms.
-   * TODO: make wavelength limits an advanced diag parameter
+   * TODO: make wavelength limits an advanced parameter
    */
 
   wave_min = 100;
@@ -718,11 +743,13 @@ create_tau_spectrum (WindPtr w)
   freq_max = VLIGHT / (wave_min * ANGSTROM);
   freq_min = VLIGHT / (wave_max * ANGSTROM);
   dfreq = (freq_max - freq_min) / NWAVE;
-  kbf_need (freq_min, freq_max);
 
-  Log_silent ("Minimum wavelength : %.0f Angstroms\n", wave_min);
-  Log_silent ("Maximum wavelength : %.0f Angstroms\n", wave_max);
-  Log_silent ("Wavelength bins    : %i\n\n", NWAVE);
+  /*
+   * It's not clear to me if we should do this really, but if it's good enough
+   * for macro then it most likely will not affect results.
+   */
+
+  kbf_need (freq_min, freq_max);
 
   /*
    * Now create the optical depth spectra for each observer angle
@@ -730,37 +757,34 @@ create_tau_spectrum (WindPtr w)
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    Log ("  - Creating spectrum: %s\n", OBSERVERS[ispec].name);
+    Log ("  - Creating spectrum: %s\n", SIGHTLINES[ispec].name);
 
     freq = freq_min;
-    current_observer = OBSERVERS[ispec].lmn;
+    current_observer = SIGHTLINES[ispec].lmn;
 
     for (ifreq = 0; ifreq < NWAVE; ifreq++)
     {
       tau = 0;
       column = 0;
 
-      ierr = create_tau_diag_phot (&ptau, freq, current_observer);
+      ierr = tau_create_phot (&ptau, freq, current_observer);
       if (ierr == EXIT_FAILURE)
       {
-        Log ("%s : %i : skipping photon of frequency %e\n", __FILE__, __LINE__, freq);
+        Log ("%s : %i : skipping photon of frequency %e when creating spectrum\n", __FILE__, __LINE__, freq);
         continue;
       }
 
-      reposition_tau_photon (&ptau);
-
-      ierr = tau_extract (w, &ptau, &column, &tau);
-      if (ierr == EXIT_FAILURE)
-        tau = -1;
-
+      tau_extract_photon (w, &ptau, &column, &tau);
       tau_spectrum[ispec * NWAVE + ifreq] = tau;
       freq += dfreq;
     }
   }
 
-  write_tau_spectrum_to_file (tau_spectrum, freq_min, dfreq);
+  tau_write_optical_depth_spectra (tau_spectrum, freq_min, dfreq);
   free (tau_spectrum);
 }
+
+
 
 /* ************************************************************************* */
 /**
@@ -793,34 +817,38 @@ create_tau_spectrum (WindPtr w)
  * ************************************************************************** */
 
 void
-tau_integrate_angles (WindPtr w)
+tau_evaluate_photo_edges (WindPtr w)
 {
-  int itau, ispec;
   int ierr;
-  int memory_req;
-
+  int itau, ispec;
   double nu;
   double tau, column;
   double *current_observer;
-  double *tau_store, *column_store;
-
+  double *optical_depth, *column_densities;
   struct photon ptau;
 
-  tau_store = calloc (N_ANGLES * N_TAU, sizeof *tau_store);
-  if (tau_store == NULL)
+  /*
+   * Allocate storage for the optical depth for each edge and sight line
+   */
+
+  if (!(optical_depth = calloc (N_ANGLES * N_TAU, sizeof *optical_depth)))
   {
-    memory_req = N_ANGLES * N_TAU * sizeof *tau_store;
-    Error ("%s : %i : cannot allocate %d bytes for tau_store\n", __FILE__, __LINE__, memory_req);
+    Error ("%s : %i : cannot allocate %d bytes for tau_store\n", __FILE__, __LINE__, N_ANGLES * N_TAU * sizeof *optical_depth);
     Exit (1);
   }
 
-  column_store = calloc (N_ANGLES, sizeof *tau_store);
-  if (column_store == NULL)
+  /*
+   * Allocate storage for the column densities for each edge and sight line
+   */
+
+  if (!(column_densities = calloc (N_ANGLES, sizeof *optical_depth)))
   {
-    memory_req = N_ANGLES * sizeof *tau_store;
-    Error ("%s : %i : cannot allocate %d bytes for col_den_store\n", __FILE__, __LINE__, memory_req);
+    Error ("%s : %i : cannot allocate %d bytes for col_den_store\n", __FILE__, __LINE__, N_ANGLES * sizeof *optical_depth);
     Exit (1);
   }
+
+  init_array (optical_depth, N_ANGLES * N_TAU);
+  init_array (column_densities, N_ANGLES);
 
   /*
    * Now extract the optical depths and mass column densities
@@ -828,45 +856,34 @@ tau_integrate_angles (WindPtr w)
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-    current_observer = OBSERVERS[ispec].lmn;
+    current_observer = SIGHTLINES[ispec].lmn;
 
     for (itau = 0; itau < N_TAU; itau++)
     {
       tau = 0.0;
       column = 0.0;
-      nu = TAU_DIAG_OPACS[itau].nu;
+      nu = OPACITY_EDGES[itau].nu;
 
-      /*
-       * Create the tau diag photon and point it towards the extract angle
-       */
-
-      ierr = create_tau_diag_phot (&ptau, nu, current_observer);
+      ierr = tau_create_phot (&ptau, nu, current_observer);
       if (ierr == EXIT_FAILURE)
       {
-        Log ("%s : %i : skipping photon of frequency %e\n", __FILE__, __LINE__, nu);
-        tau_store[ispec * N_TAU + itau] = -1;
-        column_store[ispec] = -1;
+        Error ("%s : %i : skipping photon of frequency %e\n", __FILE__, __LINE__, nu);
         continue;
       }
 
-      reposition_tau_photon (&ptau);
+      ierr = tau_extract_photon (w, &ptau, &column, &tau);
+      if (ierr == EXIT_FAILURE) // Do not throw another "extra" error
+        continue;
 
-      ierr = tau_extract (w, &ptau, &column, &tau);
-      if (ierr == EXIT_FAILURE)
-      {
-        column = -1;
-        tau = -1;
-      }
-
-      tau_store[ispec * N_TAU + itau] = tau;
-      column_store[ispec] = column;
+      optical_depth[ispec * N_TAU + itau] = tau;
+      column_densities[ispec] = column;
     }
   }
 
-  print_tau_angles (tau_store, column_store);
+  tau_log_edges (optical_depth, column_densities);
 
-  free (tau_store);
-  free (column_store);
+  free (optical_depth);
+  free (column_densities);
 }
 
 /* ************************************************************************* */
@@ -902,17 +919,15 @@ tau_diag_main (WindPtr w)
 
   geo.ioniz_or_extract = 0;
 
-  init_tau_diag_angles ();
-  tau_integrate_angles (w);
-  create_tau_spectrum (w);
-
-  if (OBSERVERS != NULL)
-    free (OBSERVERS);
+  init_tau_observers ();
+  tau_evaluate_photo_edges (w);
+  tau_create_spectra (w);
 
 #ifdef MPI_ON
   MPI_Barrier (MPI_COMM_WORLD);
 #endif
 
+  free (SIGHTLINES);
   geo.ioniz_or_extract = 1;
 
   xsignal (files.root, "%-20s Optical depth diagnostics completed\n", "TAU");
