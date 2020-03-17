@@ -96,8 +96,6 @@ int project_from(struct basis *basis_from, double v_in[], double v_out[]);
 int project_to(struct basis *basis_from, double v_in[], double v_out[]);
 int reorient(struct basis *basis_from, struct basis *basis_to, double v_from[], double v_to[]);
 /* recipes.c */
-double *vector(int i, int j);
-void free_vector(double *a, int i, int j);
 double num_int(double (*func)(double, void *), double a, double b, double eps);
 double zero_find(double (*func)(double, void *), double x_lo, double x_hi, double tol);
 double func_minimiser(double a, double m, double b, double (*func)(double, void *), double tol, double *xmin);
@@ -560,15 +558,15 @@ double diskrad(double m1, double m2, double period);
 double roche2(double q, double a);
 double logg(double mass, double rwd);
 /* tau_diag.c */
-void tau_log_edges (const double *optical_depths, const double *column_densities);
-void tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, double dfreq);
-int tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
-int tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau);
-void tau_reposition_photon (PhotPtr pout);
-int tau_create_phot (PhotPtr pout, double nu, double *lmn);
-void init_tau_observers (void);
-void tau_create_spectra (WindPtr w);
-void tau_evaluate_photo_edges (WindPtr w);
+void tau_log_edges(const double *optical_depths, const double *column_densities);
+void tau_write_optical_depth_spectra(const double *tau_spectrum, double freq_min, double dfreq);
+int tau_calculate_tau_path(WindPtr w, PhotPtr pextract, double *col_den, double *tau);
+int tau_extract_photon(WindPtr w, PhotPtr porig, double *col_den, double *tau);
+void tau_reposition_photon(PhotPtr pout);
+int tau_create_phot(PhotPtr pout, double nu, double *lmn);
+void init_tau_observers(void);
+void tau_create_spectra(WindPtr w);
+void tau_evaluate_photo_edges(WindPtr w);
 void tau_diag_main(WindPtr w);
 /* import_calloc.c */
 void calloc_import(int coord_type, int ndom);

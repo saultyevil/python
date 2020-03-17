@@ -14,7 +14,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdarg.h>
 #include <math.h>
 #include <time.h>
 #include <gsl/gsl_integration.h>
@@ -22,37 +21,11 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 #include <gsl/gsl_min.h>
-#include <gsl/gsl_errno.h>
 
 #include "atomic.h"
 #include "python.h"
 #include "recipes.h"
 #include "log.h"
-
-
-/******************************
- * The next two routines were written by ksl.  They were not part of
-   the recipes programs which I had but I think they are what was intended
-********************************/
-
-double *
-vector (i, j)
-     int i, j;
-{
-  double dummy, *d;
-  d = calloc (sizeof (dummy), (j - i + 1) + 1);
-  return (d);
-}
-
-void
-free_vector (a, i, j)
-     double *a;
-     int i, j;
-{
-  free (a);
-}
-
-
 
 /**********************************************************/
 /**
@@ -205,6 +178,8 @@ zero_find (func, x_lo, x_hi, tol)
 
   result = (x_lo + x_hi) / 2.0;
 
+  gsl_root_fsolver_free (s);
+
   return (result);
 }
 
@@ -279,6 +254,8 @@ func_minimiser (a, m, b, func, tol, xmin)
   }
   while (status == GSL_CONTINUE && iter < max_iter);
   *xmin = m;
+
+  gsl_min_fminimizer_free (s);
 
   return func (m, test);
 }
