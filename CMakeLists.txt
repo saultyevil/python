@@ -19,7 +19,7 @@ set(CMAKE_C_COMPILER mpicc)
 add_definitions(-D MPI_ON)
 
 # Include the source
-include_directories(inc)
+include_directories(include)
 link_directories(lib)
 
 # Define the executables
