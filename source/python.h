@@ -1167,7 +1167,8 @@ typedef struct photon
   int np;                       /* The photon number, which used ease tracking a photon for diagnostic
                                    purposes */
   double path;                  /* The total path length of a photon (used for reverberation calcuations) */
-  double ds;                    /* the distance a photon has moved since its creattion or last interaction */
+  double ds;                    /* the distance a photon has moved since its creation or last interaction */
+  int reposition;
 }
 p_dummy, *PhotPtr;
 
