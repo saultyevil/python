@@ -19,7 +19,8 @@
 
 /**********************************************************/
 /** 
- * @brief       Get the line transfer mode for the wind
+ * @brief       Get the line transfer mode for the wind and 
+ * several other variables related to line transfer
  *
  * @param [in] None
  * @return  0 
@@ -27,15 +28,16 @@
  * This rontinues simply gets the line tranfer mode for
  * all componensts of the wind.  After logging this
  * information, the routine also reads in the atomic 
- * data.
+ * data, and the variable that establishes in the 
+ * non-macro mode whether the wind is allowed to radiate
  *
  *
  * ###Notes###
- * 1801 -   Refactored into this file in 1801.  It is
- *          not obvioous this is the best place for this
- *          routine since it refers to all components
- *          of the wind.
-
+ * 
+ * Rather than having inputs for several aspects of line transfer
+ * the choices with regard to line_transfer_mode are used to
+ * define several variables, geo.rt_mode, geo.line_mode, and geo.scatter_mode.
+ * within the routine.  
 ***********************************************************/
 
 
@@ -55,8 +57,9 @@ get_line_transfer_mode ()
 
   strcpy (answer, "thermal_trapping");
   user_line_mode =
-    rdchoice ("Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms,macro_atoms_thermal_trapping)",
-              "0,1,2,3,5,6,7", answer);
+    rdchoice
+    ("Line_transfer(pure_abs,pure_scat,sing_scat,escape_prob,thermal_trapping,macro_atoms_escape_prob,macro_atoms_thermal_trapping)",
+     "0,1,2,3,5,6,7", answer);
 
   /* JM 1406 -- geo.rt_mode and geo.macro_simple control different things. geo.rt_mode controls the radiative
      transfer and whether or not you are going to use the indivisible packet constraint, so you can have all simple 

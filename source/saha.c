@@ -109,6 +109,15 @@ nebular_concentrations (xplasma, mode)
     m = matrix_ion_populations (xplasma, mode);
   }
 
+  else if (mode == NEBULARMODE_MATRIX_ESTIMATORS)
+  {
+
+    /* Use rate natrices based on powr law approximations to
+     * the spectra
+     */
+
+    m = matrix_ion_populations (xplasma, mode);
+  }
   else
   {
     Error ("nebular_concentrations: Unknown mode %d\n", mode);

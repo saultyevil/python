@@ -57,6 +57,7 @@ parse_command_line (argc, argv)
   int mkdir ();
   double time_max;
   char *fgets_rc;
+  double x;
 
   restart_stat = 0;
 
@@ -116,11 +117,12 @@ parse_command_line (argc, argv)
       }
       else if (strcmp (argv[i], "-e") == 0)
       {
-        if (sscanf (argv[i + 1], "%d", &max_errors) != 1)
+        if (sscanf (argv[i + 1], "%lf", &x) != 1)
         {
           Error ("python: Expected max errors after -e switch\n");
           exit (1);
         }
+        max_errors = x;
         Log_quit_after_n_errors (max_errors);
         i++;
         j = i;
@@ -129,11 +131,12 @@ parse_command_line (argc, argv)
       }
       else if (strcmp (argv[i], "-e_write") == 0)
       {
-        if (sscanf (argv[i + 1], "%d", &max_errors) != 1)
+        if (sscanf (argv[i + 1], "%lf", &x) != 1)
         {
           Error ("python: Expected max errors after -e switch\n");
           exit (1);
         }
+        max_errors = x;
         Log_print_max (max_errors);
         i++;
         j = i;
@@ -148,7 +151,7 @@ parse_command_line (argc, argv)
       else if (strcmp (argv[i], "-d") == 0)
       {
         modes.iadvanced = 1;
-        Log ("Enabling advanced/diagnositic inputs (@ commands)\n");
+        Log ("Enabling advanced/diagnostic inputs (@ commands)\n");
         j = i;
       }
       else if (strcmp (argv[i], "-f") == 0)

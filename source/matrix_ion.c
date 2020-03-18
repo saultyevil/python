@@ -135,6 +135,10 @@ matrix_ion_populations (xplasma, mode)
       {
         pi_rates[mm] = calc_pi_rate (mm, xplasma, 1, 1);        // PI rate for an explicit spectral model
       }
+      else if (mode == NEBULARMODE_MATRIX_ESTIMATORS)
+      {
+        pi_rates[mm] = xplasma->ioniz[mm] / xplasma->density[mm];       // PI rate logged during the photon passage
+      }
       else
       {
         Error ("matrix_ion_populations: Unknown mode %d\n", mode);
@@ -170,6 +174,16 @@ matrix_ion_populations (xplasma, mode)
       {
         inner_rates[mm] = calc_pi_rate (mm, xplasma, 1, 2);
       }
+      else if (mode == NEBULARMODE_MATRIX_ESTIMATORS)   //We are using estimators - so we will need to reorder the rates from freq order to cross section order to match the electron yields. This takes time, so we only do it if we need to.
+      {
+        for (nn = 0; nn < n_inner_tot; nn++)
+        {
+          if (inner_cross[mm].nion == inner_cross_ptr[nn]->nion && inner_cross[mm].freq[0] == inner_cross_ptr[nn]->freq[0])     //Check for a match
+          {
+            inner_rates[mm] = xplasma->inner_ioniz[nn] / xplasma->density[inner_cross_ptr[nn]->nion];
+          }
+        }
+      }
     }
   }
 
@@ -178,7 +192,7 @@ matrix_ion_populations (xplasma, mode)
 
 
   /* This next line sets the partition function for each ion. This has always been the place here python calculates the
-     partition funcions and sets the level densities for each ion. It needs to be done, or other parts of the code which rely
+     partition functions and sets the level densities for each ion. It needs to be done, or other parts of the code which rely
      on sensible level populations don't work properly. In the case of the dilute blackbody, the code works well, however we do
      not currently (v78) have a procedure to calucate the levels for a spectral model case. We therefore call partition
      functions with mode 4 - this is a special mode which forces the ions to be in the ground state. This is reasonable for a
@@ -189,7 +203,7 @@ matrix_ion_populations (xplasma, mode)
   {
     partition_functions (xplasma, NEBULARMODE_ML93);    // We use t_r and the radiative weight
   }
-  else if (mode == NEBULARMODE_MATRIX_SPECTRALMODEL)
+  else if (mode == NEBULARMODE_MATRIX_SPECTRALMODEL || mode == NEBULARMODE_MATRIX_ESTIMATORS)
   {
     partition_functions (xplasma, NEBULARMODE_LTE_GROUND);      // Set to ground state
   }

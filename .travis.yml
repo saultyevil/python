@@ -49,12 +49,6 @@ install:
     # do installation
     - make travis_install
 
-
-    #Then clone data
-    - mkdir data
-    - git clone --depth=50 git://github.com/agnwinds/data.git data
-
-
 script:
     - echo $PWD
     - cd source/

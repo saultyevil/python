@@ -369,16 +369,16 @@ def doit(root='ixvel',outputfile='out.txt'):
     for one in complete_message:
         print(one)
 
-    xdim=how_many_dimensions('%s.0.master.txt' % root)
+    xdim=how_many_dimensions('%s.master.txt' % root)
 
     if xdim==2:
-        converge_plot=plot_wind.doit('%s.0.master.txt' % root,'converge',plot_dir='./diag_%s' % root)
-        te_plot=plot_wind.doit('%s.0.master.txt' % root,'t_e',plot_dir='./diag_%s' % root)
-        tr_plot=plot_wind.doit('%s.0.master.txt' % root,'t_r',plot_dir='./diag_%s' % root)
+        converge_plot=plot_wind.doit('%s.master.txt' % root,'converge',plot_dir='./diag_%s' % root)
+        te_plot=plot_wind.doit('%s.master.txt' % root,'t_e',plot_dir='./diag_%s' % root)
+        tr_plot=plot_wind.doit('%s.master.txt' % root,'t_r',plot_dir='./diag_%s' % root)
     else:
-        converge_plot=plot_wind_1d.doit('%s.0.master.txt' % root,'converge',plot_dir='./diag_%s' % root)
-        te_plot=plot_wind_1d.doit('%s.0.master.txt' % root,'t_e',plot_dir='./diag_%s' % root)
-        tr_plot=plot_wind_1d.doit('%s.0.master.txt' % root,'t_r',plot_dir='./diag_%s' % root)
+        converge_plot=plot_wind_1d.doit('%s.master.txt' % root,'converge',plot_dir='./diag_%s' % root)
+        te_plot=plot_wind_1d.doit('%s.master.txt' % root,'t_e',plot_dir='./diag_%s' % root)
+        tr_plot=plot_wind_1d.doit('%s.master.txt' % root,'t_r',plot_dir='./diag_%s' % root)
 
 
     converged,converging,t_r,t_e,hc=read_diag(root)

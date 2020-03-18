@@ -32,7 +32,7 @@ double xexp_temp, xexp_w;
  * @brief      int calculates the photoionization rate coefficient for an ion in a given cell
  *
  * @param [in] int  nion   The ion being ionized (or the index to an inner shell cross section)
- * @param [in] PlasmaPtr  xplasma   The cell in question - note that the details of the model is stored in this strucute
+ * @param [in] PlasmaPtr  xplasma   The cell in question - note that the details of the model is stored in this structure
  * @param [in] int  mode says whether to use a piecewise model (1) or a blackbody model (2) for J_nu
  * @param [in, out] type says whether we are computing an outer shell (1) or inner shell (2) rate
  * @return     The photioinization rate coefficient for the ion.
@@ -43,9 +43,9 @@ double xexp_temp, xexp_w;
  * 	The mode tells the subroutine wether we are modelling the
  * 	mean intensity as a dilute blackbody (mode2) or as a series
  * 	of power laws and exponentials (mode1). The type allows for the calculation
- *  of inner shell rates - in this case nion is the indenx into an inner
- * 	shell cross section record - this links to the relvant ion internally.
- *  the reason for the difference is that there is exactly one outer rate
+ *      of inner shell rates - in this case nion is the index into an inner
+ * 	shell cross section record - this links to the relevant ion internally.
+ *      the reason for the difference is that there is exactly one outer rate
  * 	per ion, but there can be many inner shell rates. Most of the information
  * 	needed for the calculations is stored in the xplasma structure (e.g. temperature
  * 	and spectral model)
@@ -53,7 +53,7 @@ double xexp_temp, xexp_w;
  * ### Notes ###
  * This was created in Summer 2014 in preparation for matrix ionization solver. Previously, this code
  * was contained in two subroutines bb_correct_2 and pl_correct_2.The functionality of these two
- * have ben combined into one - hence the requirement for the mode parameter.It was further extended
+ * have ben combined into one - hence the requirement for the mode parameter. It was further extended
  * to deal with inner shell rates - hence the type parameter
  *
  **********************************************************/

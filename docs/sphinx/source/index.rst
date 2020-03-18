@@ -76,4 +76,5 @@ Mandy Hewitt
    running_python
    input
    output
+   examples
    *

@@ -468,11 +468,9 @@ double one_fb_f1, one_fb_f2, one_fb_te; /* Old values */
  * ### Notes ###
  *
  *
- * 	@bug This routine contains questions from Stuart in May 04 that have never been
- * 	addressed. Furthemore, the routine has a parameter delta which is used to decide
- * 	whether one is close enough in temperature to a previously generated DCF. This
- * 	is set to 500, which is probably OK if the temperatures are high, but in appropriate
- * 	if T is of order 1000 K.
+ * 	@bug This routine still assumes the possibility of jumps
+ *      even though this possibility has been removed from the cdf generation
+ *      routines.
  *
  **********************************************************/
 
@@ -499,8 +497,10 @@ one_fb (one, f1, f2)
     Exit (0);
   }
 
-/* Check if an apprpriate photon frequency has already been generated, and
-use that instead if possible --  57h */
+/* Check if an appropriate photon frequency has already been generated, 
+   and use that instead if possible 
+ */
+
   tt = xplasma->t_e;
   if (xphot->n < NSTORE && xphot->f1 == f1 && xphot->f2 == f2 && xphot->t == tt)
   {
@@ -509,7 +509,8 @@ use that instead if possible --  57h */
     return (freq);
   }
 
-  delta = 500;                  // Fudge factor to prevent generation of a CDF if t has changed only slightly
+  delta = tt / 100;             // Fudge factor to prevent generation of a CDF if t has changed only slightly
+
   /* Check to see if we have already generated a cdf */
   if (tt > (one_fb_te + delta) || tt < (one_fb_te - delta) || f1 != one_fb_f1 || f2 != one_fb_f2)
   {
@@ -644,6 +645,7 @@ use that instead if possible --  57h */
   xphot->t = tt;
   xphot->f1 = f1;
   xphot->f2 = f2;
+
   return (freq);
 }
 

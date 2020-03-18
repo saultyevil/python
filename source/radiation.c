@@ -67,6 +67,8 @@ radiation (PhotPtr p, double ds)
   double frac_tot_abs, frac_auger_abs, z_abs;
   double kappa_ion[NIONS];
   double frac_ion[NIONS];
+  double kappa_inner_ion[n_inner_tot];
+  double frac_inner_ion[n_inner_tot];
   double density, ft, tau, tau2;
   double energy_abs;
   int n, nion;
@@ -159,6 +161,11 @@ radiation (PhotPtr p, double ds)
         kappa_ion[nion] = 0;
         frac_ion[nion] = 0;
       }
+      for (n = 0; n < n_inner_tot; n++)
+      {
+        kappa_inner_ion[n] = 0;
+        frac_inner_ion[n] = 0;
+      }
     }
 
     /* Next section is for photoionization with Topbase.  There may be more
@@ -173,7 +180,6 @@ radiation (PhotPtr p, double ds)
     /* Next steps are a way to avoid the loop over photoionization x sections when it should not matter */
     if (DENSITY_PHOT_MIN > 0)
     {                           // Initialize during ionization cycles only
-
 
       /* Loop over all photoionization xsections */
       for (n = 0; n < nphot_total; n++)
@@ -257,7 +263,7 @@ radiation (PhotPtr p, double ds)
       {
         for (n = 0; n < n_inner_tot; n++)
         {
-          if (ion[inner_cross[n].nion].phot_info != 1)
+          if (ion[inner_cross_ptr[n]->nion].phot_info != 1)
           {
             x_top_ptr = inner_cross_ptr[n];
             if (x_top_ptr->n_elec_yield != -1)  //Only any point in doing this if we know the energy of elecrons
@@ -300,8 +306,10 @@ radiation (PhotPtr p, double ds)
                     {
                       frac_z += z;
                     }
-                    frac_ion[nion] += z;
-                    kappa_ion[nion] += x;
+//                    frac_ion[nion] += z;
+//                    kappa_ion[nion] += x;                    
+                    frac_inner_ion[n] += z;     //NSH We need to log the auger rate seperately - we do this by cross section
+                    kappa_inner_ion[n] += x;    //NSH and we also og the opacity by ion
                   }
                 }
               }
@@ -467,7 +475,11 @@ radiation (PhotPtr p, double ds)
         xplasma->ioniz[nion] += kappa_ion[nion] * q;
         xplasma->heat_ion[nion] += frac_ion[nion] * z;
       }
-
+      for (n = 0; n < n_inner_tot; n++)
+      {
+        xplasma->heat_inner_ion[inner_cross_ptr[n]->nion] += frac_inner_ion[n] * z;     //This quantity is per ion - the ion number comes from the freq ordered cross section
+        xplasma->inner_ioniz[n] += kappa_inner_ion[n] * q;      //This is the number of ionizations from this innershell cross section - at this point, inner_ioniz is ordered by frequency                
+      }
     }
   }
 
@@ -830,9 +842,13 @@ pop_kappa_ff_array ()
  * in which the spectra are constructed are in geo.xfreq. This information
  * is used in different ways (or not at all) depending on the ionization mode.
  *
- * It also records the values of IP.
+ * It also records the various parameters intended to describe the radiation field, 
+ * including the IP.
  *
  * ### Notes ###
+ *
+ * The term direct refers to photons that have not been scattered by the wind.
+ * 
  * In non macro atom mode, w_ave
  * this is an average weight (passed as w_ave), but 
  * in macro atom mode weights are never reduced (so p->w 
@@ -844,7 +860,15 @@ pop_kappa_ff_array ()
  * to be called in all cases, though clearly it is only provides diagnostic
  * information in some of them.
  *
+ * 
  **********************************************************/
+
+
+/* A couple of external variables to improve the counting of ionizing
+   photons coming into a cell
+*/
+int nioniz_nplasma = -1;
+int nioniz_np = -1;
 
 int
 update_banded_estimators (xplasma, p, ds, w_ave)
@@ -859,6 +883,7 @@ update_banded_estimators (xplasma, p, ds, w_ave)
   struct photon phot_mid;
 
   /*photon weight times distance in the shell is proportional to the mean intensity */
+
   xplasma->j += w_ave * ds;
 
   if (p->nscat == 0)
@@ -951,7 +976,12 @@ update_banded_estimators (xplasma, p, ds, w_ave)
      * function so it will be incremented for both macro and non-macro modes
      */
 
-    xplasma->nioniz++;
+    if (xplasma->nplasma != nioniz_nplasma || p->np != nioniz_np)
+    {
+      xplasma->nioniz++;
+      nioniz_nplasma = xplasma->nplasma;
+      nioniz_np = p->np;
+    }
 
     /* IP needs to be radiation density in the cell. We sum contributions from
        each photon, then it is normalised in wind_update. */
@@ -1030,7 +1060,7 @@ mean_intensity (xplasma, freq, mode)
 
 
 
-  if (geo.ioniz_mode == IONMODE_MATRIX_SPECTRALMODEL)   /*If we are using power law ionization, use PL estimators */
+  if (geo.ioniz_mode == IONMODE_MATRIX_SPECTRALMODEL || geo.ioniz_mode == IONMODE_MATRIX_ESTIMATORS)    /*If we are using power law ionization, use PL estimators */
   {
     if (geo.spec_mod > 0)       /* do we have a spectral model yet */
     {
