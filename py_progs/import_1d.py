@@ -128,7 +128,7 @@ def doit(root='star',outputfile=''):
 
     '''
 
-    filename=root+'.0.master.txt'
+    filename=root+'.master.txt'
     if outputfile=='':
         outputfile=root+'.import.txt'
     

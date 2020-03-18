@@ -27,6 +27,32 @@
 #include "recipes.h"
 #include "log.h"
 
+
+/******************************
+ * The next two routines were written by ksl.  They were not part of
+   the recipes programs which I had but I think they are what was intended
+   TODO EP: I think these to functions are redundant now - we don't seem to use them
+********************************/
+
+double *
+vector (i, j)
+     int i, j;
+{
+  double dummy, *d;
+  d = calloc (sizeof (dummy), (j - i + 1) + 1);
+  return (d);
+}
+
+void
+free_vector (a, i, j)
+     double *a;
+     int i, j;
+{
+  free (a);
+}
+
+
+
 /**********************************************************/
 /**
  * @brief      A wrapper function that carries out numerical integration on a supplied function between limits

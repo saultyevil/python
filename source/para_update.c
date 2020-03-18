@@ -44,12 +44,16 @@ communicate_estimators_para ()
   /*NSH 131213 the next line introduces new helper arrays for the max and min frequencies in bands */
   double *maxbandfreqhelper, *maxbandfreqhelper2, *minbandfreqhelper, *minbandfreqhelper2;
   double *redhelper, *redhelper2, *qdisk_helper, *qdisk_helper2;
+  double *ion_helper, *ion_helper2;
+  double *inner_ion_helper, *inner_ion_helper2;
+
   int *iredhelper, *iredhelper2, *iqdisk_helper, *iqdisk_helper2;
   // int size_of_helpers;
   int plasma_double_helpers, plasma_int_helpers;
 
   /* The size of the helper array for doubles. We transmit 10 numbers 
      for each cell, plus three arrays, each of length NXBANDS */
+
   plasma_double_helpers = (30 + 3 * NXBANDS) * NPLASMA;
 
   /* The size of the helper array for integers. We transmit 7 numbers 
@@ -67,6 +71,10 @@ communicate_estimators_para ()
   redhelper = calloc (sizeof (double), plasma_double_helpers);
   redhelper2 = calloc (sizeof (double), plasma_double_helpers);
 
+  ion_helper = calloc (sizeof (double), NPLASMA * nions);
+  ion_helper2 = calloc (sizeof (double), NPLASMA * nions);
+  inner_ion_helper = calloc (sizeof (double), NPLASMA * n_inner_tot);
+  inner_ion_helper2 = calloc (sizeof (double), NPLASMA * n_inner_tot);
   /* JM -- added routine to average the qdisk quantities. The 2 is because
      we only have two doubles to worry about (heat and ave_freq) and 
      two integers (nhit and nphot) */
@@ -120,6 +128,14 @@ communicate_estimators_para ()
       maxbandfreqhelper[mpi_i * NXBANDS + mpi_j] = plasmamain[mpi_i].fmax[mpi_j];
       minbandfreqhelper[mpi_i * NXBANDS + mpi_j] = plasmamain[mpi_i].fmin[mpi_j];
     }
+    for (mpi_j = 0; mpi_j < nions; mpi_j++)
+    {
+      ion_helper[mpi_i * nions + mpi_j] = plasmamain[mpi_i].ioniz[mpi_j] / np_mpi_global;
+    }
+    for (mpi_j = 0; mpi_j < n_inner_tot; mpi_j++)
+    {
+      inner_ion_helper[mpi_i * n_inner_tot + mpi_j] = plasmamain[mpi_i].inner_ioniz[mpi_j] / np_mpi_global;
+    }
   }
 
   for (mpi_i = 0; mpi_i < NRINGS; mpi_i++)
@@ -137,6 +153,9 @@ communicate_estimators_para ()
   MPI_Reduce (redhelper, redhelper2, plasma_double_helpers, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   MPI_Reduce (redhelper, redhelper2, plasma_double_helpers, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
+  MPI_Reduce (ion_helper, ion_helper2, NPLASMA * nions, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Reduce (inner_ion_helper, inner_ion_helper2, NPLASMA * n_inner_tot, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
   /* JM 1607 -- seum up the qdisk values */
   MPI_Reduce (qdisk_helper, qdisk_helper2, 2 * NRINGS, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 
@@ -152,6 +171,9 @@ communicate_estimators_para ()
   /* 131213 NSH Send out the global min and max band limited frequencies to all threads */
   MPI_Bcast (minbandfreqhelper2, NPLASMA * NXBANDS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
   MPI_Bcast (maxbandfreqhelper2, NPLASMA * NXBANDS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  MPI_Bcast (ion_helper2, NPLASMA * nions, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Bcast (inner_ion_helper2, NPLASMA * n_inner_tot, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   /* JM 1607 -- send out the qdisk values to all threads */
   MPI_Bcast (qdisk_helper2, NRINGS, MPI_DOUBLE, 0, MPI_COMM_WORLD);
@@ -201,7 +223,16 @@ communicate_estimators_para ()
       plasmamain[mpi_i].fmax[mpi_j] = maxbandfreqhelper2[mpi_i * NXBANDS + mpi_j];
       plasmamain[mpi_i].fmin[mpi_j] = minbandfreqhelper2[mpi_i * NXBANDS + mpi_j];
     }
+    for (mpi_j = 0; mpi_j < nions; mpi_j++)
+    {
+      plasmamain[mpi_i].ioniz[mpi_j] = ion_helper2[mpi_i * nions + mpi_j];
+    }
+    for (mpi_j = 0; mpi_j < n_inner_tot; mpi_j++)
+    {
+      plasmamain[mpi_i].inner_ioniz[mpi_j] = inner_ion_helper2[mpi_i * n_inner_tot + mpi_j];
+    }
   }
+
 
   for (mpi_i = 0; mpi_i < NRINGS; mpi_i++)
   {
@@ -222,6 +253,11 @@ communicate_estimators_para ()
   free (minbandfreqhelper);
   free (minbandfreqhelper2);
 
+  free (ion_helper);
+  free (ion_helper2);
+
+  free (inner_ion_helper);
+  free (inner_ion_helper2);
   /* allocate the integer helper arrays, set a barrier, then do all the integers. */
   iqdisk_helper = calloc (sizeof (int), NRINGS * 2);
   iqdisk_helper2 = calloc (sizeof (int), NRINGS * 2);

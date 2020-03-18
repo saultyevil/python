@@ -47,6 +47,9 @@ from scipy.signal import convolve
 C=2.997e18 # c in Angstroms/s
 Lyman=C/912.
 HeII=C/912.*4
+LymanA=C/1216
+HB=C/4863
+HA=C/6563
 
 def xsmooth(flux,smooth=21):
     '''
@@ -126,6 +129,9 @@ def doit(rootname='sphere',smooth=21,fig_no=2):
 
     pylab.text(Lyman,0.9*ymax,'H',horizontalalignment='center',verticalalignment='top',size=14)
     pylab.text(HeII,0.9*ymax,'HeII',horizontalalignment='center',verticalalignment='top',size=14)
+    pylab.plot([LymanA,LymanA],[0.5*ymax,0.9*ymax],'-k')
+    pylab.plot([HB,HB],[0.5*ymax,0.9*ymax],'-k')
+    pylab.plot([HA,HA],[0.5*ymax,0.9*ymax],'-k')
     pylab.legend(loc='best')
     pylab.title(rootname,size=16)
     pylab.xlabel(r'$ {\nu} $',size=16)

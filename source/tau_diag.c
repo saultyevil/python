@@ -569,8 +569,6 @@ tau_reposition_photon (PhotPtr pout)
 int
 tau_create_phot (PhotPtr pout, double nu, double *lmn)
 {
-  double theta;
-
   if (nu < 0)
   {
     Error ("%s : %i : photon can't be created with negative nu\n", __FILE__, __LINE__);
