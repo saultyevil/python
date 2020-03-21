@@ -196,17 +196,16 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
 
 
-/* The next section checks to see if the frequency difference on
- * the two sides is very small and if not limits the resonances
- * one has to worry about
- */
+  /* The next section checks to see if the frequency difference on
+   * the two sides is very small and if not limits the resonances
+   * one has to worry about
+   */
 
   if (fabs (dfreq) < EPSILON)
   {
-    Error ("calculate_ds: v same at both sides of cell %d\n", one->nwind);
-    x = -1;
-    return (smax);              // This is not really the best thing to do, but it avoids disaster below
+    Error ("%s : %i : v same at both sides of cell %d which has inwind %i\n", __FILE__, __LINE__, one->nwind, one->inwind);
 
+    return (smax);              // This is not really the best thing to do, but it avoids disaster below
   }
   else if (dfreq > 0)
   {
