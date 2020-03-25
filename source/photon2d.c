@@ -95,10 +95,14 @@ translate (w, pp, tau_scat, tau, nres)
   }
   else if ((pp->grid = where_in_grid (ndomain, pp->x)) >= 0)
   {
-      if (wmain[pp->grid].inwind < W_ALL_INWIND)  // EP: I think this will take care partially inwind cells
-        istat = translate_in_space (pp);
-      else
-        istat = translate_in_wind (w, pp, tau_scat, tau, nres);
+    if (wmain[pp->grid].inwind < W_ALL_INWIND)  // EP: I think this will take care partially inwind cells
+    {
+      Error ("%s : %i : photon found in cell %i which is 'inwind' but is actually inwind = %i\n", __FILE__, __LINE__, pp->grid,
+             wmain[pp->grid].inwind);
+      istat = translate_in_space (pp);
+    }
+    else
+      istat = translate_in_wind (w, pp, tau_scat, tau, nres);
   }
   else
   {
