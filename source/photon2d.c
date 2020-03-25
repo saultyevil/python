@@ -95,19 +95,12 @@ translate (w, pp, tau_scat, tau, nres)
   }
   else if ((pp->grid = where_in_grid (ndomain, pp->x)) >= 0)
   {
-    if (wmain[pp->grid].inwind < W_ALL_INWIND)  // EP: I think this will take care partially inwind cells
-    {
-      Error ("%s : %i : photon found in cell %i which is 'inwind' but is actually inwind = %i\n", __FILE__, __LINE__, pp->grid,
-             wmain[pp->grid].inwind);
-      istat = translate_in_space (pp);
-    }
-    else
-      istat = translate_in_wind (w, pp, tau_scat, tau, nres);
+    istat = translate_in_wind (w, pp, tau_scat, tau, nres);
   }
   else
   {
-    istat = pp->istat = -1;     /* It's not in the wind and it's not in the grid.  Bummer! */
-    Error ("%s : %i : found photon that was not in wind or grid - inwind = %i\n", __FILE__, __LINE__, inwind);
+    istat = pp->istat = -1;
+    Error ("%s : %i : found photon that was not in wind or grid - inwind = %i pp->grid %i\n", __FILE__, __LINE__, inwind, pp->grid);
   }
 
   return (istat);
@@ -548,19 +541,19 @@ return and record an error */
 
   if ((p->grid = n = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
   {
-//OLD    if (translate_in_wind_failure < 1000)
-//OLD    {
-//OLD     if (modes.save_photons)
-//OLD       {
-//OLD         save_photons (p, "NotInGrid_translate_in_wind");
-//OLD       }
-//OLD    }
     return (n);                 /* Photon was not in grid */
   }
 
 /* Assign the pointers for the cell containing the photon */
 
   one = &wmain[n];              /* one is the grid cell where the photon is */
+
+  if (one->inwind < W_ALL_INWIND)
+  {
+    istat = translate_in_space (p);
+    return istat;
+  }
+
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
 

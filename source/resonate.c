@@ -203,8 +203,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (fabs (dfreq) < EPSILON)
   {
-    Error ("%s : %i : v same at both sides of cell %d which has inwind %i\n", __FILE__, __LINE__, one->nwind, one->inwind);
-
+    Error ("%s : %i : v same at both sides of cell %d which is inwind\n", __FILE__, __LINE__, one->nwind);
     return (smax);              // This is not really the best thing to do, but it avoids disaster below
   }
   else if (dfreq > 0)
