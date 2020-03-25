@@ -86,31 +86,24 @@ translate (w, pp, tau_scat, tau, nres)
 {
   int istat;
   int ndomain;
+  int inwind;
 
-  int inwind = where_in_wind (pp->x, &ndomain);
-  int the_cell = where_in_grid (ndomain, pp->x);
 
-  int cell_inwind;
-
-  if (the_cell > 0)
-    cell_inwind = w[the_cell].inwind;
-  else
-    cell_inwind = inwind;
-
-  pp->grid = cell_inwind;
-
-  if (inwind < W_ALL_INWIND || cell_inwind < W_ALL_INWIND)
+  if ((inwind = where_in_wind (pp->x, &ndomain)) < W_ALL_INWIND)
   {
     istat = translate_in_space (pp);
   }
-  else if (pp->grid >= 0)
+  else if ((pp->grid = where_in_grid (ndomain, pp->x)) >= 0)
   {
-    istat = translate_in_wind (w, pp, tau_scat, tau, nres);
+      if (wmain[pp->grid].inwind < W_ALL_INWIND)  // EP: I think this will take care partially inwind cells
+        istat = translate_in_space (pp);
+      else
+        istat = translate_in_wind (w, pp, tau_scat, tau, nres);
   }
   else
   {
     istat = pp->istat = -1;     /* It's not in the wind and it's not in the grid.  Bummer! */
-    Error ("%s : %i : found photon that was not in wind or grid - inwind %i grid %i\n", __FILE__, __LINE__, inwind, the_cell);
+    Error ("%s : %i : found photon that was not in wind or grid - inwind = %i\n", __FILE__, __LINE__, inwind);
   }
 
   return (istat);
