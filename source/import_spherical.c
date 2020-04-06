@@ -178,7 +178,7 @@ spherical_make_grid_import (w, ndom)
 
   zdom[ndom].wind_rho_min = zdom[ndom].rho_min = 0;
   zdom[ndom].rmin = imported_model[ndom].r[0];
-  zdom[ndom].wind_rho_max = zdom[ndom].zmax = zdom[ndom].rho_max = zdom[ndom].rmax = imported_model[ndom].r[imported_model[ndom].ncell - 1];
+  zdom[ndom].wind_rho_max = zdom[ndom].zmax = zdom[ndom].rho_max = zdom[ndom].rmax = imported_model[ndom].r[imported_model[ndom].ncell - 2];
   zdom[ndom].wind_thetamin = zdom[ndom].wind_thetamax = 0.;
 
   for (j = 0; j < imported_model[ndom].ncell; j++)
