@@ -1113,6 +1113,7 @@ int size_Jbar_est, size_gamma_est, size_alpha_est;
 #define NEBULARMODE_MATRIX_ESTIMATORS 10      // matrix solver spectral model
 
 
+
 typedef struct photon
 {
   double x[3];                  /* The position of packet */
