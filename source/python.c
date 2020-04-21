@@ -670,7 +670,7 @@ main (argc, argv)
    * Perform the optical depth diagnostics routines
    */
 
-  tau_diag_main (w);
+  tau_spectrum_main (w);
 
 /* XXXX - THE CALCULATION OF A DETAILED SPECTRUM IN A SPECIFIC REGION OF WAVELENGTH SPACE */
 

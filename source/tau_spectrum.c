@@ -677,6 +677,25 @@ init_tau_observers (void)
   }
 }
 
+/* ************************************************************************** */
+/**
+ * @brief
+ *
+ * @param w
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+void
+mpi_gather_spectra (double *spec, int nspec)
+{
+  if (rank_global == 0)
+    MPI_Reduce (MPI_IN_PLACE, spec, NWAVE * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  else
+    MPI_Reduce (spec, spec, NWAVE * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
 /* ************************************************************************* */
 /**
  * @brief           Create spectra of tau vs lambda for each observer angle
@@ -708,6 +727,7 @@ tau_create_spectra (WindPtr w)
 {
   int ierr;
   int ispec, ifreq;
+  int nbins, mpi_lower, mpi_upper;
   double tau, column;
   double freq;
   double freq_min, freq_max, dfreq;
@@ -735,6 +755,16 @@ tau_create_spectra (WindPtr w)
    * TODO: make wavelength limits an advanced parameter
    */
 
+//  if (geo.swavemin)
+//    wave_min = geo.swavemin;
+//  else
+//    wave_min = 100;
+//
+//  if (geo.swavemax)
+//    wave_min = geo.swavemax;
+//  else
+//    wave_min = 1000;
+
   wave_min = 100;
   wave_max = 10000;
 
@@ -750,17 +780,27 @@ tau_create_spectra (WindPtr w)
   kbf_need (freq_min, freq_max);
 
   /*
+   * Initialise the variables to split the calculation across multiple
+   * processors
+   */
+
+  nbins = ceil ((double) NWAVE / np_mpi_global);
+  mpi_lower = nbins * rank_global;
+  mpi_upper = nbins * (rank_global + 1);
+
+  /*
    * Now create the optical depth spectra for each observer angle
    */
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
+
     Log ("  - Creating spectrum: %s\n", SIGHTLINES[ispec].name);
 
-    freq = freq_min;
     current_observer = SIGHTLINES[ispec].lmn;
+    freq = mpi_lower * dfreq;
 
-    for (ifreq = 0; ifreq < NWAVE; ifreq++)
+    for (ifreq = mpi_lower; ifreq < mpi_upper; ifreq++)
     {
       tau = 0;
       column = 0;
@@ -778,6 +818,7 @@ tau_create_spectra (WindPtr w)
     }
   }
 
+  mpi_gather_spectra (tau_spectrum, N_ANGLES);
   tau_write_optical_depth_spectra (tau_spectrum, freq_min, dfreq);
   free (tau_spectrum);
 }
@@ -904,7 +945,7 @@ tau_evaluate_photo_edges (WindPtr w)
  * ************************************************************************** */
 
 void
-tau_diag_main (WindPtr w)
+tau_spectrum_main (WindPtr w)
 {
 
   xsignal (files.root, "%-20s Optical depth diagnostics beginning\n", "TAU");

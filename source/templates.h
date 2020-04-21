@@ -570,7 +570,7 @@ int tau_create_phot (PhotPtr pout, double nu, double *lmn);
 void init_tau_observers (void);
 void tau_create_spectra (WindPtr w);
 void tau_evaluate_photo_edges (WindPtr w);
-void tau_diag_main(WindPtr w);
+void tau_spectrum_main (WindPtr w);
 /* import_calloc.c */
 void calloc_import(int coord_type, int ndom);
 void free_import(int coord_type, int ndom);
