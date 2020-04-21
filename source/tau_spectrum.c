@@ -774,22 +774,12 @@ tau_create_spectra (WindPtr w)
       }
 
       tau_extract_photon (w, &ptau, &column, &tau);
-      if (tau == ARR_FAIL)
-      {
-        Log ("freq %e tau %e\n", freq, tau);
-      }
       tau_spectrum[ispec * NWAVE + ifreq] = tau;
       freq += dfreq;
     }
   }
 
-//  for (int i = 0; i < NWAVE * N_ANGLES; i++)
-//  {
-//    Log ("tau %e\n", tau_spectrum[i]);
-//  }
-
   mpi_gather_spectra (tau_spectrum, N_ANGLES);
-
   tau_write_optical_depth_spectra (tau_spectrum, freq_min, dfreq);
   free (tau_spectrum);
 }
