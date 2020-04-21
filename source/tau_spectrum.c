@@ -788,6 +788,9 @@ tau_create_spectra (WindPtr w)
   mpi_lower = nbins * rank_global;
   mpi_upper = nbins * (rank_global + 1);
 
+  if (mpi_upper > NWAVE)
+    mpi_upper = NWAVE;
+
   /*
    * Now create the optical depth spectra for each observer angle
    */
