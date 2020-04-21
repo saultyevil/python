@@ -853,14 +853,14 @@ typedef struct plasma
                                    The sense is ionization from ion[n], and recombinations 
                                    to each ion[n].  */
   double *inner_recomb;
-  int *scatters;                /* The number of scatters in this cell for each ion.*/
+  int *scatters;                /* The number of scatters in this cell for each ion. */
   double *xscatters;            /* Diagnostic measure of energy scattered out of beam on extract. */
   double *heat_ion;             /* The amount of energy being transferred to the electron pool
-                                   by this ion via photoionization.*/
+                                   by this ion via photoionization. */
   double *cool_rr_ion;          /* The amount of energy being released from the electron pool
-                                   by this ion via recombination.*/
+                                   by this ion via recombination. */
   double *lum_rr_ion;           /* The recombination luminosity
-                                   by this ion via recombination.*/
+                                   by this ion via recombination. */
 
   double *cool_dr_ion;
   double j, ave_freq;           /*Respectively mean intensity, intensity_averaged frequency, 
@@ -879,7 +879,7 @@ typedef struct plasma
   /* The term direct here means from photons which have not been scattered. These are photons which have been
      created by the central object, or the disk, or in the simple case the wind, but which have not undergone
      any kind of interaction which would change their direction
-  */
+   */
   double j_direct, j_scatt;     /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double ip_direct, ip_scatt;   /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double xsd_freq[NXBANDS];     /* 1208 NSH the standard deviation of the frequency in the band */
@@ -953,10 +953,10 @@ typedef struct plasma
   } spec_mod_type[NXBANDS];     /* A switch to say which type of representation we are using for this band in this cell. 
                                    Negative means we have no useful representation, 0 means power law, 1 means exponential */
 
-  double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell*/
+  double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell */
   double pl_log_w[NXBANDS];     /*This is the log version of the power law weight. It is in an attempt to allow very large 
-                                  values of alpha to work with the PL spectral model to avoide NAN problems. 
-                                  The pl_w version can be deleted once testing is complete */
+                                   values of alpha to work with the PL spectral model to avoide NAN problems. 
+                                   The pl_w version can be deleted once testing is complete */
 
 
   double exp_temp[NXBANDS];     /* The effective temperature of an exponential representation of the radiation field in a cell */

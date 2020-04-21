@@ -12,20 +12,11 @@
  * ### HOW TO ADD MORE OPTICAL DEPTHS ###
  *
  * In theory it should be relatively straight forwards to add more optical
- * depths if desired. One should only need to update the the TAU_DIAG_OPACS
- * array in tau_diag.h.
- *
- * All one should be required to do is to add a name for the optical depth and
- * any relevant frequency for photons to take. * This is done as the function
- * radiation is called to calculate the opacity for a photon of a given
- * frequency in the current cell.
- *
- * If one wishes to add a "special" opacity, which is an opacity which will
- * require it's own function to calculate, such as the Rosseland mean opacity,
- * then one should update the enumerator SPEC_OPAC in tau_diag.h with a new
- * label for that opacity, as well as the frequency to be -ENUMERATOR in the
- * TAU_DIAG_OPACS array. The frequency is set such as way so as in the function
- * tau_diag, one can update the if statement to include the new opac type.
+ * depths to the photoionization edge diagnostics if desired. One should only
+ * need to update the OPACITY_EDGES[] array with the relevant edge frequency
+ * and name of that edge. Note that the frequency should actually be slightly
+ * blueward of the actual edge frequency - this is mostly to take into account
+ * any blueshifting.
  *
  * If none of this makes sense, just try to follow how everything else is done!
  *
@@ -66,17 +57,17 @@ typedef struct tau_diag_opacities
   char name[50];
 } Opacities;
 
-Opacities OPACITY_EDGES[] = {
+const Opacities OPACITY_EDGES[] = {
   {3.387485e+15, "LymanEdge_885A"},
   {8.293014e+14, "BalmerEdge_3615A"},
   {1.394384e+16, "HeIIEdge_215A"}
 };
 
+int N_ANGLES;                   // The number of inclination angles
 int const N_TAU = sizeof OPACITY_EDGES / sizeof *OPACITY_EDGES; // The number of optical depths for the simple calculation
 
-int N_ANGLES;                   // The number of inclination angles
 #define DEFAULT_DOMAIN 0        // For now, assume we only care about photons starting in domain 0
-#define NBINS 100000
+#define NBINS 100000            // The number of bins for the spectra
 
 /* ************************************************************************* */
 /**
@@ -112,7 +103,7 @@ tau_log_edges (const double *optical_depths, const double *column_densities)
   if (rank_global != 0)
     return;
 
-  Log ("Optical depths along the defined line of sights:\n\n");
+  Log ("Optical depths along the defined line of sights for domain %i:\n\n", DEFAULT_DOMAIN);
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
@@ -207,6 +198,35 @@ tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, do
   }
 }
 
+/* ************************************************************************** */
+/**
+ * @brief  Gather the separate optical depth spectra back to the root process
+ *
+ * @param[in,out] double *spec  The optical depth spectrum
+ * @param[in]     int    nspec  The number of inclination angles
+ *
+ * @details
+ *
+ * Uses MPI_Reduce to add all the arrays together. This should be fine as all
+ * arrays are initialised to zero. Hence, any empty array entries from the
+ * parallelisation design, shouldn't interfere with the fact that we use
+ * MPI_SUM.
+ *
+ * This is most likely poor design. It should be changed in the future to use
+ * MPI_Send + MPI_Recv.
+ *
+ * ************************************************************************** */
+
+void
+mpi_gather_spectra (double *spec, int nspec)
+{
+  if (rank_global == 0)
+    MPI_Reduce (MPI_IN_PLACE, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  else
+    MPI_Reduce (spec, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+}
+
+
 /* ************************************************************************* */
 /**
  * @brief           Calculate the total optical depth a photon experiences
@@ -227,11 +247,6 @@ tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, do
  * This function is concerned with finding the opacity of the photon's current
  * cell, the distance the photon can move in the cell and hence it increments
  * the optical depth tau a photon has experienced as it moves through the wind.
- *
- * The opacity is usually calculated using the function radiation which the
- * extract photon is passed to, as well as the distance it can move, smax. In
- * special cases, such as when a mean opacity is being used, radiation is not
- * used to find the opacity but specialised functions are called instead.
  *
  * The photon status istat is updated and returned for some reason.
  *
@@ -458,8 +473,11 @@ tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau)
  *
  * @details
  *
- * This function assumes that we only care about DEFAULT_DOMAIN and whatever
+ * This function assumes that we only care about DEFAULT_DOMAIN, whatever
  * that has been set as.
+ *
+ * For photons which are pointing in the polar direction, these are launched
+ * from most dense region of the lower wind.
  *
  * ************************************************************************** */
 
@@ -524,7 +542,7 @@ tau_reposition_photon (PhotPtr pout)
  * the surface of the central source, taking into account the current direction
  * of the sight-line being extracted. It's currently not possible, without a
  * tedious re-write, to place the photon at the very origin of the grid when
- * there is a central source because of how we check boundries.
+ * there is a central source because of how we check boundaries.
  *
  * Note that photons are initialised with a weight of f_tot as photons are
  * required to have weight, but since functions do not care about the weight of
@@ -644,34 +662,6 @@ init_tau_observers (void)
   }
 }
 
-/* ************************************************************************** */
-/**
- * @brief  Gather the seperate arrays back to the root process
- *
- * @param[in,out] double *spec  The optical depth spectrum
- * @param[in]     int    nspec  The number of inclination angles
- *
- * @details
- *
- * Uses MPI_Reduce to add all the arrays together. This should be fine as all
- * arrays are initialised to zero. Hence, any empty array entries from the
- * parallelisation design, shouldn't interfere with the fact that we use
- * MPI_SUM.
- *
- * This is most likely poor design. It should be changed in the future to use
- * MPI_Gather or use MPI_Send + MPI_Recv.
- *
- * ************************************************************************** */
-
-void
-mpi_gather_spectra (double *spec, int nspec)
-{
-  if (rank_global == 0)
-    MPI_Reduce (MPI_IN_PLACE, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  else
-    MPI_Reduce (spec, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-}
-
 /* ************************************************************************* */
 /**
  * @brief           Create spectra of tau vs lambda for each observer angle
@@ -692,9 +682,11 @@ mpi_gather_spectra (double *spec, int nspec)
  * for a range of photon frequencies to find how optical depth changes with
  * frequency.
  *
- * This processes can take some time compared to tau_diag. But since only NBINS
- * photons are being generated for each spectrum and the fact that these photons
- * do not interact, this spectrum does not actually take that long.
+ * This processes can take some time compared to tau_evalulate_photo_edges. But,
+ * since NBINS photons are being generated for each spectrum and the fact that
+ * these photons do not interact, the spectra does not actually take that long
+ * to complete. If NBINS is large enough, it can take a bit longer than one
+ * would like, hence the reason why this routine is parallelised.
  *
  * ************************************************************************** */
 
@@ -783,12 +775,12 @@ tau_create_spectra (WindPtr w)
     }
   }
 
+#ifdef MPI_ON
   mpi_gather_spectra (tau_spectrum, N_ANGLES);
+#endif
   tau_write_optical_depth_spectra (tau_spectrum, freq_min, dfreq);
   free (tau_spectrum);
 }
-
-
 
 /* ************************************************************************* */
 /**
