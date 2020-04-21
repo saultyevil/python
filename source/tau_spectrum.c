@@ -76,6 +76,7 @@ int const N_TAU = sizeof OPACITY_EDGES / sizeof *OPACITY_EDGES; // The number of
 
 int N_ANGLES;                   // The number of inclination angles
 #define DEFAULT_DOMAIN 0        // For now, assume we only care about photons starting in domain 0
+#define NBINS 100000
 
 /* ************************************************************************* */
 /**
@@ -186,13 +187,13 @@ tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, do
 
   frequency = freq_min;
 
-  for (ifreq = 0; ifreq < NWAVE; ifreq++)
+  for (ifreq = 0; ifreq < NBINS; ifreq++)
   {
     wavelength = VLIGHT / frequency / ANGSTROM;
     fprintf (tau_spec_file, "%-12e %-12e ", frequency, wavelength);
 
     for (ispec = 0; ispec < N_ANGLES; ispec++)
-      fprintf (tau_spec_file, "%-12e ", tau_spectrum[ispec * NWAVE + ifreq]);
+      fprintf (tau_spec_file, "%-12e ", tau_spectrum[ispec * NBINS + ifreq]);
 
     fprintf (tau_spec_file, "\n");
 
@@ -645,11 +646,20 @@ init_tau_observers (void)
 
 /* ************************************************************************** */
 /**
- * @brief
+ * @brief  Gather the seperate arrays back to the root process
  *
- * @param w
+ * @param[in,out] double *spec  The optical depth spectrum
+ * @param[in]     int    nspec  The number of inclination angles
  *
  * @details
+ *
+ * Uses MPI_Reduce to add all the arrays together. This should be fine as all
+ * arrays are initialised to zero. Hence, any empty array entries from the
+ * parallelisation design, shouldn't interfere with the fact that we use
+ * MPI_SUM.
+ *
+ * This is most likely poor design. It should be changed in the future to use
+ * MPI_Gather or use MPI_Send + MPI_Recv.
  *
  * ************************************************************************** */
 
@@ -657,9 +667,9 @@ void
 mpi_gather_spectra (double *spec, int nspec)
 {
   if (rank_global == 0)
-    MPI_Reduce (MPI_IN_PLACE, spec, NWAVE * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce (MPI_IN_PLACE, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   else
-    MPI_Reduce (spec, spec, NWAVE * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Reduce (spec, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
 }
 
 /* ************************************************************************* */
@@ -682,7 +692,7 @@ mpi_gather_spectra (double *spec, int nspec)
  * for a range of photon frequencies to find how optical depth changes with
  * frequency.
  *
- * This processes can take some time compared to tau_diag. But since only NWAVE
+ * This processes can take some time compared to tau_diag. But since only NBINS
  * photons are being generated for each spectrum and the fact that these photons
  * do not interact, this spectrum does not actually take that long.
  *
@@ -697,7 +707,6 @@ tau_create_spectra (WindPtr w)
   double tau, column;
   double freq;
   double freq_min, freq_max, dfreq;
-  double wave_min, wave_max;
   double *current_observer;
   double *tau_spectrum;
 
@@ -705,9 +714,9 @@ tau_create_spectra (WindPtr w)
 
   Log ("Creating optical depth spectra:\n");
 
-  if (!(tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum)))
+  if (!(tau_spectrum = calloc (N_ANGLES * NBINS, sizeof *tau_spectrum)))
   {
-    Error ("%s : %i : cannot allocate %d bytes for tau_spectrum\n", __FILE__, __LINE__, N_ANGLES * NWAVE * sizeof *tau_spectrum);
+    Error ("%s : %i : cannot allocate %d bytes for tau_spectrum\n", __FILE__, __LINE__, N_ANGLES * NBINS * sizeof *tau_spectrum);
     Exit (1);
   }
 
@@ -718,12 +727,9 @@ tau_create_spectra (WindPtr w)
    * TODO: make wavelength limits an advanced parameter
    */
 
-  wave_min = 100;
-  wave_max = 10000;
-
-  freq_max = VLIGHT / (wave_min * ANGSTROM);
-  freq_min = VLIGHT / (wave_max * ANGSTROM);
-  dfreq = (freq_max - freq_min) / NWAVE;
+  freq_min = xband.f1[0];
+  freq_max = xband.f2[xband.nbands - 1];
+  dfreq = (freq_max - freq_min) / NBINS;
 
   /*
    * It's not clear to me if we should do this really, but if it's good enough
@@ -737,14 +743,12 @@ tau_create_spectra (WindPtr w)
    * processors
    */
 
-  nbins = ceil ((double) NWAVE / np_mpi_global);
+  nbins = ceil ((double) NBINS / np_mpi_global);
   mpi_lower = nbins * rank_global;
   mpi_upper = nbins * (rank_global + 1);
 
-  if (mpi_upper > NWAVE)
-    mpi_upper = NWAVE;
-
-  nbins = mpi_upper - mpi_lower;
+  if (mpi_upper > NBINS)
+    mpi_upper = NBINS;
 
   /*
    * Now create the optical depth spectra for each observer angle
@@ -774,7 +778,7 @@ tau_create_spectra (WindPtr w)
       }
 
       tau_extract_photon (w, &ptau, &column, &tau);
-      tau_spectrum[ispec * NWAVE + ifreq] = tau;
+      tau_spectrum[ispec * NBINS + ifreq] = tau;
       freq += dfreq;
     }
   }
