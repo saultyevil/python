@@ -79,36 +79,6 @@ int N_ANGLES;                   // The number of inclination angles
 
 /* ************************************************************************* */
 /**
- * @brief     Initialise an array to a failure value
- *
- * @param    double *arr      The array to initialise
- * @param    int len          The length of the array
- *
- * @details
- *
- * The purpose of this function is to simply initialise the values of the
- * array to a number which will indicate a failure in the output.
- *
- * ### Programming Notes ###
- *
- * This function has been declared as static to ensure that it only has scope
- * in this file.
- *
- * ************************************************************************** */
-
-#define ARR_FAIL -1.0
-
-static void
-init_array (double *arr, int len)
-{
-  int i;
-
-  for (i = 0; i < len; ++i)
-    arr[i] = ARR_FAIL;
-}
-
-/* ************************************************************************* */
-/**
  * @brief           Print the various optical depths calculated using this
  *                  routine
  *
@@ -205,13 +175,9 @@ tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, do
     Exit (1);
   }
 
-  /*
-   * Write the file header - nothing fancy
-   */
-
-  fprintf (tau_spec_file, "Freq. Lambda ");
+  fprintf (tau_spec_file, "Freq.        Lambda       ");
   for (ispec = 0; ispec < N_ANGLES; ispec++)
-    fprintf (tau_spec_file, "%s ", SIGHTLINES[ispec].name);
+    fprintf (tau_spec_file, "%-12s ", SIGHTLINES[ispec].name);
   fprintf (tau_spec_file, "\n");
 
   /*
@@ -223,10 +189,10 @@ tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, do
   for (ifreq = 0; ifreq < NWAVE; ifreq++)
   {
     wavelength = VLIGHT / frequency / ANGSTROM;
-    fprintf (tau_spec_file, "%e %e ", frequency, wavelength);
+    fprintf (tau_spec_file, "%-12e %-12e ", frequency, wavelength);
 
     for (ispec = 0; ispec < N_ANGLES; ispec++)
-      fprintf (tau_spec_file, "%e ", tau_spectrum[ispec * NWAVE + ifreq]);
+      fprintf (tau_spec_file, "%-12e ", tau_spectrum[ispec * NWAVE + ifreq]);
 
     fprintf (tau_spec_file, "\n");
 
@@ -741,12 +707,9 @@ tau_create_spectra (WindPtr w)
 
   if (!(tau_spectrum = calloc (N_ANGLES * NWAVE, sizeof *tau_spectrum)))
   {
-
     Error ("%s : %i : cannot allocate %d bytes for tau_spectrum\n", __FILE__, __LINE__, N_ANGLES * NWAVE * sizeof *tau_spectrum);
     Exit (1);
   }
-
-  init_array (tau_spectrum, N_ANGLES * NWAVE);
 
   /*
    * Define the limits of the spectra in both wavelength and frequency. The
@@ -754,16 +717,6 @@ tau_create_spectra (WindPtr w)
    * wavelength limits MUST be in units of Angstroms.
    * TODO: make wavelength limits an advanced parameter
    */
-
-//  if (geo.swavemin)
-//    wave_min = geo.swavemin;
-//  else
-//    wave_min = 100;
-//
-//  if (geo.swavemax)
-//    wave_min = geo.swavemax;
-//  else
-//    wave_min = 1000;
 
   wave_min = 100;
   wave_max = 10000;
@@ -791,17 +744,21 @@ tau_create_spectra (WindPtr w)
   if (mpi_upper > NWAVE)
     mpi_upper = NWAVE;
 
+  nbins = mpi_upper - mpi_lower;
+
   /*
    * Now create the optical depth spectra for each observer angle
    */
 
   for (ispec = 0; ispec < N_ANGLES; ispec++)
   {
-
     Log ("  - Creating spectrum: %s\n", SIGHTLINES[ispec].name);
 
     current_observer = SIGHTLINES[ispec].lmn;
     freq = mpi_lower * dfreq;
+
+    if (freq < freq_min)
+      freq = freq_min;
 
     for (ifreq = mpi_lower; ifreq < mpi_upper; ifreq++)
     {
@@ -809,6 +766,7 @@ tau_create_spectra (WindPtr w)
       column = 0;
 
       ierr = tau_create_phot (&ptau, freq, current_observer);
+
       if (ierr == EXIT_FAILURE)
       {
         Log ("%s : %i : skipping photon of frequency %e when creating spectrum\n", __FILE__, __LINE__, freq);
@@ -816,12 +774,22 @@ tau_create_spectra (WindPtr w)
       }
 
       tau_extract_photon (w, &ptau, &column, &tau);
+      if (tau == ARR_FAIL)
+      {
+        Log ("freq %e tau %e\n", freq, tau);
+      }
       tau_spectrum[ispec * NWAVE + ifreq] = tau;
       freq += dfreq;
     }
   }
 
+//  for (int i = 0; i < NWAVE * N_ANGLES; i++)
+//  {
+//    Log ("tau %e\n", tau_spectrum[i]);
+//  }
+
   mpi_gather_spectra (tau_spectrum, N_ANGLES);
+
   tau_write_optical_depth_spectra (tau_spectrum, freq_min, dfreq);
   free (tau_spectrum);
 }
@@ -888,9 +856,6 @@ tau_evaluate_photo_edges (WindPtr w)
     Error ("%s : %i : cannot allocate %d bytes for col_den_store\n", __FILE__, __LINE__, N_ANGLES * sizeof *optical_depth);
     Exit (1);
   }
-
-  init_array (optical_depth, N_ANGLES * N_TAU);
-  init_array (column_densities, N_ANGLES);
 
   /*
    * Now extract the optical depths and mass column densities
