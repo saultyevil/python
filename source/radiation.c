@@ -67,6 +67,8 @@ radiation (PhotPtr p, double ds)
   double frac_tot_abs, frac_auger_abs, z_abs;
   double kappa_ion[NIONS];
   double frac_ion[NIONS];
+  double kappa_inner_ion[n_inner_tot];
+  double frac_inner_ion[n_inner_tot];
   double density, ft, tau, tau2;
   double energy_abs;
   int n, nion;
@@ -158,6 +160,11 @@ radiation (PhotPtr p, double ds)
       {
         kappa_ion[nion] = 0;
         frac_ion[nion] = 0;
+      }
+      for (n = 0; n < n_inner_tot; n++)
+      {
+        kappa_inner_ion[n] = 0;
+        frac_inner_ion[n] = 0;
       }
     }
 
@@ -256,7 +263,7 @@ radiation (PhotPtr p, double ds)
       {
         for (n = 0; n < n_inner_tot; n++)
         {
-          if (ion[inner_cross[n].nion].phot_info != 1)
+          if (ion[inner_cross_ptr[n]->nion].phot_info != 1)
           {
             x_top_ptr = inner_cross_ptr[n];
             if (x_top_ptr->n_elec_yield != -1)  //Only any point in doing this if we know the energy of elecrons
@@ -299,8 +306,10 @@ radiation (PhotPtr p, double ds)
                     {
                       frac_z += z;
                     }
-                    frac_ion[nion] += z;
-                    kappa_ion[nion] += x;
+//                    frac_ion[nion] += z;
+//                    kappa_ion[nion] += x;
+                    frac_inner_ion[n] += z;     //NSH We need to log the auger rate seperately - we do this by cross section
+                    kappa_inner_ion[n] += x;    //NSH and we also og the opacity by ion
                   }
                 }
               }
@@ -466,7 +475,11 @@ radiation (PhotPtr p, double ds)
         xplasma->ioniz[nion] += kappa_ion[nion] * q;
         xplasma->heat_ion[nion] += frac_ion[nion] * z;
       }
-
+      for (n = 0; n < n_inner_tot; n++)
+      {
+        xplasma->heat_inner_ion[inner_cross_ptr[n]->nion] += frac_inner_ion[n] * z;     //This quantity is per ion - the ion number comes from the freq ordered cross section
+        xplasma->inner_ioniz[n] += kappa_inner_ion[n] * q;      //This is the number of ionizations from this innershell cross section - at this point, inner_ioniz is ordered by frequency
+      }
     }
   }
 
@@ -640,52 +653,6 @@ sigma_phot (x_ptr, freq)
 
 
 
-/**********************************************************/
-/** 
- * @brief      calculates the photionization crossection due to the transition
- *  	associated with x_ptr at frequency freq (when the data is in the form of the Verner x-sections
- *
- * @param [in] struct innershell *  x_ptr   The stucture that contains information in the format of Verner for 
- * a particular ion level
- * @param [in] double  freq   The frequency where the x-section is calculated
- * @return     The photoinization x-section
- *
- * @details
- * Same as sigma_phot but using the older compilation from Verner that includes inner shells
- *
- * ### Notes ###
- * 
- * I (NSH) think this routine has been largely superceeded by the new inner shell formulation of auger ionization.
- * At some point we may wish to expunge the old augerion perts of python.
- *
- **********************************************************/
-
-double
-sigma_phot_verner (x_ptr, freq)
-     struct innershell *x_ptr;
-     double freq;
-{
-  double ft;
-  double y;
-  double f1, f2, f3;
-  double xsection;
-
-  ft = x_ptr->freq_t;           /* threshold frequency */
-
-  if (ft < freq)
-  {
-    y = freq / x_ptr->E_0 * HEV;
-
-    f1 = ((y - 1.0) * (y - 1.0)) + (x_ptr->yw * x_ptr->yw);
-    f2 = pow (y, 0.5 * x_ptr->P - 5.5 - x_ptr->l);
-    f3 = pow (1.0 + sqrt (y / x_ptr->ya), -x_ptr->P);
-    xsection = x_ptr->Sigma * f1 * f2 * f3;     // the photoinization xsection
-
-    return (xsection);
-  }
-  else
-    return (0.0);
-}
 
 
 
@@ -791,7 +758,7 @@ pop_kappa_ff_array ()
         sum += plasmamain[i].density[j] * (ion[j].istate - 1) * (ion[j].istate - 1) * gaunt;
         if (sane_check (sum))
         {
-          Error ("pop_kappa_ff_array:sane_check sum is %e this is a problem, possible in gaunt %3\n", sum, gaunt);
+          Error ("pop_kappa_ff_array:sane_check sum is %e this is a problem, possible in gaunt %e\n", sum, gaunt);
         }
       }
       else
@@ -1047,7 +1014,7 @@ mean_intensity (xplasma, freq, mode)
 
 
 
-  if (geo.ioniz_mode == IONMODE_MATRIX_SPECTRALMODEL)   /*If we are using power law ionization, use PL estimators */
+  if (geo.ioniz_mode == IONMODE_MATRIX_SPECTRALMODEL || geo.ioniz_mode == IONMODE_MATRIX_ESTIMATORS)    /*If we are using power law ionization, use PL estimators */
   {
     if (geo.spec_mod > 0)       /* do we have a spectral model yet */
     {

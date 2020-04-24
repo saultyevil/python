@@ -100,7 +100,7 @@ LDFLAGS+= -L$(LIB) -lm -lgsl -lgslcblas
 
 #Note that version should be a single string without spaces.
 
-VERSION = 84b
+VERSION = 84d
 
 INDENT = yes
 
@@ -220,7 +220,7 @@ py_wind_objects = py_wind.o get_atomicdata.o py_wind_sub.o windsave.o py_wind_io
 		bb.o rdpar.o xlog.o direct_ion.o diag.o matrix_ion.o \
 		pi_rates.o photo_gen_matom.o macro_gov.o \
 		time.o reverb.o paths.o synonyms.o cooling.o windsave2table_sub.o \
-		rdpar_init.o import_calloc.c
+		rdpar_init.o import_calloc.o
 
 
 

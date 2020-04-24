@@ -440,6 +440,14 @@ struct geometry
                                    the same results as pre-Macro Atom versions of the code. */
   int partition_mode;           /* Diagnostic to force the partition function to be calculated in
                                    a specific way. */
+
+#define LINE_MODE_ABSORB      0
+#define LINE_MODE_SCAT        1
+#define LINE_MODE_SINGLE_SCAT 2
+#define LINE_MODE_ESC_PROB    3
+
+
+
   int line_mode;                /*0, the atomosphere is a completely absorbing and no photons
                                    will be scattered.  In this mode, assuming the wind is a source
                                    of emission, the emissivity will be the Einstein A coefficient
@@ -448,18 +456,18 @@ struct geometry
                                    as a result of radiation transfer
                                    2, then a simple single scattering approximation is applied in which
                                    case the scattered flux is just  A21/(C21+A21). 
-                                   3, then radiation trapping is included as well.
-                                   6, If set to 6 initially, this switches on the macro atom stuff
-                                   and then behaves like 3. (SS)
+                                   3, then radiation trapping aka escape probabilities are included as well.
+                                   6 - 9,  If set to 6-9 initially, this switches on the macro atom case
+                                   and then behaves like LINE_MODE_ESC_PROB.
                                  */
-/* Note that the scatter_mode is actually a subsidiary variable of the line_mode.  Chooising a line_mode
+/* Note that the scatter_mode is actually a subsidiary variable of the line_mode.  Choosing a line_mode
  * results in the selection of a scatter_mode */
+
 #define SCATTER_MODE_ISOTROPIC    0
 #define SCATTER_MODE_THERMAL      2
 
   int scatter_mode;             /*The way in which scattering for resonance lines is treated 
                                    0  isotropic
-                                   1  anisotropic
                                    2  thermally broadened anisotropic
                                  */
 
@@ -852,15 +860,17 @@ typedef struct plasma
   double *ioniz, *recomb;       /* Number of ionizations and recombinations for each ion.
                                    The sense is ionization from ion[n], and recombinations 
                                    to each ion[n].  */
-  double *inner_recomb;
-  int *scatters;                /* The number of scatters in this cell for each ion. */
+  double *inner_ioniz, *inner_recomb;
+  int *scatters;                /* The number of scatters in this cell for each ion.*/
   double *xscatters;            /* Diagnostic measure of energy scattered out of beam on extract. */
   double *heat_ion;             /* The amount of energy being transferred to the electron pool
-                                   by this ion via photoionization. */
+                                   by this ion via photoionization.*/
+  double *heat_inner_ion;             /* The amount of energy being transferred to the electron pool
+                                       by this ion via photoionization.*/
   double *cool_rr_ion;          /* The amount of energy being released from the electron pool
-                                   by this ion via recombination. */
+                                   by this ion via recombination.*/
   double *lum_rr_ion;           /* The recombination luminosity
-                                   by this ion via recombination. */
+                                   by this ion via recombination.*/
 
   double *cool_dr_ion;
   double j, ave_freq;           /*Respectively mean intensity, intensity_averaged frequency, 
@@ -879,7 +889,7 @@ typedef struct plasma
   /* The term direct here means from photons which have not been scattered. These are photons which have been
      created by the central object, or the disk, or in the simple case the wind, but which have not undergone
      any kind of interaction which would change their direction
-   */
+  */
   double j_direct, j_scatt;     /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double ip_direct, ip_scatt;   /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double xsd_freq[NXBANDS];     /* 1208 NSH the standard deviation of the frequency in the band */
@@ -953,10 +963,10 @@ typedef struct plasma
   } spec_mod_type[NXBANDS];     /* A switch to say which type of representation we are using for this band in this cell. 
                                    Negative means we have no useful representation, 0 means power law, 1 means exponential */
 
-  double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell */
+  double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell*/
   double pl_log_w[NXBANDS];     /*This is the log version of the power law weight. It is in an attempt to allow very large 
-                                   values of alpha to work with the PL spectral model to avoide NAN problems. 
-                                   The pl_w version can be deleted once testing is complete */
+                                  values of alpha to work with the PL spectral model to avoide NAN problems. 
+                                  The pl_w version can be deleted once testing is complete */
 
 
   double exp_temp[NXBANDS];     /* The effective temperature of an exponential representation of the radiation field in a cell */
@@ -1087,6 +1097,7 @@ int size_Jbar_est, size_gamma_est, size_alpha_est;
 #define IONMODE_ML93 3          // Lucy Mazzali
 #define IONMODE_MATRIX_BB 8     // matrix solver BB model
 #define IONMODE_MATRIX_SPECTRALMODEL 9  // matrix solver spectral model based on power laws
+#define IONMODE_MATRIX_ESTIMATORS 10  // matrix solver spectral model based on power laws
 
 // and the corresponding modes in nebular_concentrations
 #define NEBULARMODE_TR 0        // LTE using t_r
@@ -1098,6 +1109,8 @@ int size_Jbar_est, size_gamma_est, size_alpha_est;
 #define NEBULARMODE_PAIRWISE_SPECTRALMODEL 7    // pairwise spectral models (power law or expoentials)
 #define NEBULARMODE_MATRIX_BB 8 // matrix solver BB model
 #define NEBULARMODE_MATRIX_SPECTRALMODEL 9      // matrix solver spectral model
+#define NEBULARMODE_MATRIX_ESTIMATORS 10      // matrix solver spectral model
+
 
 
 typedef struct photon

@@ -122,6 +122,27 @@ to match heating and cooling in the wind element! */
 /* Convergence check */
     convergence (xplasma);
   }
+  else if (IONMODE_MATRIX_ESTIMATORS)
+  {
+
+/*  spectral_estimators does the work of getting banded W and alpha. Then oneshot gets called. */
+
+    ireturn = spectral_estimators (xplasma);
+
+    xplasma->dt_e_old = xplasma->dt_e;
+    xplasma->dt_e = xplasma->t_e - xplasma->t_e_old;
+    xplasma->t_e_old = xplasma->t_e;
+    //OLD xplasma->t_r_old = xplasma->t_r;
+    xplasma->lum_tot_old = xplasma->lum_tot;
+    xplasma->heat_tot_old = xplasma->heat_tot;
+
+
+    ireturn = one_shot (xplasma, mode);
+
+
+/* Convergence check */
+    convergence (xplasma);
+  }
   else
   {
     Error ("ion_abundances: Could not calculate abundances for mode %d\n", mode);
@@ -347,7 +368,7 @@ check_convergence (void)
   xconverging = ((double) nconverging) / ntot;
   geo.fraction_converged = xconverge;
 
-  Log ("!!Check_convergence: %4d (%.3f) converged and %4d (%.3f) converging of %d the cells actually in the wind\n",
+  Log ("!!Check_convergence: %4d (%.3f) converged and %4d (%.3f) converging of %d cells actually in the wind\n",
        nconverge, xconverge, nconverging, xconverging, ntot);
   Log ("!!Check_convergence: t_r %4d t_e(real) %4d t_e(maxed) %4d hc(real) %4d\n", ntr, nte, nmax, nhc);
   Log_flush ();
@@ -429,7 +450,7 @@ meaning in nebular concentrations.
 
   if (mode == IONMODE_ML93)
     mode = NEBULARMODE_ML93;    // This is weird, why not continue
-  else if (mode <= 1 || mode == 5 || mode > 9)
+  else if (mode <= 1 || mode == 5 || mode > 10)
   {
     /* There is no mode 5 at present  - SIM + two new modes in Feb 2012  + mode 5 now removed */
 
