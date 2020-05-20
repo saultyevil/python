@@ -1142,6 +1142,7 @@ typedef struct photon
                                    for continuum scattering, meaning 
                                    depends on matom vs non-matom. See headers of emission.c 
                                    or matom.c for details. */
+  int line_nres;                /* Indicates the previous nres for a line interaction */
   int nnscat;                   /* Used for the thermal trapping model of
                                    anisotropic scattering to carry the number of
                                    scattering to "extract" when needed for wind

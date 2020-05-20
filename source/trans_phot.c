@@ -141,6 +141,7 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
       /* We increase weight to account for number of scatters. This is done because in extract we multiply by the escape
          probability along a given direction, but we also need to divide the weight by the mean escape probability, which is
          equal to 1/nnscat */
+
       if (geo.scatter_mode == SCATTER_MODE_THERMAL && pextract.nres <= NLINES && pextract.nres > -1)
       {
         /* we normalised our rejection method by the escape probability along the vector of maximum velocity gradient.

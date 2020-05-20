@@ -91,11 +91,10 @@ delay_dump_prep (int restart_stat)
     delay_dump_spec[i] = 0;
 
   if (restart_stat == 1)
-  {                             //Check whether the output file already has a header
+  {                             //TODO: Check whether the output file already has a header
     Log ("delay_dump_prep: Resume run, skipping writeout\n");
     return (0);
   }
-
 
   if ((fptr = fopen (delay_dump_file, "w")) != NULL)
   {                             //If this isn't a continue run, prep the output file
@@ -108,7 +107,8 @@ delay_dump_prep (int restart_stat)
       fprintf (fptr, "# Python Version %s\n", VERSION);
       get_time (s_time);
       fprintf (fptr, "# Date	%s\n#  \n", s_time);
-      fprintf (fptr, "# \n#    Freq.     Lambda     Weight      Last X      Last Y      Last Z Scat. RScat      Delay Spec. Orig.  Res.\n");
+      fprintf (fptr, "#\n%-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "Freq.", "Lambda", "Weight",
+               "LastX", "LastY", "LastZ", "Scat.", "RScat.", "Delay", "Spec.", "Orig.", "Res.", "LineRes.");
     }
     fclose (fptr);
     Log ("delay_dump_prep: Thread %d successfully prepared file '%s' for writing\n", rank_global, delay_dump_file);
@@ -249,11 +249,9 @@ delay_dump (PhotPtr p, int np)
       if (delay < 0)
         subzero++;
 
-      fprintf (fptr,
-               "%10.5g %12.7g %10.5g %+10.5g %+10.5g %+10.5g %3d     %3d     %10.5g %5d %5d %5d\n",
-               p[nphot].freq, VLIGHT * 1e8 / p[nphot].freq, p[nphot].w,
-               p[nphot].x[0], p[nphot].x[1], p[nphot].x[2],
-               p[nphot].nscat, p[nphot].nrscat, delay, i - MSPEC, p[nphot].origin, p[nphot].nres);
+      fprintf (fptr, "%-12.5g %-12.7g %-12.5g %-12.5g %-12.5g %-12.5g %-12d %-12d %-12.5g %-12d %-12d %-12d %-12d\n",
+               p[nphot].freq, VLIGHT * 1e8 / p[nphot].freq, p[nphot].w, p[nphot].x[0], p[nphot].x[1], p[nphot].x[2],
+               p[nphot].nscat, p[nphot].nrscat, delay, i - MSPEC, p[nphot].origin, p[nphot].nres, p[nphot].line_nres);
     }
   }
 
@@ -285,6 +283,10 @@ delay_dump_single (PhotPtr pp, int i_spec)
   if (geo.reverb_filter_lines == -1 && pp->nres == -1)
   {
     //If we're filtering out continuum photons and this is a continuum photon, throw it away.
+    return (1);
+  }
+  else if (geo.reverb_filter_lines == -2 && pp->nres == -1 && pp->line_nres == -1)
+  {
     return (1);
   }
   else if (geo.reverb_filter_lines > 0)

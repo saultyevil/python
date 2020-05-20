@@ -412,7 +412,8 @@ the same resonance again */
       /* Records the total distance travelled by extracted photon if in reverberation mode */
       if (geo.reverb != REV_NONE)
       {
-        if (pstart.nscat > 0 || pstart.origin > 9 || (pstart.nres > -1 && pstart.nres < nlines))
+        if (pstart.nscat > 0 || pstart.origin > 9 || (pstart.nres > -1 && pstart.nres < nlines)
+            || (pstart.line_nres > -1 && pstart.line_nres < nlines))
         {                       //If this photon has scattered, been reprocessed, or originated in the wind it's important
           pstart.w = pp->w * exp (-(tau));      //Adjust weight to weight reduced by extraction
           stuff_v (xxspec[nspec].lmn, pstart.lmn);

@@ -62,6 +62,7 @@ stuff_phot (pin, pout)
 
   pout->istat = pin->istat;
   pout->nres = pin->nres;
+  pout->line_nres = pin->line_nres;
   pout->nrscat = pin->nrscat;
   pout->nscat = pin->nscat;
   pout->nnscat = pin->nnscat;
