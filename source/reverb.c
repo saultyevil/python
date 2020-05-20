@@ -107,7 +107,7 @@ delay_dump_prep (int restart_stat)
       fprintf (fptr, "# Python Version %s\n", VERSION);
       get_time (s_time);
       fprintf (fptr, "# Date	%s\n#  \n", s_time);
-      fprintf (fptr, "#\n%-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "Freq.", "Lambda", "Weight",
+      fprintf (fptr, "#\n# %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "Freq.", "Lambda", "Weight",
                "LastX", "LastY", "LastZ", "Scat.", "RScat.", "Delay", "Spec.", "Orig.", "Res.", "LineRes.");
     }
     fclose (fptr);
@@ -249,7 +249,7 @@ delay_dump (PhotPtr p, int np)
       if (delay < 0)
         subzero++;
 
-      fprintf (fptr, "%-12.5g %-12.7g %-12.5g %-12.5g %-12.5g %-12.5g %-12d %-12d %-12.5g %-12d %-12d %-12d %-12d\n",
+      fprintf (fptr, "  %-12.5g %-12.7g %-12.5g %-12.5g %-12.5g %-12.5g %-12d %-12d %-12.5g %-12d %-12d %-12d %-12d\n",
                p[nphot].freq, VLIGHT * 1e8 / p[nphot].freq, p[nphot].w, p[nphot].x[0], p[nphot].x[1], p[nphot].x[2],
                p[nphot].nscat, p[nphot].nrscat, delay, i - MSPEC, p[nphot].origin, p[nphot].nres, p[nphot].line_nres);
     }
