@@ -497,6 +497,7 @@ kn_wind_mdot_integral (double r, void *params)
   double x, ratio;
   double tref;
 
+  (void) params;
 
   tref = tdisk (geo.mstar, geo.disk_mdot, geo.rstar);
   ratio = r / geo.rstar;

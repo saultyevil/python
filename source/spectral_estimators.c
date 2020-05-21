@@ -373,6 +373,7 @@ pl_alpha_func_log (double alpha)
 double
 pl_alpha_func_log2 (double alpha, void *params)
 {
+  (void) params;
   return (pl_alpha_func_log (alpha));
 }
 
@@ -539,6 +540,7 @@ exp_temp_func (double exp_temp)
 double
 exp_temp_func2 (double exp_temp, void *params)
 {
+  (void) params;
   return (exp_temp_func (exp_temp));
 }
 

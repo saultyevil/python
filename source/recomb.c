@@ -176,6 +176,7 @@ fb_topbase_partial2 (double freq, void *params)
 {
   double partial;
 
+  (void) params;
   partial = fb_topbase_partial (freq);
 
   return (partial);

@@ -1073,6 +1073,8 @@ gamma_integrand (double freq, void *params)
   double integrand;
   double tt;
 
+  (void) params;
+
   fthresh = cont_ext_ptr2->freq[0];
   tt = temp_ext2;
 
@@ -1151,6 +1153,8 @@ gamma_e_integrand (double freq, void *params)
   double x;
   double integrand;
   double tt;
+
+  (void) params;
 
   fthresh = cont_ext_ptr2->freq[0];
   tt = temp_ext2;
@@ -1245,6 +1249,8 @@ alpha_st_integrand (double freq, void *params)
   double integrand;
   double tt;
   double ttrr;
+
+  (void) params;
 
   fthresh = cont_ext_ptr2->freq[0];
   tt = temp_ext2;               //this is the electron temperature
@@ -1342,6 +1348,8 @@ alpha_st_e_integrand (double freq, void *params)
   double integrand;
   double tt;
   double ttrr;
+
+  (void) params;
 
   fthresh = cont_ext_ptr2->freq[0];
   tt = temp_ext2;               //this is the electron temperature

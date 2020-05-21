@@ -482,6 +482,8 @@ sv_zero_r (double r, void *params)
   double theta;
   double rho, rho_guess;
 
+  (void) params;
+
   /* sv_zero_r_ndom should be set to the domain number before calling sv_zero_r */
 
   theta = sv_theta_wind (sv_zero_r_ndom, r);
@@ -568,7 +570,9 @@ sv_wind_mdot_integral (double r, void *params)
 {
   double x;
 
+  (void) params;
   x = 2 * PI * pow (r, zdom[sdom].sv_lambda + 1.) * cos (sv_theta_wind (sdom, r));
+
   return (x);
 
 }

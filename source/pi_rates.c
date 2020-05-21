@@ -247,6 +247,9 @@ double
 tb_planck (double freq, void *params)
 {
   double answer, bbe;
+
+  (void) params;
+
   bbe = exp ((PLANCK * freq) / (BOLTZMANN * qromb_temp));
   answer = (2. * PLANCK * pow (freq, 3.)) / (pow (VLIGHT, 2));
   answer *= (1 / (bbe - 1));
@@ -279,6 +282,9 @@ double
 tb_logpow (double freq, void *params)
 {
   double answer;
+
+  (void) params;
+
   answer = pow (10, xpl_logw + (xpl_alpha - 1.0) * log10 (freq));       //NB - the alpha-1.0 appears because we divide by nu
   answer *= sigma_phot (xtop, freq);    // and finally multiply by the cross section.
 
@@ -306,6 +312,8 @@ double
 tb_exp (double freq, void *params)
 {
   double answer;
+
+  (void) params;
 
   answer = xexp_w * exp ((-1.0 * PLANCK * freq) / (BOLTZMANN * xexp_temp));
   answer *= sigma_phot (xtop, freq);    // and finally multiply by the cross section.

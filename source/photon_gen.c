@@ -1149,7 +1149,6 @@ bl_init (lum_bl, t_bl, freqmin, freqmax, ioniz_or_final, f)
      int ioniz_or_final;
 {
   double q1;
-  double integ_planck_d ();
   double alphamin, alphamax;
 
   q1 = 2. * PI * (BOLTZMANN * BOLTZMANN * BOLTZMANN * BOLTZMANN) / (PLANCK * PLANCK * PLANCK * VLIGHT * VLIGHT);

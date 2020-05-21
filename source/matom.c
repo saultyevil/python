@@ -692,6 +692,8 @@ alpha_sp_integrand (double freq, void *params)
   double integrand;
   double tt;
 
+  (void) params;
+
   fthresh = cont_ext_ptr->freq[0];
   tt = temp_ext;
 

@@ -782,6 +782,8 @@ disk_height (double s, void *params)
   struct photon phit;
   double z1, r1;
 
+  (void) params;
+
   stuff_phot (&ds_to_disk_photon, &phit);
   move_phot (&phit, s);
   r1 = sqrt (phit.x[0] * phit.x[0] + phit.x[1] * phit.x[1]);

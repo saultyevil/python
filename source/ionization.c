@@ -618,6 +618,7 @@ calc_te (PlasmaPtr xplasma, double tmin, double tmax)
 double
 zero_emit2 (double t, void *params)
 {
+  (void) params;
   return (zero_emit (t));
 }
 
