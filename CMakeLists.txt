@@ -16,6 +16,11 @@
 project(Python C)
 cmake_minimum_required(VERSION 3.0)
 
+# Set the Python version
+
+set(PYTHON_VERSION 84e)
+message(STATUS "Python version : ${PYTHON_VERSION}")
+
 # The C standard is being set to 99, although if we follow this standard is
 # somewhat a mystery. The compiler is, by default, set to mpicc as we want to
 # exploit MPI to reduce runtimes.
@@ -34,13 +39,10 @@ link_directories(lib)
 # should be created and whenever the program is build again, the information
 # in version.h should be updated.
 
-set(PY_VERSION 84e)
-
 set(GIT_HASH "")
 set(GIT_NUM_CHANGES 0)
 set(VERSION_FILE source/version.h)
 
-message(STATUS "Python version : ${PY_VERSION}")
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
     find_package(Git)
     find_program(BASH bash HINTS /bin)
@@ -65,7 +67,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
     endif(GIT_FOUND)
     message(STATUS "Git hash       : ${GIT_HASH}")
     message(STATUS "Git changes    : ${GIT_NUM_CHANGES}")
-    file(WRITE ${VERSION_FILE} "#define VERSION \"${PY_VERSION}\"\n\
+    file(WRITE ${VERSION_FILE} "#define VERSION \"${PYTHON_VERSION}\"\n\
 #define GIT_COMMIT_HASH \"${GIT_HASH}\"\n\
 #define GIT_DIFF_STATUS \"${GIT_NUM_CHANGES}\"\n"
     )
@@ -120,9 +122,6 @@ set(RAD_HYDRO_SOURCE
 
 # Create the executables for each program, and link the required libraries
 
-# Python
-add_executable(python source/python.c ${PYTHON_SOURCE})
-target_link_libraries(python gsl gslcblas m)
 # Py_wind
 add_executable(py_wind source/py_wind.c ${PYTHON_SOURCE} ${PY_WIND_SOURCE})
 target_link_libraries(py_wind gsl gslcblas m)
@@ -132,3 +131,6 @@ target_link_libraries(windsave2table gsl gslcblas m)
 # Rad_hydro_files
 add_executable(rad_hydro_files ${PYTHON_SOURCE} ${RAD_HYDRO_SOURCE})
 target_link_libraries(rad_hydro_files gsl gslcblas m)
+# Python
+add_executable(python source/python.c ${PYTHON_SOURCE})
+target_link_libraries(python gsl gslcblas m)
