@@ -5,6 +5,11 @@
 # One should also be able to build Python using CMakeLists, if that is the
 # poison which they prefer. This CMakeLists will also allow once to import
 # Python into an IDE which uses CMake as its build system.
+#
+# Note that this CMakeLists program is nowhere near as complex as the standard
+# Makefile is, as an example it CANNOT indent files automatically nor does it
+# create libatomic or change the compiler flags depending on the GCC version
+#
 # TODO: make building from scratch via CMake possible
 #
 
@@ -30,9 +35,10 @@ link_directories(lib)
 # in version.h should be updated.
 
 set(PY_VERSION 84e)
+
 set(GIT_HASH "")
 set(GIT_NUM_CHANGES 0)
-set(VERSION_FILE version.h)
+set(VERSION_FILE source/version.h)
 
 message(STATUS "Python version : ${PY_VERSION}")
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
@@ -59,6 +65,10 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
     endif(GIT_FOUND)
     message(STATUS "Git hash       : ${GIT_HASH}")
     message(STATUS "Git changes    : ${GIT_NUM_CHANGES}")
+    file(WRITE ${VERSION_FILE} "#define VERSION \"${PY_VERSION}\"\n\
+#define GIT_COMMIT_HASH \"${GIT_HASH}\"\n\
+#define GIT_DIFF_STATUS \"${GIT_NUM_CHANGES}\"\n"
+    )
 endif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
 
 # Define the source for the various different programs contained with the
@@ -104,6 +114,9 @@ set(WINDSAVE2TABLE_SOURCE
     source/windsave2table_sub.c
 )
 
+set(RAD_HYDRO_SOURCE
+    source/rad_hydro_files.c
+)
 
 # Create the executables for each program, and link the required libraries
 
@@ -116,4 +129,6 @@ target_link_libraries(py_wind gsl gslcblas m)
 # Windsave2table
 add_executable(windsave2table source/windsave2table.c ${PYTHON_SOURCE} ${WINDSAVE2TABLE_SOURCE})
 target_link_libraries(windsave2table gsl gslcblas m)
-
+# Rad_hydro_files
+add_executable(rad_hydro_files ${PYTHON_SOURCE} ${RAD_HYDRO_SOURCE})
+target_link_libraries(rad_hydro_files gsl gslcblas m)
