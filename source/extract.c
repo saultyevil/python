@@ -4,7 +4,7 @@
  * @author ksl
  * @date   April, 2018
  *
- * @brief  Maing routines for extracting photons during the 
+ * @brief  Maing routines for extracting photons during the
  * spectral generation phase.
  *
  ***********************************************************/
@@ -18,46 +18,46 @@
 
 
 /**********************************************************/
-/** 
- * @brief      A supervisory routine called to 
+/**
+ * @brief      A supervisory routine called to
  * 	builds detailed spectra in the normal (extract) mode.
  *
  * @param [in, out] WindPtr  w   The entire wind
  * @param [in, out] PhotPtr  p   The photon to extract
- * @param [in, out] int  itype   An integer representing the type of photon 
+ * @param [in, out] int  itype   An integer representing the type of photon
  * for the purpose of being extracted.
  * @return     Always returns 0
  *
  * @details
  * extract is called when a photon begins it's flight and every time that photon
  * scatters, unless the user has exercised the "live or die" option, in
- * which case it is not called.  
+ * which case it is not called.
  *
  * extract carries out several preperatory steps for the extraction
  * and for each spectrum one wants to build, it calls extract_one,
  * where the actual incrementing of the spectrum is done.
  *
  * itype takes on the following values:
- * * PTYPE_STAR->the photon came for the star 
+ * * PTYPE_STAR->the photon came for the star
  * * PTYPE_BL->the photon came from the boundary layer
  * * PTYPE_DISK->the photon being redirected arose in the disk,
  * * PTYPE_WIND->the photon being redirected arose in the wind,
- * 
+ *
  * extract uses the types to prepare the photon for extraction, including
- * doppler shifting the photon if is of PTYPE_WIND or PTYPE_STAR 
- * 
+ * doppler shifting the photon if is of PTYPE_WIND or PTYPE_STAR
+ *
  * Usually, Python constructs a spectrum of all photons, but there are
  * advanced options which allone to restict the spectrum created to
- * those produced with a certain number of scatters or from photons 
+ * those produced with a certain number of scatters or from photons
  * that arise from the above or below the disk.  extract enforces
  * those choices before calling extract_one.
  * The parameters for this option all come in through
- * python.h, and are contained in the spectrum structure. 
+ * python.h, and are contained in the spectrum structure.
  *
  * The basic choices, some of which can be used in tandom are as follows:
  *
  * *	If s[n].nscat>999; then one obtains the entire spectrum
- * *	if s[n].nscat is a positive number, then the spectrum is composed just 
+ * *	if s[n].nscat is a positive number, then the spectrum is composed just
  * 		of photons with that number of scatters
  * *	if s[n].nscat is a negative number, then the spectrum contains all photons
  * 		with >=  the absolute value of s[n].nscat
@@ -67,12 +67,12 @@
  * *    One can also select photons that are to be extracted from a particular
  * spherical region.
  * ### Notes ###
- * 
+ *
  * @bug This routine as well as extract_one have options for tracking the photon
- * history.  The routines are in diag.c It is not clear that they have been used 
+ * history.  The routines are in diag.c It is not clear that they have been used
  * in a long time and so it may be worthwhile to remove them. Furthermore,
  * we have established a new mechanism save_phot for essentially this same
- * task.  This really should be consolidated. 
+ * task.  This really should be consolidated.
  *
  * @bug This is also commented in the text, but there is a rather bizarre separation
  * for where the photon frequency is updated and where the weight is update. The former is
@@ -185,12 +185,12 @@ extract (w, p, itype)
       stuff_phot (p, &pp);
       stuff_v (xxspec[n].lmn, pp.lmn);  /* Stuff new photon direction into pp */
 
-/* 
+/*
 
-Need to frequency shift the disk photons as well as the wind 
-photons.    
+Need to frequency shift the disk photons as well as the wind
+photons.
 
-Note that split of functionality between this and extract 
+Note that split of functionality between this and extract
 one is odd. We do frequency here but weighting is carried out in  extract */
 
       if (itype == PTYPE_DISK)
@@ -200,7 +200,7 @@ one is odd. We do frequency here but weighting is carried out in  extract */
 
       }
       if (itype == PTYPE_WIND)
-      {                         /* If the photon was scattered in the wind, 
+      {                         /* If the photon was scattered in the wind,
                                    the frequency also must be shifted */
         ndom = wmain[p->grid].ndom;
         vwind_xyz (ndom, &pp, v);       /*  Get the velocity at the position of pp */
@@ -242,7 +242,7 @@ one is odd. We do frequency here but weighting is carried out in  extract */
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      Extract a single photon along a single line of sight.
  *
  * @param [in] WindPtr  w   The entire wind
@@ -254,9 +254,9 @@ one is odd. We do frequency here but weighting is carried out in  extract */
  * @details
  * extract_one is analogous to the detailed portion of transphot except here the
  * basic point is to calculate the optical depth through the plasma in a certain
- * direction, and to increment the appropriate spectrum.  
+ * direction, and to increment the appropriate spectrum.
  *
- * Unlike trans_phot, this routine also checks to see if 
+ * Unlike trans_phot, this routine also checks to see if
  * whether the photon hits the secondary star, if one exists.
  *
  * ### Notes ###
@@ -264,7 +264,7 @@ one is odd. We do frequency here but weighting is carried out in  extract */
  * section 2.3.4.  According to equation 2.19
  * 	Pc/Pw=12 cos(theta)*(1+b cos(theta)/(3+2b) where b=1.5 corresponds to the
  * Eddington approximation.
- * 
+ *
  * In Python, and in extract and transphot in particular, tau generally refers to the tau associated
  * with scattering processes, and the weight contains the effect of dimunition of the energy of
  * the photon bundle due to pure absorption processes.  So, in extract, we add pp->w * exp(-tau)
@@ -306,7 +306,7 @@ extract_one (w, pp, itype, nspec)
 
   stuff_phot (pp, &pstart);
 
-/* Reweight the photons. Note that photons have already been frequency shifted prior 
+/* Reweight the photons. Note that photons have already been frequency shifted prior
 to entering extract */
 
   if (itype == PTYPE_STAR || itype == PTYPE_BL)
@@ -325,10 +325,10 @@ to entering extract */
   {
 
 /* It was a wind photon.  In this case, what we do depends
-on whether it is a photon which arose via line radiation or 
+on whether it is a photon which arose via line radiation or
 some other process.
 
-If geo.scatter_mode==SCATTER_MODE_ISOTROPIC then there is no need 
+If geo.scatter_mode==SCATTER_MODE_ISOTROPIC then there is no need
 to reweight.  This is the isotropic assumption.  Otherwise, one
 needs to reweight
 */
@@ -454,7 +454,8 @@ the same resonance again */
       /* Records the total distance travelled by extracted photon if in reverberation mode */
       if (geo.reverb != REV_NONE)
       {
-        if (pstart.nscat > 0 || pstart.origin > 9 || (pstart.nres > -1 && pstart.nres < nlines))
+        // if (pstart.nscat > 0 || pstart.origin > 9 ||
+        if ((pstart.nres > -1 && pstart.nres < nlines) || (pstart.line_nres > -1 && pstart.line_nres < nlines))
         {                       //If this photon has scattered, been reprocessed, or originated in the wind it's important
           pstart.w = pp->w * exp (-(tau));      //Adjust weight to weight reduced by extraction
           stuff_v (xxspec[nspec].lmn, pstart.lmn);

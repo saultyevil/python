@@ -125,11 +125,9 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
 
     if (iextract)
     {
-
       stuff_phot (&p[nphot], &pextract);
       extract (w, &pextract, pextract.origin);
-
-    }                           
+    }
 
     p[nphot].np = nphot;
 
@@ -245,14 +243,14 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
   while (istat == P_INWIND)
   {
 
-    /* The call to translate below involves only a single cell (or alternatively a single transfer 
-       in the windless region). 
+    /* The call to translate below involves only a single cell (or alternatively a single transfer
+       in the windless region).
 
-       istat as returned by should either be P_INWIND in which case the photon hit the other side 
-       of the cell without scattering or P_SCAT in which case there was a scattering event in the shell, 
+       istat as returned by should either be P_INWIND in which case the photon hit the other side
+       of the cell without scattering or P_SCAT in which case there was a scattering event in the shell,
        P_ESCAPE in which case the photon reached the outside edge of the grid and escaped, P_STAR in
-       which case it reach the inner central object, etc. If the photon escapes then we leave the 
-       photon at the position of it's last scatter.  In most other cases though we store the final 
+       which case it reach the inner central object, etc. If the photon escapes then we leave the
+       photon at the position of it's last scatter.  In most other cases though we store the final
        position of the photon. */
 
 
@@ -262,7 +260,6 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
     {
       save_photons (&pp, "AfterTranslate");
     }
-
 
     icell++;
     istat = walls (&pp, p, normal);
@@ -305,7 +302,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
         }
       }
       else
-      {                         /*In this case, photons that hit the star are simply absorbed 
+      {                         /*In this case, photons that hit the star are simply absorbed
                                    so this is the end of the line. */
         stuff_phot (&pp, p);
         break;
@@ -316,9 +313,9 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
     {
       /* It hit the disk */
 
-      /* Store the energy of the photon bundle into a disk structure so that one 
+      /* Store the energy of the photon bundle into a disk structure so that one
          can determine later how much and where the disk was heated by photons.
-         Note that the disk is defined from 0 to NRINGS-2. NRINGS-1 contains the position 
+         Note that the disk is defined from 0 to NRINGS-2. NRINGS-1 contains the position
          of the outer radius of the disk. */
 
       if (modes.save_photons)
@@ -354,7 +351,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
         }
       }
       else
-      {                         /* In this case, photons that hit the disk are to be absorbed 
+      {                         /* In this case, photons that hit the disk are to be absorbed
                                    so this is the end of the line. */
         stuff_phot (&pp, p);
         break;
@@ -477,8 +474,8 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
       /* Now extract photons if we are in detailed the detailed spectrum portion of the program */
 
-      /* N.B. To use the anisotropic scattering option, extract needs to follow scatter.  
-       * This is because the reweighting which occurs in extract needs the pdf for scattering 
+      /* N.B. To use the anisotropic scattering option, extract needs to follow scatter.
+       * This is because the reweighting which occurs in extract needs the pdf for scattering
        * to have been initialized.
        */
 
@@ -490,9 +487,9 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       }
 
 
-      /* OK we have completed extract, if that had to be done, 
-       * need to reinitialize parameters for the scattered photon so it can 
-       * can continue throug the wind 
+      /* OK we have completed extract, if that had to be done,
+       * need to reinitialize parameters for the scattered photon so it can
+       * can continue throug the wind
        */
 
       tau_scat = -log (1. - random_number (0.0, 1.0));
