@@ -26,19 +26,12 @@ int linterp (double x, double xarray[], double yarray[], int xdim, double *y, in
 /* python.c */
 int main (int argc, char *argv[]);
 /* photon2d.c */
-int translate(WindPtr w, PhotPtr pp, double tau_scat, double *tau, int *nres);
-int translate_in_space(PhotPtr pp);
-double ds_to_wind(PhotPtr pp, int *ndom_current);
-double find_smax(PhotPtr p);
-int translate_in_wind(WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
-double ds_in_cell(int ndom, PhotPtr p);
-int walls(PhotPtr p, PhotPtr pold, double *normal);
 int translate (WindPtr w, PhotPtr pp, double tau_scat, double *tau, int *nres);
 int translate_in_space (PhotPtr pp);
 double ds_to_wind (PhotPtr pp, int *ndom_current);
+double find_smax (PhotPtr p);
 int translate_in_wind (WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell (int ndom, PhotPtr p);
-int walls (PhotPtr p, PhotPtr pold, double *normal);
 /* photon_gen.c */
 int define_phot (PhotPtr p, double f1, double f2, long nphot_tot, int ioniz_or_final, int iwind, int freq_sampling);
 double populate_bands (int ioniz_or_final, int iwind, struct xbands *band);
@@ -132,13 +125,13 @@ double sobolev (WindPtr one, double x[], double den_ion, struct lines *lptr, dou
 int doppler (PhotPtr pin, PhotPtr pout, double v[], int nres);
 int scatter (PhotPtr p, int *nres, int *nnscat);
 /* radiation.c */
-double radiation(PhotPtr p, double ds);
-double kappa_ff(PlasmaPtr xplasma, double freq);
-double sigma_phot(struct topbase_phot *x_ptr, double freq);
-double den_config(PlasmaPtr xplasma, int nconf);
-double pop_kappa_ff_array(void);
-int update_banded_estimators(PlasmaPtr xplasma, PhotPtr p, double ds, double w_ave);
-double mean_intensity(PlasmaPtr xplasma, double freq, int mode);
+double radiation (PhotPtr p, double ds);
+double kappa_ff (PlasmaPtr xplasma, double freq);
+double sigma_phot (struct topbase_phot *x_ptr, double freq);
+double den_config (PlasmaPtr xplasma, int nconf);
+double pop_kappa_ff_array (void);
+int update_banded_estimators (PlasmaPtr xplasma, PhotPtr p, double ds, double w_ave, int ndom);
+double mean_intensity (PlasmaPtr xplasma, double freq, int mode);
 /* setup_files.c */
 int init_log_and_windsave (int restart_stat);
 int setup_created_files (void);
@@ -297,7 +290,6 @@ double dvwind_ds (PhotPtr p);
 int dvds_ave (void);
 /* reposition.c */
 int reposition (PhotPtr p);
-void reposition_lost_disk_photon (PhotPtr p);
 /* anisowind.c */
 int randwind_thermal_trapping (PhotPtr p, int *nnscat);
 /* wind_util.c */
@@ -564,27 +556,18 @@ double get_rand_brem (double freqmin, double freqmax);
 int get_question_name_length (char question[]);
 int are_synonym_lists_valid (void);
 int is_input_line_synonym_for_question (char question[], char input_line[]);
+/* walls.c */
+int walls (PhotPtr p, PhotPtr pold, double *normal);
 /* setup_reverb.c */
 int get_meta_params (void);
 /* setup_line_transfer.c */
 int get_line_transfer_mode (void);
 int line_transfer_help_message (void);
 /* cv.c */
-double wdrad(double m);
-double diskrad(double m1, double m2, double period);
-double roche2(double q, double a);
-double logg(double mass, double rwd);
-/* tau_diag.c */
-void tau_log_edges (const double *optical_depths, const double *column_densities);
-void tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, double dfreq);
-int tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
-int tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau);
-void tau_reposition_photon (PhotPtr pout);
-int tau_create_phot (PhotPtr pout, double nu, double *lmn);
-void init_tau_observers (void);
-void tau_create_spectra (WindPtr w);
-void tau_evaluate_photo_edges (WindPtr w);
-void tau_spectrum_main (WindPtr w);
+double wdrad (double m);
+double diskrad (double m1, double m2, double period);
+double roche2 (double q, double a);
+double logg (double mass, double rwd);
 /* import_calloc.c */
 void calloc_import (int coord_type, int ndom);
 void free_import (int coord_type, int ndom);
