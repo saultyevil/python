@@ -31,11 +31,14 @@ int iicount = 0;
  *
  * @param [in,out] PhotPtr  p   the photon
  * @param [in] double  ds   the distance the photon has travelled in the cell
- * @return     Always returns 0.  The pieces of the wind structure which are updated are
- * 	j,ave_freq,ntot, heat_photo, heat_ff, heat_h, heat_he1, heat_he2, heat_z,
- * 	nioniz, and ioniz[].
+ * @return     double kappa_tot  the total opacity in the cell  the photon has travelled in.
  *
  * @details
+ *
+ * The pieces of the wind structure which are updated in each call to radiation
+ * are:
+ *   j,ave_freq,ntot, heat_photo, heat_ff, heat_h, heat_he1, heat_he2, heat_z,
+ *   nioniz, and ioniz[].
  *
  * ### Notes ###
  * The # of ionizations of a specific ion = (w(0)-w(s))*n_i sigma_i/ (h nu * kappa_tot).  (The # of ionizations
@@ -48,10 +51,8 @@ int iicount = 0;
  *
  **********************************************************/
 
-int
-radiation (p, ds)
-     PhotPtr p;
-     double ds;
+double
+radiation (PhotPtr p, double ds)
 {
   TopPhotPtr x_top_ptr;
 
@@ -73,7 +74,6 @@ radiation (p, ds)
   int n, nion;
   double q, x, z;
   double w_ave, w_in, w_out;
-  double den_config ();
   int nconf;
   double p_in[3], p_out[3], dp_cyl[3];  //The initial and final momentum.
 //  double weight_of_packet, y;  //to do with augerion calcs, now deprecated
@@ -107,7 +107,7 @@ radiation (p, ds)
 
   /* Create phot, a photon at the position we are moving to 
    *  note that the actual movement of the photon gets done after 
-   *  the call to radiation 
+   *  the call to radiation
    */
 
   stuff_phot (p, &phot);        // copy photon ptr
@@ -307,7 +307,7 @@ radiation (p, ds)
                       frac_z += z;
                     }
 //                    frac_ion[nion] += z;
-//                    kappa_ion[nion] += x;                    
+//                    kappa_ion[nion] += x;
                     frac_inner_ion[n] += z;     //NSH We need to log the auger rate seperately - we do this by cross section
                     kappa_inner_ion[n] += x;    //NSH and we also og the opacity by ion
                   }
@@ -382,7 +382,7 @@ radiation (p, ds)
   }
 
   if (geo.ioniz_or_extract == 0)
-    return (0);                 // 57h -- ksl -- 060715
+    return kappa_tot;           // 57h -- ksl -- 060715
 
 /* Everything after this is only needed for ionization calculations */
 /* Update the radiation parameters used ultimately in calculating t_r */
@@ -456,7 +456,7 @@ radiation (p, ds)
       for (n = 0; n < n_inner_tot; n++)
       {
         xplasma->heat_inner_ion[inner_cross_ptr[n]->nion] += frac_inner_ion[n] * z;     //This quantity is per ion - the ion number comes from the freq ordered cross section
-        xplasma->inner_ioniz[n] += kappa_inner_ion[n] * q;      //This is the number of ionizations from this innershell cross section - at this point, inner_ioniz is ordered by frequency                
+        xplasma->inner_ioniz[n] += kappa_inner_ion[n] * q;      //This is the number of ionizations from this innershell cross section - at this point, inner_ioniz is ordered by frequency
       }
     }
   }

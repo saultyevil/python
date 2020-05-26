@@ -458,7 +458,7 @@ struct geometry
                                    case the scattered flux is just  A21/(C21+A21). 
                                    3, then radiation trapping aka escape probabilities are included as well.
                                    6 - 9,  If set to 6-9 initially, this switches on the macro atom case
-                                   and then behaves like LINE_MODE_ESC_PROB. 
+                                   and then behaves like LINE_MODE_ESC_PROB.
                                  */
 /* Note that the scatter_mode is actually a subsidiary variable of the line_mode.  Choosing a line_mode
  * results in the selection of a scatter_mode */
@@ -965,7 +965,7 @@ typedef struct plasma
 
   double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell */
   double pl_log_w[NXBANDS];     /*This is the log version of the power law weight. It is in an attempt to allow very large 
-                                   values of alpha to work with the PL spectral model to avoide NAN problems. 
+                                   values of alpha to work with the PL spectral model to avoide NAN problems.
                                    The pl_w version can be deleted once testing is complete */
 
 

@@ -224,7 +224,7 @@ py_wind_objects = py_wind.o get_atomicdata.o py_wind_sub.o windsave.o py_wind_io
 		bb.o rdpar.o xlog.o direct_ion.o diag.o matrix_ion.o \
 		pi_rates.o photo_gen_matom.o macro_gov.o \
 		time.o reverb.o paths.o synonyms.o cooling.o windsave2table_sub.o \
-		rdpar_init.o import_calloc.o walls.o 
+		rdpar_init.o import_calloc.o walls.o
 
 
 
@@ -247,7 +247,7 @@ table_objects = windsave2table.o windsave2table_sub.o get_atomicdata.o py_wind_s
 		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
 		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
 		pi_rates.o photo_gen_matom.o macro_gov.o reverb.o paths.o time.o synonyms.o \
-		cooling.o import_calloc.o walls.o 
+		cooling.o import_calloc.o walls.o
 
 rhf_objects = rad_hydro_files.o get_atomicdata.o py_wind_sub.o windsave.o py_wind_ion.o \
 		emission.o recomb.o wind_util.o  \
@@ -261,7 +261,7 @@ rhf_objects = rad_hydro_files.o get_atomicdata.o py_wind_sub.o windsave.o py_win
 		spectral_estimators.o shell_wind.o compton.o zeta.o dielectronic.o \
 		bb.o rdpar.o rdpar_init.o xlog.o direct_ion.o diag.o matrix_ion.o \
 		pi_rates.o photo_gen_matom.o macro_gov.o reverb.o paths.o time.o synonyms.o \
-		cooling.o import_calloc.o walls.o 
+		cooling.o import_calloc.o walls.o
 
 run_indent:
 	../py_progs/run_indent.py -all_no_headers

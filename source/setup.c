@@ -139,6 +139,8 @@ init_geo ()
 
   geo.model_count = 0;          //The number of models read in
 
+  geo.nangles = 0;
+
   return (0);
 }
 

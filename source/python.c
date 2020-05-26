@@ -427,10 +427,8 @@ main (argc, argv)
  * radiation and then value given to return a spectrum type. The output is not the same
  * number as one inputs. It' s not obvious that this is a good idea. */
 
-  if (geo.pcycles > 0 && geo.pcycle == 0)
+  if (geo.pcycles > 0 && geo.pcycle == 0)       // This should only evaluate true for when no spectrum cycles have run (I hope)
   {
-    // This should only evaluate true for when no spectrum cycles have run (I hope)
-
     rdpar_comment ("Parameters defining the spectra seen by observers\n");
 
     if (geo.star_radiation)
@@ -668,6 +666,12 @@ main (argc, argv)
   {                             //If this is a mode in which we keep wind arrays, update them
     wind_paths_evaluate (w, my_rank);
   }
+
+  /*
+   * Perform the optical depth diagnostics routines
+   */
+
+  tau_spectrum_main (w);
 
 /* XXXX - THE CALCULATION OF A DETAILED SPECTRUM IN A SPECIFIC REGION OF WAVELENGTH SPACE */
 
