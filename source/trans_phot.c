@@ -84,16 +84,10 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
 {
   int nphot;
   struct photon pp, pextract;
-  int absorb_reflect;           /* this is a variable used to store geo.absorb_reflect during exxtract */
   int nreport;
   struct timeval timer_t0;
 
-  nreport = 100000;
-  if (nreport < NPHOT / 100)
-  {
-    nreport = NPHOT / 100;
-  }
-
+  nreport = (int) NPHOT / 10;
 
   Log ("\n");
 
@@ -118,7 +112,6 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
     Log_flush ();
 
     stuff_phot (&p[nphot], &pp);
-    absorb_reflect = geo.absorb_reflect;
 
     /* The next if statement is executed if we are calculating the detailed spectrum and makes sure we always run extract on
        the original photon no matter where it was generated */
@@ -208,7 +201,7 @@ int
 trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 {
   double tau_scat, tau;
-  int istat;
+  enum istat_enum istat;
   int ierr;
   double rrr;
   int icell;
