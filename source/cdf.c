@@ -307,7 +307,7 @@ gen_array_from_func (func, xmin, xmax, pdfsteps)
     x = xmin + (n + 0.5) * xstep;       /*The next value of x - it is midway between points on the required cdf because we
                                            will be adding the new z value onto the cumlative total, we assume the function is best approximated over the
                                            whole rage from x[n] to x[n+1] by using the value of the function between the two */
-    if ((z = (*func) (x, NULL)) < 0 || z > VERY_BIG || sane_check (z))        //check the function return is sensible
+    if ((z = (*func) (x, NULL)) < 0 || z > VERY_BIG || sane_check (z))  //check the function return is sensible
     {
       Error ("pdf_gen_from_func: probability density %g < 0 at %g\n", z, x);
     }

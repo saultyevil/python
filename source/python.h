@@ -881,7 +881,7 @@ typedef struct plasma
   double fmin_mod[NXBANDS];     /* the minimum freqneucy that the model should be applied for */
   double fmax_mod[NXBANDS];     /* the maximum frequency that the model should be applied for */
 
-  /* banded, directional fluxes - last element is used for the sum of magnitude of (flux)*/
+  /* banded, directional fluxes - last element is used for the sum of magnitude of (flux) */
   double F_vis[4];
   double F_UV[4];
   double F_Xray[4];
@@ -929,9 +929,9 @@ typedef struct plasma
                                  */
 
   double dmo_dt[3];             /*Radiative force of wind */
-  double rad_force_es[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
-  double rad_force_ff[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
-  double rad_force_bf[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
+  double rad_force_es[4];       /*Radiative force of wind - 4th element is sum of magnitudes */
+  double rad_force_ff[4];       /*Radiative force of wind - 4th element is sum of magnitudes */
+  double rad_force_bf[4];       /*Radiative force of wind - 4th element is sum of magnitudes */
 
 
 
