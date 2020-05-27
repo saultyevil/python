@@ -100,13 +100,13 @@ delay_dump_prep (int restart_stat)
   {                             //If this isn't a continue run, prep the output file
     if (rank_global > 0)
     {
-      fprintf (fptr, "# Delay dump file for slave process %d\n", rank_global);
+      fprintf (fptr, "# Delay dump file for slave process %d of %d\n", rank_global, np_mpi_global);
     }
     else
     {                           // Construct and write a header string for the output file
       fprintf (fptr, "# Python Version %s\n", VERSION);
       get_time (s_time);
-      fprintf (fptr, "# Date	%s\n#  \n", s_time);
+      fprintf (fptr, "# Date	%s\n# %d MPI processes\n", s_time, np_mpi_global);
       fprintf (fptr, "#\n# %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "Np", "Freq.", "Lambda",
                "Weight", "LastX", "LastY", "LastZ", "Scat.", "RScat.", "Delay", "Spec.", "Orig.", "Res.", "LineRes.");
     }
