@@ -202,7 +202,7 @@ int NPLASMA;                    //The number of cells with non-zero volume or th
  */ 
    double wind_z_var[NDIM_MAX][NDIM_MAX];
    double wind_midz_var[NDIM_MAX][NDIM_MAX];
-  
+  
 /* Since in principle we can mix and match arbitrarily the next parameters now have to be part of the domain structure */ 
    
     /* Generic parameters for the wind */ 
@@ -224,7 +224,7 @@ int NPLASMA;                    //The number of cells with non-zero volume or th
 #define SOUND_SPEED 1
   double sv_r_scale, sv_alpha;  /* the scale length and power law exponent for the velocity law */
    double sv_v_infinity;       /* the factor by which the velocity at infinity exceeds the excape velocity */
-  
+  
     /* Parameters defining Knigge Wind */ 
   double kn_dratio;             /* parameter describing collimation of wind */
    double kn_lambda;           /* power law exponent describing from  what portion of disk wind is radiated */
@@ -308,7 +308,7 @@ int current_domain;             // This integer is used by py_wind only
    int wcycles, pcycles, pcycles_renorm;       /* The number of ionization and spectrum cycles desired, pcycles_renorm 
                                                  * is only used on restarts.  See spectrum_restart_renormalize
                                                  */
-  
+  
     /* This section stores information which specifies the spectra to be extracted.  Some of the parameters
      * are used only in advanced modes.  
      */ 
@@ -334,7 +334,7 @@ int current_domain;             // This integer is used by py_wind only
    double lum_star_init, lum_star_back;        /* The luminosity of the star as determined by tstar_init */
   double tmax;                /*NSH 120817 the maximum temperature of any element of the model 
                                    - used to help estimate things for an exponential representation of the spectrum in a cell */
-  
+  
 #define DISK_NONE   0
 #define DISK_FLAT   1
 #define DISK_VERTICALLY_EXTENDED   2
@@ -437,7 +437,7 @@ int current_domain;             // This integer is used by py_wind only
                                    storing coarse spectra for each plasma cell */
    int nxfreq;                 /* the number of frequency intervals actually used */
    double xfreq[NXBANDS + 1];  /* the frequency boundaries for the coarse spectra  */
-  
+  
     /* The next set pf variables assign a SPECTYPE (see above) for
        each possible source of radiation in a model.  The value assigned can be different for
        the ionization and detailed spectrum generation part of the code */ 

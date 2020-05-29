@@ -615,6 +615,8 @@ return and record an error */
   move_phot (p, ds_current);
 
   p->nres = (*nres);
+  if (p->nres > -1 && p->nres < nlines)
+    p->line_nres = p->nres;
 
   return (p->istat = istat);
 
