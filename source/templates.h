@@ -571,6 +571,18 @@ double logg (double mass, double rwd);
 /* import_calloc.c */
 void calloc_import (int coord_type, int ndom);
 void free_import (int coord_type, int ndom);
+/* tau_spectrum.c */
+void tau_log_edges (const double *optical_depths, const double *column_densities);
+void tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, double dfreq);
+void mpi_gather_spectra (double *spec, int nspec);
+int tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *tau);
+int tau_extract_photon (WindPtr w, PhotPtr porig, double *col_den, double *tau);
+void tau_reposition_photon (PhotPtr pout);
+int tau_create_phot (PhotPtr pout, double nu, double *lmn);
+void init_tau_observers (void);
+void tau_create_spectra (WindPtr w);
+void tau_evaluate_photo_edges (WindPtr w);
+void tau_spectrum_main (WindPtr w);
 /* py_wind_sub.c */
 int zoom (int direction);
 int overview (WindPtr w, char rootname[]);

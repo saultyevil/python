@@ -198,7 +198,7 @@ typedef struct cone
   double z;                     /* The place where the cone intersects the z axis (used after 56d) */
   double dzdr;                  /* the slope (used after 56d) */
 }
-  cone_dummy, *ConePtr;
+cone_dummy, *ConePtr;
 
 
 /* End of structures which are used to define boundaries to the emission regions */
@@ -282,7 +282,7 @@ typedef struct domain
   /* JM 1601 -- Moved here from geo, see #212 */
   double fill;
 }
-  domain_dummy, *DomainPtr;       // One structure for each domain
+domain_dummy, *DomainPtr;       // One structure for each domain
 
 DomainPtr zdom;                 //This is the array pointer that contains the domains
 int current_domain;             // This integer is used by py_wind only
@@ -630,7 +630,7 @@ struct geometry
 
   int spec_mod;                 //A flag to say that we do hav spectral models  ??? What does this mean???
 }
-  geo;
+geo;
 
 /*
  * EP: 27/09/19
@@ -670,7 +670,7 @@ struct xdisk
   int nphot[NRINGS];            /*The number of photons created in each annulus */
   int nhit[NRINGS];             /*The number of photons which hit each annulus */
 }
-  disk, qdisk;                    /* disk defines zones in the disk which in a specified frequency band emit equal amounts
+disk, qdisk;                    /* disk defines zones in the disk which in a specified frequency band emit equal amounts
                                    of radiation. disk gets reinitialized whenever the frequency interval of interest
                                    is changed.  qdisk stores the amount of heating of the disk as a result of
                                    illumination by the star or wind. It's boundaries are fixed throughout a cycle */
@@ -687,7 +687,7 @@ struct blmodel
   double r[NBLMODEL];
   double t[NBLMODEL];
 }
-  blmod;
+blmod;
 
 
 /*
@@ -771,7 +771,7 @@ typedef struct wind
   } inwind;
   Wind_Paths_Ptr paths, *line_paths;    // SWM 6-2-15 Path data struct for each cell
 }
-  wind_dummy, *WindPtr;
+wind_dummy, *WindPtr;
 
 WindPtr wmain;
 
@@ -875,7 +875,7 @@ typedef struct plasma
   double fmin_mod[NXBANDS];     /* the minimum freqneucy that the model should be applied for */
   double fmax_mod[NXBANDS];     /* the maximum frequency that the model should be applied for */
 
-  /* banded, directional fluxes - last element is used for the sum of magnitude of (flux)*/
+  /* banded, directional fluxes - last element is used for the sum of magnitude of (flux) */
   double F_vis[4];
   double F_UV[4];
   double F_Xray[4];
@@ -923,9 +923,9 @@ typedef struct plasma
                                  */
 
   double dmo_dt[3];             /*Radiative force of wind */
-  double rad_force_es[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
-  double rad_force_ff[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
-  double rad_force_bf[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
+  double rad_force_es[4];       /*Radiative force of wind - 4th element is sum of magnitudes */
+  double rad_force_ff[4];       /*Radiative force of wind - 4th element is sum of magnitudes */
+  double rad_force_bf[4];       /*Radiative force of wind - 4th element is sum of magnitudes */
 
 
 
@@ -1171,7 +1171,7 @@ typedef struct photon
   double path;                  /* The total path length of a photon (used for reverberation calcuations) */
   double ds;                    /* the distance a photon has moved since its creation or last interaction */
 }
-  p_dummy, *PhotPtr;
+p_dummy, *PhotPtr;
 
 PhotPtr photmain;               /* A pointer to all of the photons that have been created in a subcycle. Added to ease
                                    breaking the main routine of python into separate rooutines for inputs and running the
@@ -1196,7 +1196,7 @@ struct basis
   double a[3][3];
 
 }
-  basis_cartesian;
+basis_cartesian;
 
 
 /* The next section defines the spectrum arrays.  The spectrum structure contains
@@ -1266,7 +1266,7 @@ typedef struct spectrum
                                    reflection studies but possibly useful for other reasons as well. */
   double lf_wind[NWAVE];        /* The logarithmic version of this */
 }
-  spectrum_dummy, *SpecPtr;
+spectrum_dummy, *SpecPtr;
 
 
 SpecPtr xxspec;
@@ -1304,7 +1304,7 @@ typedef struct Cdf
   double norm;                  //The scaling factor which would renormalize the CDF
   int ncdf;                     /* Size of this CDF */
 }
-  *CdfPtr, cdf_dummy;
+ *CdfPtr, cdf_dummy;
 
 struct Cdf cdf_ff;
 struct Cdf cdf_fb;
@@ -1361,7 +1361,7 @@ struct xbands
   int nphot[NBANDS];
   int nbands;                   // Actual number of bands in use
 }
-  xband;
+xband;
 
 
 /* The next section contains the freebound structures that can be used for both the
@@ -1381,7 +1381,7 @@ struct fbstruc
   double lum[NIONS][NTEMPS];    //emissivity due to radiative recombinaion
   double cool_inner[NIONS][NTEMPS];     //cooling rate due to recombinations to inner shells
 }
-  freebound[NFB];
+freebound[NFB];
 
 double xnrecomb[NIONS][NTEMPS]; // There is only one set of recombination coefficients
 double xninnerrecomb[NIONS][NTEMPS];    // There is only one set of recombination coefficients
@@ -1444,7 +1444,7 @@ struct advanced_modes
   int rand_seed_usetime;        // default random number seed is fixed, not based on time
   int photon_speedup;
 }
-  modes;
+modes;
 
 
 FILE *optr;                     //pointer to a diagnostic file that will contain dvds information
@@ -1475,7 +1475,7 @@ struct filenames
   char phot[LINELENGTH];        // photfile e.g. python.phot
   char windrad[LINELENGTH];     // wind rad file
 }
-  files;
+files;
 
 
 
