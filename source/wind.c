@@ -533,8 +533,6 @@ wind_check (www, n)
     mdim = zdom[ndom].mdim;
     if (zdom[ndom].coord_type == RTHETA)
     {
-      drmin = 1e99;
-      dtmin = 1e99;
       for (i = 0; i < ndim; i++)
       {
         for (j = 0; j < mdim; j++)
@@ -556,8 +554,6 @@ wind_check (www, n)
     }
     else if (zdom[ndom].coord_type == CYLIND || zdom[ndom].coord_type == CYLVAR)
     {
-      dxmin = 1e99;
-      dzmin = 1e99;
       for (i = 0; i < ndim; i++)
       {
         for (j = 0; j < mdim; j++)
@@ -570,7 +566,7 @@ wind_check (www, n)
             dxmin = fabs (wmain[outer_n].x[0] - wmain[n].x[0]);
             dzmin = fabs (wmain[outer_m].x[2] - wmain[n].x[2]);
 
-            if (drmin < delta || dtmin < delta)
+            if (dxmin < delta || dzmin < delta)
             {
               Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, drmin, dtmin);
             }
@@ -580,7 +576,6 @@ wind_check (www, n)
     }
     else if (zdom[ndom].coord_type == SPHERICAL)
     {
-      drmin = 1e99;
       for (i = 0; i < ndim; i++)
       {
         if (wmain[i].vol > 0.0)
