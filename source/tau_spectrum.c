@@ -220,10 +220,12 @@ tau_write_optical_depth_spectra (const double *tau_spectrum, double freq_min, do
 void
 mpi_gather_spectra (double *spec, int nspec)
 {
+#ifdef MPI_ON
   if (rank_global == 0)
     MPI_Reduce (MPI_IN_PLACE, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
   else
     MPI_Reduce (spec, spec, NBINS * nspec, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+#endif
 }
 
 
@@ -715,12 +717,22 @@ tau_create_spectra (WindPtr w)
   /*
    * Define the limits of the spectra in both wavelength and frequency. The
    * size of the frequency and wavelength bins is also defined. Note that the
-   * wavelength limits MUST be in units of Angstroms.
-   * TODO: make wavelength limits an advanced parameter
+   * wavelength limits MUST be in units of Angstroms if using a wavelength,
+   * otherwise frequency can be ine Hz = 1 / s.
+   * TODO: make frequency limits an advanced parameter
    */
 
-  freq_min = xband.f1[0];
-  freq_max = xband.f2[xband.nbands - 1];
+  if (xxspec == NULL)
+  {
+    freq_min = xband.f1[0];
+    freq_max = xband.f2[xband.nbands - 1];
+  }
+  else
+  {
+    freq_min = geo.swavemax;
+    freq_max = geo.swavemin;
+  }
+
   dfreq = (freq_max - freq_min) / NBINS;
 
   /*
@@ -775,9 +787,7 @@ tau_create_spectra (WindPtr w)
     }
   }
 
-#ifdef MPI_ON
   mpi_gather_spectra (tau_spectrum, N_ANGLES);
-#endif
   tau_write_optical_depth_spectra (tau_spectrum, freq_min, dfreq);
   free (tau_spectrum);
 }
