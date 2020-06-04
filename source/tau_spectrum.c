@@ -729,8 +729,8 @@ tau_create_spectra (WindPtr w)
   }
   else
   {
-    freq_min = geo.swavemax;
-    freq_max = geo.swavemin;
+    freq_min = VLIGHT / (geo.swavemax * 1e-8);
+    freq_max = VLIGHT / (geo.swavemin * 1e-8);
   }
 
   dfreq = (freq_max - freq_min) / NBINS;
