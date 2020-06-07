@@ -570,9 +570,9 @@ wind_check (www, n)
             dxmin = fabs (wmain[outer_n].x[0] - wmain[n].x[0]);
             dzmin = fabs (wmain[outer_m].x[2] - wmain[n].x[2]);
 
-            if (drmin < delta || dtmin < delta)
+            if (dxmin < delta || dzmin < delta)
             {
-              Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, drmin, dtmin);
+              Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, dxmin, dzmin);
             }
           }
         }

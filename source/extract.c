@@ -105,9 +105,13 @@ extract (w, p, itype)
 
 /* The next section was moved from trans_phot 200518 */
 
-  /* We increase weight to account for number of scatters. This is done because in extract we multiply by the escape
+  /* We increase weight to account for the number of scatters. This is done because in extract we multiply by the escape
      probability along a given direction, but we also need to divide the weight by the mean escape probability, which is
-     equal to 1/nnscat */
+     equal to 1/nnscat.  See issue #710 for a more extended explanation of how the weight is renormalized stocahstically. */
+
+
+
+
   if (itype == PTYPE_WIND)
   {
     if (geo.scatter_mode == SCATTER_MODE_THERMAL && p->nres <= NLINES && p->nres > -1)
