@@ -58,9 +58,11 @@ stuff_phot (pin, pout)
   pout->w_orig = pin->w_orig;
   pout->freq = pin->freq;
   pout->freq_orig = pin->freq_orig;
+  pout->freq_orig_loc = pin->freq_orig_loc;
   pout->tau = pin->tau;
 
   pout->istat = pin->istat;
+  pout->frame = pin->frame;
   pout->nres = pin->nres;
   pout->nrscat = pin->nrscat;
   pout->nscat = pin->nscat;

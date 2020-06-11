@@ -77,12 +77,14 @@ radiation (p, ds)
   int nconf;
   double p_in[3], p_out[3], dp_cyl[3];  //The initial and final momentum.
 //  double weight_of_packet, y;  //to do with augerion calcs, now deprecated
-  double v_inner[3], v_outer[3], v1, v2;
+//OLD  double v_inner[3], v_outer[3], v1, v2;
   double freq_inner, freq_outer;
   double freq_min, freq_max;
   double frac_path, freq_xs;
-  struct photon phot, phot_mid;
+  struct photon phot, phot_mid, phot_dummy;
   int ndom, i;
+
+//OLD  double ftest;
 
   one = &wmain[p->grid];        /* So one is the grid cell of interest */
 
@@ -97,8 +99,8 @@ radiation (p, ds)
      this could be improved, so we throw an error if the difference between v1 and v2 is large */
 
   /* calculate velocity at original position */
-  vwind_xyz (ndom, p, v_inner); // get velocity vector at new pos
-  v1 = dot (p->lmn, v_inner);   // get direction cosine
+//OLD  vwind_xyz (ndom, p, v_inner); // get velocity vector at new pos
+//OLD  v1 = dot (p->lmn, v_inner);   // get direction cosine
 
   /* compute the initial momentum of the photon */
 
@@ -112,18 +114,30 @@ radiation (p, ds)
 
   stuff_phot (p, &phot);        // copy photon ptr
   move_phot (&phot, ds);        // move it by ds
-  vwind_xyz (ndom, &phot, v_outer);     // get velocity vector at new pos
-  v2 = dot (phot.lmn, v_outer); // get direction cosine
+//OLD  vwind_xyz (ndom, &phot, v_outer);     // get velocity vector at new pos
+//OLD  v2 = dot (phot.lmn, v_outer); // get direction cosine
 
   /* calculate photon frequencies in rest frame of cell */
 
-  freq_inner = p->freq * (1. - v1 / VLIGHT);
-  freq_outer = phot.freq * (1. - v2 / VLIGHT);
+//OLD  freq_inner = p->freq * (1. - v1 / VLIGHT);    //XFRAME
+//OLD  freq_outer = phot.freq * (1. - v2 / VLIGHT);  //XFRAME
+
+  if (observer_to_local_frame (&phot, &phot_dummy))
+  {
+    Error ("radiation: observer to local frame error\n");
+  }
+  freq_inner = phot_dummy.freq;
+
+  if (observer_to_local_frame (p, &phot_dummy))
+  {
+    Error ("radiation: observer to local frame error\n");
+  }
+  freq_outer = phot_dummy.freq;
 
   /* take the average of the frequencies at original position and original+ds */
   freq = 0.5 * (freq_inner + freq_outer);
 
-  /* calculate free-free, Compton and ind-Compton opacities 
+  /* calculate free-free, Compton and induced-Compton opacities 
      note that we also call these with the average frequency along ds */
 
   kappa_tot = frac_ff = kappa_ff (xplasma, freq);       /* Add ff opacity */

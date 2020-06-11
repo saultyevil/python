@@ -27,6 +27,10 @@ value determined by values in python.h to a values which are adjustable from
 within python */
 
 
+#define REL_MODE_LINEAR 0      /*Only make v/c corrections when doing frame transfers*/
+#define REL_MODE_FULL   1      /*Make full corrections for special relativity*/
+
+  int rel_mode;                 /* How doppler effects are treated */
 
 
 
@@ -475,6 +479,7 @@ struct geometry
 #define RT_MODE_MACRO   2
 
   int rt_mode;                  /* radiative transfer mode. 2 for Macro Atom method,  1 for non-Macro Atom methods  */
+
 
   /* Define the choices for calculating the FB, see, e.g. integ_fb */
 
@@ -1115,11 +1120,11 @@ int size_Jbar_est, size_gamma_est, size_alpha_est;
 
 typedef struct photon
 {
-  double x[3];                  /* The position of packet */
-  double lmn[3];                /* Direction cosines of the packet */
-  double freq, freq_orig;       /* current and original frequency of this packet */
-  double w, w_orig;             /* current and original weight of this packet */
-  double tau;                   /* optical depth of the photon since its creation or last interaction */
+  double x[3];                                  /* The position of packet */
+  double lmn[3];                                /* Direction cosines of the packet */
+  double freq, freq_orig, freq_orig_loc;        /* current, original frequency redshifted and unredshifted) of this packet */
+  double w, w_orig;                             /* current and original weight of this packet */
+  double tau;                                   /* optical depth of the photon since its creation or last interaction */
   enum istat_enum
   {
     P_INWIND = 0,               //in wind,
@@ -1136,6 +1141,12 @@ typedef struct photon
     P_LOFREQ_FF = 11,           //records a photon that had too low a frequency
     P_REPOSITION_ERROR = 12     //A photon passed through the disk due to dfudge pushing it through incorrectly
   } istat;                      /*status of photon. */
+
+  enum frame
+  {
+    F_LOCAL = 0,
+    F_OBSERVER = 1
+  } frame;
 
   int nscat;                    /*Number of scatters for this photon */
   int nres;                     /*For line scattering, indicates the actual transition; 

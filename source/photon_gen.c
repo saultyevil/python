@@ -186,13 +186,28 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
   }
 
 
+  /* XFRAME the error check below was not working properly for TDE models which
+     have very hight velocities involved, and so has been commented out.
+     But if there is any real doubt about whether freq_orig_loc has been
+     assigned it needs to be restored.  A better test would be possible if we knew that the intial
+     photon freqency was 0.  
+   */
   for (n = 0; n < NPHOT; n++)
   {
     p[n].w_orig = p[n].w;
     p[n].freq_orig = p[n].freq;
+//    if (fabs (p[n].freq_orig_loc - p[n].freq) > 0.5 * p[n].freq)
+//    {
+//      Error ("Photon_gen: photon (%d) from %d does not have an orignal frequency defined  orig %10.3e shifted %10.3e gen %10.3e\n", n,
+//             p[n].freq_orig_loc, p[n].freq_orig, p[n].freq_orig, p[n].freq);
+//      p[n].freq_orig_loc = p[n].freq_orig;
+//
+//    }
+
     p[n].origin_orig = p[n].origin;
     p[n].np = n;
     p[n].ds = 0;
+    p[n].frame = F_OBSERVER;
     if (geo.reverb != REV_NONE && p[n].path < 0.0)      // SWM - Set path lengths for disk, star etc.
       simple_paths_gen_phot (&p[n]);
   }
@@ -842,6 +857,7 @@ photo_gen_star (p, r, t, weight, f1, f2, spectype, istart, nphot)
   for (i = istart; i < iend; i++)
   {
     p[i].origin = PTYPE_STAR;   // For BL photons this is corrected in photon_gen
+    p[i].frame = F_OBSERVER;    // Stellar photons are not redshifted
     p[i].w = weight;
     p[i].istat = p[i].nscat = p[i].nrscat = 0;
     p[i].grid = 0;
@@ -887,6 +903,9 @@ photo_gen_star (p, r, t, weight, f1, f2, spectype, istart, nphot)
     }
 
     randvcos (p[i].lmn, p[i].x);
+
+    p[i].freq_orig_loc = p[i].freq;
+
   }
   return (0);
 }
@@ -930,7 +949,8 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
   double planck ();
   double t, r, z, theta, phi;
   int nring;
-  double north[3], v[3];
+  double north[3];
+//OLD  double v[3];
   if ((iend = istart + nphot) > NPHOT)
   {
     Error ("photo_gen_disk: iend %d > NPHOT %d\n", iend, NPHOT);
@@ -947,6 +967,7 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
   for (i = istart; i < iend; i++)
   {
     p[i].origin = PTYPE_DISK;   // identify this as a disk photon
+    p[i].frame = F_LOCAL;
     p[i].w = weight;
     p[i].istat = p[i].nscat = p[i].nrscat = 0;
     p[i].tau = 0;
@@ -1048,8 +1069,19 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
     /* Now Doppler shift this. Use convention of dividing when going from rest
        to moving frame */
 
-    vdisk (p[i].x, v);
-    p[i].freq /= (1. - dot (v, p[i].lmn) / VLIGHT);
+
+    p[i].freq_orig_loc = p[i].freq;
+
+    /* When given the same input photons the transformation is made in place */
+    if (local_to_observer_frame_disk (&p[i], &p[i]))
+    {
+      Error ("photon_gen: Frame Error\n");
+    }
+
+//OLD    vdisk (p[i].x, v);
+//OLD    p[i].freq /= (1. - dot (v, p[i].lmn) / VLIGHT);     //XFRAME
+
+
 
   }
 
@@ -1262,6 +1294,11 @@ photon_checks (p, freqmin, freqmax, comment)
       Error ("photon_checks: %id %5d %5d %10.4e %10.4e %10.4e freq out of range\n", nn, p[nn].origin, p[nn].nres, p[nn].freq, freqmin,
              freqmax);
       p[nn].freq = freqmax;
+      nnn++;
+    }
+
+    if (check_frame (&p[nn], F_OBSERVER, "photon_checks: all photons shouuld be in OBSERVER frame\n"))
+    {
       nnn++;
     }
   }

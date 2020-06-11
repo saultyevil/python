@@ -24,7 +24,7 @@ int rdpar_set_verbose(int vlevel);
 /* xlog.c */
 int Log_init(char *filename);
 int Log_append(char *filename);
-int Log_close(void);
+void Log_close(void);
 int Log_set_verbosity(int vlevel);
 int Log_print_max(int print_max);
 int Log_quit_after_n_errors(int n);

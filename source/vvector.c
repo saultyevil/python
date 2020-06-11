@@ -17,7 +17,7 @@
  * 	- dot(a,b)		returns the  product of the 3 vectors a and b
  * 	- double length(x)	returns the length of the 3 vector x
  * 	- int renorm(a,scalar)		renormalizes the 3-vector a to a length of
- * 							a; retuns -1 if a has length 0.
+ * 							scalaar; retuns -1 if a has length 0.
  * 	- int cross(a,b,c)		c = a x b  (where x is the cross-product)
  * 	- vmove(u,lmn,s,result)
  * 	- vsub(u,v,result)

@@ -5,7 +5,7 @@ double get_rand_exp(double alpha_min, double alpha_max);
 double integ_planck_d(double alphamin, double alphamax);
 int init_integ_planck_d(void);
 double planck_d(double alpha, void *params);
-double planck_d_2 (double alpha, void *params);
+double planck_d_2(double alpha, void *params);
 double emittance_bb(double freqmin, double freqmax, double t);
 double check_fmax(double fmax, double temp);
 /* get_atomicdata.c */
@@ -31,7 +31,6 @@ int translate_in_space(PhotPtr pp);
 double ds_to_wind(PhotPtr pp, int *ndom_current);
 int translate_in_wind(WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell(int ndom, PhotPtr p);
-int walls(PhotPtr p, PhotPtr pold, double *normal);
 /* photon_gen.c */
 int define_phot(PhotPtr p, double f1, double f2, long nphot_tot, int ioniz_or_final, int iwind, int freq_sampling);
 double populate_bands(int ioniz_or_final, int iwind, struct xbands *band);
@@ -121,7 +120,6 @@ int select_continuum_scattering_process(double kap_cont, double kap_es, double k
 double kappa_bf(PlasmaPtr xplasma, double freq, int macro_all);
 int kbf_need(double fmin, double fmax);
 double sobolev(WindPtr one, double x[], double den_ion, struct lines *lptr, double dvds);
-int doppler(PhotPtr pin, PhotPtr pout, double v[], int nres);
 int scatter(PhotPtr p, int *nres, int *nnscat);
 /* radiation.c */
 int radiation(PhotPtr p, double ds);
@@ -169,7 +167,7 @@ double roche2_width_max(void);
 /* random.c */
 int randvec(double a[], double r);
 int randvcos(double lmn[], double north[]);
-double vcos (double x, void *params);
+double vcos(double x, void *params);
 int init_rand(int seed);
 double random_number(double min, double max);
 /* stellar_wind.c */
@@ -262,9 +260,10 @@ int get_standard_care_factors(void);
 int get_extra_diagnostics(void);
 int init_extra_diagnostics(void);
 int save_photon_stats(WindPtr one, PhotPtr p, double ds, double w_ave);
-int save_extract_photons(int n, PhotPtr p, PhotPtr pp, double *v);
+int save_extract_photons(int n, PhotPtr p, PhotPtr pp);
 int save_photons(PhotPtr p, char comment[]);
 int track_scatters(PhotPtr p, int nplasma, char *comment);
+int Diag(char *format, ...);
 /* sv.c */
 int get_sv_wind_params(int ndom);
 double sv_velocity(double x[], double v[], int ndom);
@@ -289,7 +288,6 @@ double dvwind_ds(PhotPtr p);
 int dvds_ave(void);
 /* reposition.c */
 int reposition(PhotPtr p);
-void reposition_lost_disk_photon(PhotPtr p);
 /* anisowind.c */
 int randwind_thermal_trapping(PhotPtr p, int *nnscat);
 /* wind_util.c */
@@ -549,12 +547,14 @@ int calculate_ionization(int restart_stat);
 int make_spectra(int restart_stat);
 /* brem.c */
 double integ_brem(double freq, void *params);
-double brem_d (double alpha, void *params);
+double brem_d(double alpha, void *params);
 double get_rand_brem(double freqmin, double freqmax);
 /* synonyms.c */
 int get_question_name_length(char question[]);
 int are_synonym_lists_valid(void);
 int is_input_line_synonym_for_question(char question[], char input_line[]);
+/* walls.c */
+int walls(PhotPtr p, PhotPtr pold, double *normal);
 /* setup_reverb.c */
 int get_meta_params(void);
 /* setup_line_transfer.c */
@@ -568,6 +568,11 @@ double logg(double mass, double rwd);
 /* import_calloc.c */
 void calloc_import(int coord_type, int ndom);
 void free_import(int coord_type, int ndom);
+/* frame.c */
+int check_frame(PhotPtr p, enum frame desired_frame, char *msg);
+int observer_to_local_frame(PhotPtr p_in, PhotPtr p_out);
+int local_to_observer_frame(PhotPtr p_in, PhotPtr p_out);
+int local_to_observer_frame_disk(PhotPtr p_in, PhotPtr p_out);
 /* py_wind_sub.c */
 int zoom(int direction);
 int overview(WindPtr w, char rootname[]);

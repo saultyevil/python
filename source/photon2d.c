@@ -505,6 +505,11 @@ return and record an error */
 
   }
 
+  if (modes.save_photons)
+  {
+    Diag ("smax  %10.3e tau_scat %10.3e tau %10.3e\n", smax, tau_scat, *tau);
+  }
+
 
 /* At this point we now know how far the photon can travel in it's current grid cell */
 

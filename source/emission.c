@@ -233,7 +233,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
   int n, nn, np;
   int photstop;
   double xlum, xlumsum, lum;
-  double v[3];
+//OLD  double v[3];
   int icell, icell_old;
   int nplasma = 0;
   int nnscat;
@@ -379,18 +379,25 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
       }
       p[np].nnscat = nnscat;
 
-      /* Photons are generated in the CMF and so must be Doppler shifted into 
-         the Lab Frame.  We only correct the frequency to first order for the velocity of the wind.,
-         We don not make adjust the direction for relativistic effects.
+      /* Photons are generated in the local and so must be Doppler shifted into 
+         the observer frame.  
        */
 
-      vwind_xyz (ndom, &p[np], v);
-      p[np].freq /= (1. - dot (v, p[np].lmn) / VLIGHT);
-      p[np].istat = 0;
+
+//OLD      vwind_xyz (ndom, &p[np], v);
+      p[np].istat = P_INWIND;
+      p[np].freq_orig_loc = p[np].freq;
+      p[np].frame = F_LOCAL;
       p[np].tau = p[np].nscat = p[np].nrscat = 0;
       p[np].origin = PTYPE_WIND;        // A wind photon
 
-      /* Extra processing for revereration calculations */
+      /* Make an in place transformation to the observe frame */
+      if (local_to_observer_frame (&p[np], &p[np]))
+      {
+        Error ("photo_gen_wind: frame tranformation error\n");
+      }
+
+      /* Extra processing for reveberation calculations */
       switch (geo.reverb)
       {                         // SWM 26-3-15: Added wind paths
       case REV_WIND:

@@ -22,14 +22,14 @@
  * @brief      A supervisory routine called to 
  * 	builds detailed spectra in the normal (extract) mode.
  *
- * @param [in, out] WindPtr  w   The entire wind
- * @param [in, out] PhotPtr  p   The photon to extract
- * @param [in, out] int  itype   An integer representing the type of photon 
+ * @param [in] WindPtr  w   The entire wind
+ * @param [in] PhotPtr  p   The photon to extract
+ * @param [in] int  itype   An integer representing the type of photon 
  * for the purpose of being extracted.
  * @return     Always returns 0
  *
  * @details
- * extract is called when a photon begins it's flight and every time that photon
+ * extract is called when a photon begins its flight and every time that photon
  * scatters, unless the user has exercised the "live or die" option, in
  * which case it is not called.  
  *
@@ -44,7 +44,7 @@
  * * PTYPE_WIND->the photon being redirected arose in the wind,
  * 
  * extract uses the types to prepare the photon for extraction, including
- * doppler shifting the photon if is of PTYPE_WIND or PTYPE_STAR 
+ * doppler shifting the photon if is of PTYPE_WIND or PTYPE_DISK.
  * 
  * Usually, Python constructs a spectrum of all photons, but there are
  * advanced options which allone to restict the spectrum created to
@@ -89,12 +89,10 @@ extract (w, p, itype)
 {
   int n, mscat, mtopbot;
   struct photon pp;
-  double v[3];
   double length ();
   int vsub ();
   int yep;
   double xdiff[3];
-  int ndom;
   double p_norm, tau_norm;
 
 
@@ -183,10 +181,19 @@ extract (w, p, itype)
 
 
 /* Create a photon pp to use here and in extract_one.  This assures we
- * have not modified p as part of extract
+ * have not modified p as part of extract.
+ *
+ * If it is a wind photon, it will have be in the observer frame in 
+ * a different direction so we need to put it into the local frame
+ * This needs to be done before we stuff the new direction in
  */
 
       stuff_phot (p, &pp);
+      if (itype == PTYPE_WIND)
+      {
+        observer_to_local_frame (&pp, &pp);
+      }
+
       stuff_v (xxspec[n].lmn, pp.lmn);  /* Stuff new photon direction into pp */
 
 /* 
@@ -199,24 +206,30 @@ one is odd. We do frequency here but weighting is carried out in  extract */
 
       if (itype == PTYPE_DISK)
       {
-        vdisk (pp.x, v);
-        doppler (p, &pp, v, -1);
+        pp.freq = pp.freq_orig;
+        pp.frame = F_LOCAL;
+        local_to_observer_frame_disk (&pp, &pp);
 
       }
       if (itype == PTYPE_WIND)
       {                         /* If the photon was scattered in the wind, 
                                    the frequency also must be shifted */
-        ndom = wmain[p->grid].ndom;
-        vwind_xyz (ndom, &pp, v);       /*  Get the velocity at the position of pp */
-        doppler (p, &pp, v, pp.nres);   /*  Doppler shift the photon -- test! */
 
-/*  Doppler shift the photon (as nonresonant scatter) to new direction */
+/* XFRAME  Doppler shift the photon  to new direction.  In what follows
+   we make the assumption which seems explicit in the old doppler routine that we 
+   are in the observe frame
+ */
+        if (pp.nres > -1 && pp.nres < nlines)
+        {
+          pp.freq = lin_ptr[pp.nres]->freq;
+        }
+        local_to_observer_frame (&pp, &pp);
 
       }
 
       if (modes.save_extract_photons && 1545.0 < 2.997925e18 / pp.freq && 2.997925e18 / pp.freq < 1565.0)
       {
-        save_extract_photons (n, p, &pp, v);
+        save_extract_photons (n, p, &pp);
       }
 
 /* 68b - 0902 - ksl - turn phot_history on for the middle spectrum.  Note that we have to wait
@@ -228,8 +241,20 @@ one is odd. We do frequency here but weighting is carried out in  extract */
       }
 
       /* Now extract the photon */
+      if (modes.save_photons)
+      {
+        Diag ("BeforeExtract freq  %10.3e itype %d  nres %d\n", pp.freq, itype, pp.nres);
+        save_photons (&pp, "BeforeExtract");
+      }
+
 
       extract_one (w, &pp, itype, n);
+
+//OLD      if (modes.save_photons)
+//OLD      {
+//OLD        save_photons (&pp, "AfterExtract");
+//OLD      }
+
 
       /* Make sure phot_hist is on, for just one extraction */
 
