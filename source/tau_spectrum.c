@@ -291,7 +291,7 @@ tau_calculate_tau_path (WindPtr w, PhotPtr pextract, double *col_den, double *ta
    * smax should be the transverse distance of the cell the photon is in
    */
 
-  smax = find_smax (pextract);
+  smax = calculate_smax_in_cell (pextract, 0, NULL);
   if (smax < 0)
   {
     Error ("%s : %i : abnormal value of smax for photon\n", __FILE__, __LINE__);

@@ -83,7 +83,7 @@ ifeq (D,$(firstword $(MAKECMDGOALS)))
 	CFLAGS = -g -pg -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
 	FFLAGS = -g -pg
 	PRINT_VAR = DEBUGGING, -g -pg -Wall flags
-        XDEBUG = True
+	XDEBUG = True
 else
 # Use this for large runs
 	CFLAGS = -O3 -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
@@ -156,7 +156,7 @@ python_objects = bb.o get_atomicdata.o photon2d.o photon_gen.o parse.o setup_fil
 		setup_star_bh.o setup_domains.o setup_disk.o photo_gen_matom.o macro_gov.o windsave2table_sub.o \
 		import.o import_spherical.o import_cylindrical.o import_rtheta.o  \
 		reverb.o paths.o setup.o run.o brem.o synonyms.o walls.o \
-		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o import_calloc.o frame.o
+		setup_reverb.o setup_line_transfer.o rdpar_init.o cv.o import_calloc.o frame.o \
 		tau_spectrum.o
 
 
@@ -179,7 +179,7 @@ python_source= bb.c get_atomicdata.c python.c photon2d.c photon_gen.c parse.c \
 		setup_disk.c photo_gen_matom.c macro_gov.c windsave2table_sub.c \
 		import.c import_spherical.c import_cylindrical.c import_rtheta.c\
 		reverb.c paths.c setup.c run.c brem.c synonyms.c walls.c \
-		setup_reverb.c setup_line_transfer.c cv.c import_calloc.c tau_spectrum.c
+		setup_reverb.c setup_line_transfer.c cv.c import_calloc.c tau_spectrum.c \
 		frame.c
 
 #
@@ -200,11 +200,11 @@ prototypes:
 python: startup python.o $(python_objects)
 	$(CC) ${CFLAGS} python.o $(python_objects) $(kpar_objects) $(LDFLAGS) -o python
 	cp $@ $(BIN)/py
-        ifdef XDEBUG
-	  mv $@ $(BIN)/py$(VERSION)_debug
-        else
-	  mv $@ $(BIN)/py$(VERSION)
-        endif
+	ifdef XDEBUG
+		mv $@ $(BIN)/py$(VERSION)_debug
+	else
+		mv $@ $(BIN)/py$(VERSION)
+	endif
 	# Fix indenting, if necessary.
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi
 

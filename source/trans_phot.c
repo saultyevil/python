@@ -125,8 +125,6 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
     {
       stuff_phot (&p[nphot], &pextract);
       extract (w, &pextract, pextract.origin);
-
-    }
     }
 
     p[nphot].np = nphot;

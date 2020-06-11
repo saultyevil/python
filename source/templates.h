@@ -29,6 +29,7 @@ int main(int argc, char *argv[]);
 int translate(WindPtr w, PhotPtr pp, double tau_scat, double *tau, int *nres);
 int translate_in_space(PhotPtr pp);
 double ds_to_wind(PhotPtr pp, int *ndom_current);
+double calculate_smax_in_cell(PhotPtr p, double tau_scat, double *tau);
 int translate_in_wind(WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
 double ds_in_cell(int ndom, PhotPtr p);
 /* photon_gen.c */
@@ -122,7 +123,7 @@ int kbf_need(double fmin, double fmax);
 double sobolev(WindPtr one, double x[], double den_ion, struct lines *lptr, double dvds);
 int scatter(PhotPtr p, int *nres, int *nnscat);
 /* radiation.c */
-int radiation(PhotPtr p, double ds);
+double radiation(PhotPtr p, double ds);
 double kappa_ff(PlasmaPtr xplasma, double freq);
 double sigma_phot(struct topbase_phot *x_ptr, double freq);
 double den_config(PlasmaPtr xplasma, int nconf);
@@ -568,6 +569,18 @@ double logg(double mass, double rwd);
 /* import_calloc.c */
 void calloc_import(int coord_type, int ndom);
 void free_import(int coord_type, int ndom);
+/* tau_spectrum.c */
+void tau_log_edges(const double *optical_depths, const double *column_densities);
+void tau_write_optical_depth_spectra(const double *tau_spectrum, double freq_min, double dfreq);
+void mpi_gather_spectra(double *spec, int nspec);
+int tau_calculate_tau_path(WindPtr w, PhotPtr pextract, double *col_den, double *tau);
+int tau_extract_photon(WindPtr w, PhotPtr porig, double *col_den, double *tau);
+void tau_reposition_photon(PhotPtr pout);
+int tau_create_phot(PhotPtr pout, double nu, double *lmn);
+void init_tau_observers(void);
+void tau_create_spectra(WindPtr w);
+void tau_evaluate_photo_edges(WindPtr w);
+void tau_spectrum_main(WindPtr w);
 /* frame.c */
 int check_frame(PhotPtr p, enum frame desired_frame, char *msg);
 int observer_to_local_frame(PhotPtr p_in, PhotPtr p_out);
