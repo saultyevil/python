@@ -11,7 +11,7 @@ of python is working.
 
 Command line usage (if any):
 
-    usage: regression.py [-np 3 -pf_dir test -out_dir foo] version 
+    usage: regression.py [-np 3 -x 'whatever' -pf_dir test -out_dir foo] version 
 
     where 
 
@@ -22,6 +22,9 @@ Command line usage (if any):
                         to provide the full path name to the directory.  The routine doit
                         first searches the current workind directory for the directory and then
                         looks in $PYTHON/examples/
+        -x  '-v/c'      Extra switches to be applied to the run, such as using linear Doppler
+                        shifts.  Note that these will be applied to everything except the
+                        hydro calculation so use with caution.  This should be a single string
         -out_dir foo    The directory (below the current working directory) where the 
                         tests will run.  The defauld is constructed for the version
                         and the data
@@ -173,7 +176,7 @@ def check_one(xfile,root):
     
 
 
-def doit(version='py',pf_dir='',out_dir='',np=3,outputfile='Summary.txt'):
+def doit(version='py',pf_dir='',out_dir='',np=3,switches='',outputfile='Summary.txt'):
     '''
     Test a specific version of python against a series of models
 
@@ -253,7 +256,7 @@ def doit(version='py',pf_dir='',out_dir='',np=3,outputfile='Summary.txt'):
         if np<=1:
             command='%s %s' % (version,pf)
         else:
-            command='mpirun -np %d %s %s >%s.stdout.txt' % (np,version,pf,root_name)
+            command='mpirun -np %d %s %s %s >%s.stdout.txt' % (np,version,switches,pf,root_name)
         commands.append(command)
         root_names.append(root_name)
 
@@ -445,6 +448,7 @@ def steer(argv):
     pf_dir=''
     out_dir=''
     np=3
+    switches=''
 
     i=1
     words=[]
@@ -461,6 +465,9 @@ def steer(argv):
         elif argv[i]=='-out_dir':
             i=i+1
             out_dir=(argv[i])
+        elif argv[i]=='-x':
+            i=i+1
+            switches=(argv[i])
         elif argv[i][0]=='-':
             print('Error: Unknown switch ---  %s' % argv[i])
             return
@@ -473,7 +480,7 @@ def steer(argv):
         return
 
     for one in words:
-        q=doit(version=one,pf_dir=pf_dir,out_dir=out_dir,np=np,outputfile='Summary.txt')
+        q=doit(version=one,pf_dir=pf_dir,out_dir=out_dir,np=np,switches=switches,outputfile='Summary.txt')
 
     # Now run regression checks between this run and the last time the routine was run
 

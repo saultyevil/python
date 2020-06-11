@@ -23,8 +23,8 @@
 #include "atomic.h"
 #include "python.h"
 
-struct photon cds_phot_old;
-double cds_v2_old, cds_dvds2_old;
+struct photon cds_phot_old_observer, cds_phot_old_loc;
+//OLD double cds_v2_old, cds_dvds2_old;
 
 
 /**********************************************************/
@@ -92,10 +92,9 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   int n, nn, nstart, ndelt;
   double x;
   double ds_current, ds;
-  double v_inner[3], v_outer[3], v1, v2, dvds, dd;
-  double v_check[3], vch, vc;
+  double dvds, dd;
   double dvds1, dvds2;
-  struct photon phot, p_now;
+  struct photon p_start, p_stop, p_now;
   int init_dvds;
   double kap_bf_tot, kap_ff, kap_cont;
   double tau_sobolev;
@@ -105,6 +104,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   PlasmaPtr xplasma, xplasma2;
   int ndom;
   double normal[3];
+  double diff;
 
   one = &w[p->grid];            //pointer to the cell where the photon bundle is located.
 
@@ -125,65 +125,53 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   }
 
 
-/* Note that comp_phot compares the position and
- * direction of two photons.  If they are the same, then
- * it just takes v1 from the old value.  */
-
-  if (comp_phot (&cds_phot_old, p))
+  if (comp_phot (&cds_phot_old_observer, p))
   {
-    vwind_xyz (ndom, p, v_inner);
-    v1 = dot (p->lmn, v_inner);
+    observer_to_local_frame (p, &p_start);
   }
   else
   {
-    v1 = cds_v2_old;
+    stuff_phot (&cds_phot_old_loc, &p_start);
+//OLD  Log ("This helped  %d\n", p_start.np);
   }
 
-  /* Initialize two photon structures phot and p_now for internal work
-   * "phot"  will be a photon vector at the far edge of the cell, while p
-   * remains the photon at its current positon. p_now  is located
-   * at the midpoint between these tow positions.
+  stuff_phot (p, &p_stop);
+  move_phot (&p_stop, smax);
+  stuff_phot (&p_stop, &cds_phot_old_observer);
+  observer_to_local_frame (&p_stop, &p_stop);
+  stuff_phot (&p_stop, &cds_phot_old_loc);
+
+
+
+  /* At this point p_start and pstop are in the local frame 
+   * at the and p_stop is at the maximum distance it can 
+   * travel.  We want to check that the frequncy shift is 
+   * not too great along the path that a linear approximation
+   * to the change in frequency is not reasonable
    */
 
-  stuff_phot (p, &phot);
-  move_phot (&phot, smax);
-  vwind_xyz (ndom, &phot, v_outer);
-  v2 = dot (phot.lmn, v_outer);
 
-  /* Check to see that the velocity is monotonic across the cell
-   * by calculating the velocity at the midpoint of the path
-   *
-   * If it is not monitocinc, then reduce smax
-   */
-  vc = VLIGHT;
-  while (vc > VCHECK && smax > DFUDGE)
+  diff = 1;
+#define  MAXDIFF  VCHECK/VLIGHT /* The same as our old velocity requirement */
+
+  while (smax > DFUDGE)
   {
     stuff_phot (p, &p_now);
-    move_phot (&p_now, smax / 2.);
-    vwind_xyz (ndom, &p_now, v_check);
-    vch = dot (p_now.lmn, v_check);
-
-    vc = fabs (vch - 0.5 * (v1 + v2));
-
-    if (vc > VCHECK)
+    move_phot (&p_now, smax * 0.5);
+    observer_to_local_frame (&p_now, &p_now);
+    diff = fabs (p_now.freq - 0.5 * (p_start.freq + p_stop.freq)) / p_start.freq;
+    if (diff < MAXDIFF)
     {
-      stuff_phot (&p_now, &phot);
-      smax *= 0.5;
-      v2 = vch;
+      break;
     }
+    stuff_phot (&p_now, &p_stop);
+    smax *= 0.5;
+//OLD    Log ("Shorten %d %d %e %e\n", p_now.np, p_now.grid, smax, diff);
   }
 
+  freq_inner = p_start.freq;
+  freq_outer = p_stop.freq;
 
-/* This Doppler shift shifts the photon from the global to the local
- * frame of rest. Therefore multiply. See doppler notes for a discussion
- * The sign is  correct.  If the photon is moving in the same
- * direction as v, then in the rest frame of the ions,
- * then the photon frequency will be less. */
-
-
-  freq_inner = p->freq * (1. - v1 / VLIGHT);
-  freq_outer = phot.freq * (1. - v2 / VLIGHT);
-  dfreq = freq_outer - freq_inner;
 
 
 /* We use the doppler shifted frequency to compute the Klein-Nishina cross
@@ -193,6 +181,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * for every little path section between resonances */
 
   mean_freq = 0.5 * (freq_inner + freq_outer);
+  dfreq = freq_outer - freq_inner;
 
 
 
@@ -203,7 +192,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (fabs (dfreq) < EPSILON)
   {
-    Error ("calculate_ds: v same at both sides of cell %d\n", one->nwind);
+    Error ("calculate_ds: freq same at both sides of cell %d\n", one->nwind);
     x = -1;
     return (smax);              // This is not really the best thing to do, but it avoids disaster below
 
@@ -225,9 +214,10 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * are set by limit_lines()
  */
 
-  /*Compute the angle averaged electron scattering cross section.  Note the es is always
+  /*Compute the angle averaged electron scattering cross section.  Note electron scattering  is always
      treated as a scattering event. */
 
+  //XFRAME In principle, lines like this need a transformation: kappa transforms
   kap_es = klein_nishina (mean_freq) * xplasma->ne * zdom[ndom].fill;
 
 /* If in macro-atom mode, calculate the bf and ff opacities, becuase in macro-atom mode
@@ -247,7 +237,8 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
     freq_av = freq_inner;
 
-    //(freq_inner + freq_outer) * 0.5;  //need to do better than this perhaps but okay for star - comoving frequency (SS)
+    // XFRAME need to do better than this perhaps but okay for star - comoving frequency (SS)
+    //(freq_inner + freq_outer) * 0.5;  
 
 
     kap_bf_tot = kappa_bf (xplasma, freq_av, 0);
@@ -266,7 +257,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
 
   kap_cont = kap_es + kap_bf_tot + kap_ff;      //total continuum opacity
-
+//XFRAME Probably here to transformation on all opacities for continuum, once summed up? ds (below) is observer frame
 
 /* Finally begin the loop over the resonances that can interact
  * with the photon in the cell
@@ -294,6 +285,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
  * the photon to scatter.  The variable threshold is used for this. */
 
         *nres = select_continuum_scattering_process (kap_cont, kap_es, kap_ff, xplasma);
+        //XFRAME This call will depend on kap_cont, kap_es being consistently in the same frame
         *istat = P_SCAT;        //flag as scattering
         ds_current += (tau_scat - ttau) / (kap_cont);   //distance travelled
         ttau = tau_scat;
@@ -305,6 +297,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
 /* increment tau by the continuum optical depth to this point */
         ttau += kap_cont * (ds - ds_current);
+        //XFRAME could also transform kap_cont here instead of above
 
 
         ds_current = ds;        /* At this point ds_current is exactly the position of the resonance */
@@ -329,7 +322,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
           if (init_dvds == 0)
           {
             dvds1 = dvwind_ds (p);
-            dvds2 = dvwind_ds (&phot);
+            dvds2 = dvwind_ds (&p_stop);
             init_dvds = 1;
           }
 
@@ -338,6 +331,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
 
           tau_sobolev = sobolev (one, p->x, dd, lin_ptr[nn], dvds);
+          //XFRAME I think tau_sobolev is invariant, but will depend on all the ingredients being in the same frame
 
 /* tau_sobolev now stores the optical depth. This is fed into the next statement for the bb estimator calculation. SS March 2004 */
 
@@ -366,6 +360,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
                 if (geo.ioniz_or_extract == 1)
                 {
                   bb_estimators_increment (two, p, tau_sobolev, dvds, nn);
+                  //XFRAME ultimately need to consider transformaions in estimators - eitger transform quantities before passing (p) or else in the incremenr routines (choose a principle and apply to all?)
                 }
               }
               else if (two->vol == 0)
@@ -382,6 +377,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
                 xplasma2 = &plasmamain[two->nplasma];
 
                 bb_simple_heat (xplasma2, p, tau_sobolev, dvds, nn);
+                //XFRAME ultimately need to consider transformaions in estimators (?)
 
               }
             }
@@ -445,6 +441,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   if (ttau + kap_cont * (smax - ds_current) > tau_scat)
   {
     *nres = select_continuum_scattering_process (kap_cont, kap_es, kap_ff, xplasma);
+    //XFRAME as above -- need consistency of frames for kappas
 
     /* A scattering event has occurred in the shell  and we
      * remain in the same shell */
@@ -463,8 +460,9 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   *tau = ttau;
 
-  stuff_phot (&phot, &cds_phot_old);    // Store the final photon position
-  cds_v2_old = v2;              // and the velocity along the line of sight
+//OLD   stuff_phot (&phot, &cds_phot_old);    // Store the final photon position
+
+//OLD   cds_v2_old = v2;              // and the velocity along the line of sight
 
   return (ds_current);
 }
@@ -521,6 +519,8 @@ select_continuum_scattering_process (kap_cont, kap_es, kap_ff, xplasma)
   double threshold;
   double run_tot;
   int ncont;
+
+  //XFRAME think this works provided that all the incoming kappas are in the same frame. shouldn't matter which frame though really - i.e. just consistency
 
   threshold = random_number (0.0, 1.0) * (kap_cont);
 
@@ -600,6 +600,7 @@ kappa_bf (xplasma, freq, macro_all)
   int nn;
   int ndom;
 
+  //XFRAME this will be giving a cmf kappa, I think - provided that level populations are densities in cmf (should be)
 
   kap_bf_tot = 0;
 
@@ -694,6 +695,7 @@ kbf_need (fmin, fmax)
   PlasmaPtr xplasma;
   WindPtr one;
   int nplasma, nion;
+  //XFRAME this will be giving a cmf kappa, I think - provided that level populations are densities in cmf (should be)
 
 
   for (nplasma = 0; nplasma < NPLASMA; nplasma++)       // Loop over all the cells in the wind
@@ -903,81 +905,6 @@ calls to two_level atom
 
 /**********************************************************/
 /**
- * @brief      calculate the  shift given the direction of the incoming
- * 	and outgoing photons and the local  velocity of the wind
- *
- * @param [in] PhotPtr  pin   The pre-scattered  photon (used for its direction)
- * @param [in,out] PhotPtr  pout   the scattered  photon (used for its direction)
- * @param [in] double  v[]   the velocity of the wind where the scatter occurred
- * @param [in] int  nres   either the number of the scatter
- * @return    Always returns 0
- *
- * pout->freq is updated
- *
- * @details
- * Given the incoming and the outgoing photon direction,
- * doppler calculates the outgoing frequency (to first order in beta).
- * There are two basic cases, depending on whether it was a resonant
- * or a nonresonant scatter.
- *
- * ### Notes ###
- * Called from scatter
- *
- **********************************************************/
-
-int
-doppler (pin, pout, v, nres)
-     PhotPtr pin, pout;
-     double v[];
-     int nres;
-
-{
-  double dot ();
-
-  if (nres == -1)               //Electron scattering (SS)
-  {                             /*It was a non-resonant scatter */
-    pout->freq = pin->freq * (1 - dot (v, pin->lmn) / VLIGHT) / (1 - dot (v, pout->lmn) / VLIGHT);
-
-
-  }
-  else if (nres > -1 && nres < nlines)
-  {                             /* It was a resonant scatter. */
-    pout->freq = lin_ptr[nres]->freq / (1. - dot (v, pout->lmn) / VLIGHT);
-  }
-  else if ((nres > NLINES && nres < NLINES + nphot_total + 1) || nres == -2)
-    /* It was continuum emission - new comoving frequency has been chosen by
-       the matom/kpkt routine, but now need to convert in the same way
-       as for lines (SS) */
-  {
-    /*
-       If a 2-level atom run, one should never arrive here.
-       Just do a check that all is well - this can be removed eventually (SS)
-     */
-    if (geo.rt_mode == RT_MODE_2LEVEL)
-    {
-      Error ("doppler: Not using macro atoms but trying to deexcite one? Abort.\n");
-      Exit (0);
-    }
-    pout->freq = pout->freq / (1. - dot (v, pout->lmn) / VLIGHT);
-  }
-/* Now do one final check that nothing is awry.  This is another
- * check added by SS that should probably be deleted or done before this point.
- * I have made it fatal so that we will pay attention to it if it occurs. ksl */
-
-  else
-  {
-    Error ("doppler: nres %d > NLINES + nphot_total %d\n", nres, NLINES + nphot_total);
-    Exit (0);
-  }
-
-  return (0);
-
-}
-
-
-
-/**********************************************************/
-/**
  * @brief      determine a new direction and frequency for a photon
  * that is in the wind
  *
@@ -1013,17 +940,15 @@ scatter (p, nres, nnscat)
      int *nres;
      int *nnscat;
 {
-  double v[3];
   double z_prime[3];
   int which_out;
-  struct photon pold;
+  struct photon p_orig;
   int i, n;
   double p_init[3], p_final[3], dp[3], dp_cyl[3];
   WindPtr one;
   double prob_kpkt, kpkt_choice, freq_comoving;
   double gamma_twiddle, gamma_twiddle_e, stim_fact;
   int m, llvl, ulvl;
-  double v_dop;
   PlasmaPtr xplasma;
   MacroPtr mplasma;
   int ndom;
@@ -1034,9 +959,16 @@ scatter (p, nres, nnscat)
   xplasma = &plasmamain[one->nplasma];
   ndom = wmain[p->grid].ndom;
 
+  /* Scatter assumes it has been passed a photon in the observer frame */
 
-  stuff_phot (p, &pold);
-  n = where_in_grid (ndom, pold.x);     // Find out where we are
+  if (check_frame (p, F_OBSERVER, "BeginScatter(err)\n") && modes.save_photons)
+  {
+    save_photons (p, "BeginScatter(err)");
+  }
+
+  stuff_phot (p, &p_orig);
+
+  n = where_in_grid (ndom, p->x);       // Find out where we are
 
   if (n < 0)
   {
@@ -1044,9 +976,20 @@ scatter (p, nres, nnscat)
     return (-1);
   }
 
-  vwind_xyz (ndom, p, v);       //get the local velocity at the location of the photon
-  v_dop = dot (p->lmn, v);      //get the dot product of the photon direction with the wind, to get the doppler velocity
-  freq_comoving = p->freq * (1. - v_dop / VLIGHT);      //This is the photon frequency in the comoving frame
+  if (modes.save_photons)
+  {
+    save_photons (p, "ScatIn");
+  }
+
+  if (observer_to_local_frame (p, p))
+  {
+    Error ("scatter: observer to local frame error (begin)\n");
+  }
+  freq_comoving = p->freq;
+
+
+
+  /* So p is now in the local, or co-moving frame */
 
 
   /* On entering this subroutine we know that a photon packet has been
@@ -1076,6 +1019,12 @@ scatter (p, nres, nnscat)
       /* It's a bb line - we can go straight to macro_gov since we know that
          we don't want a k-packet immediately. macro_gov now makes the decision
          regarding the treament (simple or full macro). */
+      /*XFRAME may need to check, but I believe all the macro atom (including macro gov) should already be 
+         formulated in the cmf: i.e. provided that the photon was transformed to the cmf before this call 
+         (see above) then nothing should be needed here before going in - need to consider reverse 
+         transfer when coming back out though (likely in macro_gov?)
+       */
+
       macro_gov (p, nres, 1, &which_out);
     }
 
@@ -1223,8 +1172,6 @@ scatter (p, nres, nnscat)
         xplasma->bf_simple_ionpool_in += p->w * (1 - prob_kpkt);
         p->w *= prob_kpkt;
 
-//OLD        /* record the amount of energy going into the simple ion ionization pool */
-//OLD        xplasma->bf_simple_ionpool_in += (p->w / prob_kpkt) - p->w;
         macro_gov (p, nres, 2, &which_out);     //routine to deal with kpkt
 #else
         /* This is the old apporach.  Process the BF photon for a simple atom.  In this
@@ -1256,12 +1203,21 @@ scatter (p, nres, nnscat)
       macro_gov (p, nres, 2, &which_out);       //ff always make a k-packet
     }
   }
+  /*XFRAME need to make sure that macro_gov leaves the photon in the Local frame. We will do all
+     of the transformations back to the observer frame here.
+   */
+
 
   /* END OF SECTION FOR HANDLING ASPECTS OF SCATTERING PROCESSES THAT ARE SPECIFIC TO MACRO-ATOMS. */
 
-  /* Set nres  correctly for the call to randvec */
+  /* Set nres  correctly and make sure the frequency is correct
+     for a resonanant scatter. Note that nres may have changed especially for macro-atoms */
 
-  p->nres = *nres;              // Update the resonance number on a scatter
+  p->nres = *nres;
+  if (*nres > -1 && *nres < nlines)
+  {
+    p->freq = lin_ptr[*nres]->freq;
+  }
 
   /* SS July 04
      Next block is modified to include the thermal trapping model for anisotropic scattering.
@@ -1272,10 +1228,8 @@ scatter (p, nres, nnscat)
 
   if (*nres == -1)              //Its an electron scatter
   {
-    p->freq = freq_comoving;    // The photon frequency in the electron rest frame 
+
     compton_dir (p);            // Get a new direction using the KN formula
-    v_dop = dot (p->lmn, v);    // Find the dot product of the new direction with the wind velocity 
-    p->freq = p->freq / (1. - v_dop / VLIGHT);  //Transform back to the observer frame
 
   }
   else if (*nres == -2 || *nres > NLINES || geo.scatter_mode == SCATTER_MODE_ISOTROPIC)
@@ -1298,12 +1252,9 @@ scatter (p, nres, nnscat)
   /* End of modification for thermal trapping model (SS July 04) */
 
 
+  /* Finally put everything back in the observer frame */
 
-
-//OLD (We already calculated this)  vwind_xyz (ndom, p, v);       /* Get the velocity vector for the wind */
-
-  if (*nres != -1)              //Only do this if its not an electron scatter, otherwise we have already dealt with this
-    doppler (&pold, p, v, *nres);
+  local_to_observer_frame (p, p);
 
 
 
@@ -1313,19 +1264,26 @@ The rest of this is only needed during ionization cycles, before the wind itself
 if fixed.  
 */
 
-  if (geo.pcycle == 0)
+  if (modes.save_photons)
   {
-    stuff_v (pold.lmn, p_init);
-    renorm (p_init, pold.w / VLIGHT);
+    save_photons (p, "ExScatter");
+  }
+
+//XFRAME - Is this  the correct way to calculate the momentum transfer allowing for CMF calculation ? 
+// ioniz_or_extract is True for ionization cycles, false for spectral cycles
+  if (geo.ioniz_or_extract)
+  {
+    stuff_v (p_orig.lmn, p_init);
+    renorm (p_init, p_orig.w / VLIGHT);
     stuff_v (p->lmn, p_final);
     renorm (p_final, p->w / VLIGHT);
     vsub (p_final, p_init, dp);
 
-    project_from_xyz_cyl (pold.x, dp, dp_cyl);
+    project_from_xyz_cyl (p_orig.x, dp, dp_cyl);
 
 
 
-    if (pold.x[2] < 0)
+    if (p_orig.x[2] < 0)
       dp_cyl[2] *= (-1);
     for (i = 0; i < 3; i++)
     {

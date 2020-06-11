@@ -548,11 +548,8 @@ photo_gen_kpkt (p, weight, photstart, nphot)
   struct photon pp;
   int nres, esc_ptr, which_out;
   int n;
-  double v[3];
-  double dot ();
   double test;
   int nnscat;
-  double dvwind_ds (), sobolev ();
   int nplasma, ndom;
   int kpkt_mode;
   double fmin, fmax;
@@ -637,6 +634,7 @@ photo_gen_kpkt (p, weight, photstart, nphot)
     get_random_location (icell, p[n].x);
 
     p[n].grid = icell;
+    p[n].frame = F_LOCAL;
 
     nnscat = 1;
     // Determine the direction of the photon
@@ -659,8 +657,14 @@ photo_gen_kpkt (p, weight, photstart, nphot)
        forward scattering of the distribution */
 
     ndom = wmain[icell].ndom;
-    vwind_xyz (ndom, &p[n], v);
-    p[n].freq /= (1. - dot (v, p[n].lmn) / VLIGHT);
+//OLD    vwind_xyz (ndom, &p[n], v);
+//OLD    p[n].freq /= (1. - dot (v, p[n].lmn) / VLIGHT);     //XFRAME
+
+    /* Make an in-place transformation to the observer frame */
+    if (local_to_observer_frame (&p[n], &p[n]))
+    {
+      Error ("photo_gen_kpkt:Frame transformation error\n");
+    }
 
     p[n].istat = 0;
     p[n].tau = p[n].nscat = p[n].nrscat = 0;
@@ -725,7 +729,7 @@ photo_gen_matom (p, weight, photstart, nphot)
   struct photon pp;
   int nres;
   int n;
-  double v[3];
+//OLD  double v[3];
   double dot ();
   int emit_matom ();
   double test;
@@ -808,6 +812,9 @@ photo_gen_matom (p, weight, photstart, nphot)
 
     p[n].freq = pp.freq;
     p[n].nres = nres;
+    p[n].freq_orig_loc = p[n].freq;
+    p[n].frame = F_LOCAL;
+
 
 
     /* The photon frequency is now known. */
@@ -843,8 +850,15 @@ photo_gen_matom (p, weight, photstart, nphot)
        forward scattering of the distribution */
 
     ndom = wmain[icell].ndom;
-    vwind_xyz (ndom, &p[n], v);
-    p[n].freq /= (1. - dot (v, p[n].lmn) / VLIGHT);
+
+//OLD    vwind_xyz (ndom, &p[n], v);
+//OLD    p[n].freq /= (1. - dot (v, p[n].lmn) / VLIGHT);     //XFRAME
+
+    /* Make an in-place transformation to the observer frame */
+    if (local_to_observer_frame (&p[n], &p[n]))
+    {
+      Error ("photo_gen_matom:Frame transformation error\n");
+    }
 
     p[n].istat = 0;
     p[n].tau = p[n].nscat = p[n].nrscat = 0;

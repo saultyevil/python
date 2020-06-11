@@ -36,8 +36,8 @@ int i_spec_start = 0;
  * @param [in] int  scat_select[]   A parameter for each spectrum which allows one to construct spectra with specifid numbers of scatters
  * @param [in] int  top_bot_select[]   A code which allows one to select photons only from below or above the disk
  * @param [in] int  select_extract   0 for Live or Die option, non-zero fo a normal extraction
- * @param [in] double  rho_select[]   Rho coordinates for extracting only photons in a particualr region
- * @param [in] double  z_select[]   Z cooordiante for selecting only photons that scattreed or were created in a praticular region
+ * @param [in] double  rho_select[]   Rho coordinates for extracting only photons in a particular region
+ * @param [in] double  z_select[]   Z cooordiante for selecting only photons that scattered or were created in a praticular region
  * @param [in] double  az_select[]  Aximuthal angle for selecting only photons in a particular region
  * @param [in] double  r_select[]   Radius of the region from which to select photons
  * @return     Always returns 0
@@ -46,7 +46,7 @@ int i_spec_start = 0;
  * The first time spectrum_init  is called (i.e. if ispec_start=0), it allocates memory
  * for the various spectrum arrays.  (This is done one time, so one needs to allocate
  * space for all the arrays even though they are not all used in the ionization step).
- * The total number of spectra created is nangle+MSPEC.
+ * The total number of spectra created is nangle+MSPEC.)
  *
  * On subsequent calls to  spectrum_init, it rezeros all the spectrum information and
  * calculates the other information associated with each spectrum, such as the
@@ -71,7 +71,7 @@ int i_spec_start = 0;
  *
  *
  * Warning - Do not put anything in this routine that does anything but initialize
- * or reinitialize the spectrum structure s. This is important because this routine
+ * or reinitialize the spectrum structures. This is important because this routine
  * is not accessed if one is continuing an old calculation of the detailed spectrum.
  * It is still used on a restart where the detailed spectral cycles have not begun
  * because in that case the spectra are not saved.
@@ -99,7 +99,7 @@ spectrum_init (f1, f2, nangle, angle, phase, scat_select, top_bot_select, select
 
   nspec = nangle + MSPEC;
 
-/* NSH 1302 Lines to set up a logarithmic spectrum */
+/* Lines to set up a logarithmic spectrum */
 
   lfreqmin = log10 (freqmin);
   lfreqmax = log10 (freqmax);
@@ -143,7 +143,7 @@ spectrum_init (f1, f2, nangle, angle, phase, scat_select, top_bot_select, select
     for (i = 0; i < NWAVE; i++)
     {
       xxspec[n].f[i] = 0;
-      xxspec[n].lf[i] = 0;      /* NSH 1302 zero the logarithmic spectra */
+      xxspec[n].lf[i] = 0;
     }
   }
 
@@ -186,6 +186,31 @@ disk. The minus sign in the terms associated with phase are to make this happen.
       x1 = 0;
     if (x2 > 180.)
       x2 = 180.;
+
+    /* There are problems near 90 deg which need to be dealt with for the
+       live or die mode.  These arise because in live or die, we normally
+       extract on both sides of the disk, that is to say if we want to
+       get the flux at 45d, we actually use bands at 45 and 135 degrees,
+       explicitly assuming that the program only deals with winds which are
+       biconical.  But if we choose 90 degrees for extraction we are extracing
+       basically from 88-92 degrees, not as in the case of 45, from 43-47, and 
+       133-137.
+     */
+
+    if (x1 < 90 && x2 > 90)
+    {
+      if (90 - x1 < x2 - 90)
+      {
+        x1 = 90;
+      }
+      else
+      {
+        x2 = 90;
+      }
+    }
+
+
+
     x1 = fabs (cos (x1 / RADIAN));
     x2 = fabs (cos (x2 / RADIAN));
     if (x1 > x2)
@@ -201,10 +226,13 @@ disk. The minus sign in the terms associated with phase are to make this happen.
     if (select_extract == 0)
     {
       xxspec[n].renorm = 1. / (xxspec[n].mmax - xxspec[n].mmin);
+
     }
     else
       xxspec[n].renorm = 1.;
     /* Completed initialization of variables for live or die */
+
+//OLD    Log ("XXX angle  %.3f -> %.3f %.3f -> %.3f\n", angle[n - MSPEC], x1, x2, xxspec[n].renorm);
 
     strcpy (dummy, "");
     sprintf (dummy, "P%04.2f", phase[n - MSPEC]);
@@ -265,7 +293,7 @@ disk. The minus sign in the terms associated with phase are to make this happen.
  * @param [in] double  f1   The minimum frequncy in the spectrum
  * @param [in] double  f2   The maximum frequency in the spectrum
  * @param [in] int  nangle  The number of different angles and phases for which to create detailed spectra
- * @param [in] int  select_extract   The integer stating whether the Live or Die option has
+ * @param [in] int  select_extract   Parameter to select whether to use the Live or Die (0) or extract option
  * @return     Always returns 0
  *
  * @details
@@ -585,9 +613,10 @@ spectrum_create (p, f1, f2, nangle, select_extract)
 
 
   Log ("Photons contributing to the various spectra\n");
-  Log ("Inwind   Scat    Esc     Star    >nscat    err    Absorb   Disk    sec    Adiab(matom)\n");
+  Log ("                     Inwind   Scat    Esc     Star    >nscat    err    Absorb   Disk    sec    Adiab(matom)\n");
   for (n = 0; n < nspectra; n++)
   {
+    Log ("%20s ", xxspec[n].name);
     for (i = 0; i < NSTAT; i++)
       Log (" %7d", xxspec[n].nphot[i]);
     Log ("\n");

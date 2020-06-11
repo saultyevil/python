@@ -66,6 +66,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "atomic.h"
 #include "python.h"
@@ -353,11 +354,19 @@ phase(0=inferior_conjunction)                   0.5
  **********************************************************/
 
 int
-save_extract_photons (n, p, pp, v)
+save_extract_photons (n, p, pp)
      int n;
      PhotPtr p, pp;
-     double *v;
 {
+  double v[3];
+  WindPtr one;
+  int ndom;
+
+  /* Calculate the local velocity of the wind at this position */
+  one = &wmain[p->grid];
+  ndom = one->ndom;
+  vwind_xyz (ndom, p, v);
+
   fprintf (epltptr,
            "EXTRACT %3d %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %6.3f %6.3f %6.3f %6.3f %6.3f %6.3f %7.2f %7.2f \n",
            n, p->x[0], p->x[1], p->x[2], v[0], v[1], v[2],
@@ -394,6 +403,11 @@ save_photons (p, comment)
      char comment[];
 {
   save_photon_number += 1;
+
+//FORNOW  fprintf (epltptr,
+//FORNOW           "PHOTON %3d %3d %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %3d %3d %s \n",
+//FORNOW           geo.wcycle, p->np, p->freq, p->w, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
+//FORNOW           p->lmn[2], p->grid, p->istat, p->origin, p->nscat, p->nres, p->frame, comment);
 
   fprintf (epltptr,
            "PHOTON %3d %3d %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %3d %s \n",
@@ -436,4 +450,44 @@ track_scatters (p, nplasma, comment)
   fflush (epltptr);
 
   return (0);
+}
+
+
+
+
+
+
+/**********************************************************/
+/** 
+ * @brief      Write to the extra diagnostics file a special 
+ *   message for debugging
+ *
+ * @param [in] char *  format   The format string for the message
+ * @param [in]   ...   The various values which fill out the format statement
+ * @return     The number of characters sucessfully written
+ *
+ *
+ * The intention that this routine would be used to log messages when one
+ * is trying to debug a problme where one is using the extra diagnostics file
+ * and that these lines would be removed from
+ * the code once the debugging was completed. 
+ *
+ * ###Notes###
+ *
+ *
+ **********************************************************/
+
+int
+Diag (char *format, ...)
+{
+  va_list ap, ap2;
+  int result;
+
+
+  va_start (ap, format);
+  va_copy (ap2, ap);
+  fprintf (epltptr, "DIAG ");
+  result = vfprintf (epltptr, format, ap2);
+  va_end (ap);
+  return (result);
 }

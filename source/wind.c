@@ -568,7 +568,7 @@ wind_check (www, n)
 
             if (dxmin < delta || dzmin < delta)
             {
-              Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, drmin, dtmin);
+              Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, dxmin, dzmin);
             }
           }
         }
