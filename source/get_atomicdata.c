@@ -144,6 +144,9 @@ get_atomic_data (masterfile)
   int c_l, c_u;                 //Chianti level indicators
   double en, gf, hlt, sp;       //Parameters in collision strangth file
   int type;                     //used in collision strength
+  double a, b, c, d, tmax, delta_E;
+  int z2, istate2;
+  double delta_E_ovr_k;
 
   /* define which files to read as data files */
 
@@ -277,6 +280,8 @@ get_atomic_data (masterfile)
     ion[n].dere_di_flag = 0;    //Initialise to say this ion has no Dere DI rate data
     ion[n].nxderedi = -1;       //Initialise the pointer into the Dere DI rate structure
     ion[n].n_inner = 0;         //Initialise the pointer to say we have no inner shell ionization cross sections
+    ion[n].n_ch_ex = -1;        //Initialise the pointer to the charge exchange 
+
     for (i = 0; i < N_INNER; i++)
       ion[n].nxinner[i] = -1;   //Inintialise the inner shell pointer array
   }
@@ -426,6 +431,18 @@ get_atomic_data (masterfile)
     gaunt_total[n].s3 = 0.0;
   }
 
+/* The following lines initialise the Sutherland gaunt factors */
+  n_charge_exchange = 0;        //The number of sets of scaled temperatures we have data for
+  for (n = 0; n < MAX_CHARGE_EXCHANGE; n++)
+  {
+    charge_exchange[n].nion1 = charge_exchange[n].nion2 = -1;
+    charge_exchange[n].a = charge_exchange[n].b = charge_exchange[n].c = charge_exchange[n].d = 0.0;
+    charge_exchange[n].tmin = -1e99;
+    charge_exchange[n].tmax = 1e99;
+    charge_exchange[n].energy_defect = 0.0;
+    charge_exchange[n].delta_e_ovr_k = 0.0;
+  }
+
 
 /* The following lines initialise the collision strengths */
   n_coll_stren = 0;             //The number of data sets
@@ -552,6 +569,8 @@ structure does not have this property! */
           choice = 'g';
         else if (strncmp (word, "Kelecyield", 10) == 0) /*Electron yield from inner shell ionization fro Kaastra and Mewe */
           choice = 'K';
+        else if (strncmp (word, "ChEx", 4) == 0)        /*Charge exchange */
+          choice = 'X';
 //        else if (strncmp (word, "Kphotyield", 10) == 0) /*Floruescent photon yield from IS ionization from Kaastra and Mewe */
 //          choice = 'F';
         else if (strncmp (word, "*", 1) == 0);  /* It's a continuation so record type remains same */
@@ -2353,9 +2372,6 @@ would like to have simple lines for macro-ions */
             Error ("Get_atomic_data %s\n", aline);
             exit (0);
           }
-
-
-
           break;
 /**
  * @section direct (collisional) ionization data from Dere 07.
@@ -2460,6 +2476,65 @@ would like to have simple lines for macro-ions */
             }
           }
           break;
+
+/**
+* @section Charge exchange recombination and ionization state
+* #This is electron yield data from Kingdon and Ferland (1996) -1996ApJS..106..205K
+* #It is processed by hand - so errors are possible!
+* #The typical data is below
+* @verbatim
+* #Label	Elem_1	Istate_1	Elem_2	Istate_2	a	b	c	d	Tmin	Tmax	delta_E	delta_E_ovr_K KF_ion	KF_level
+* ChEx	1	1	2	2	1.87E-06	2.06E+00	9.93E+00	-3.89E+00	6.00E+03	1.00E+05	1.10E+01	0.00E+00	He+	total
+*ChEx	1	1	2	3	1.00E-05	0.00E+00	0.00E+00	0.00E+00	1.00E+03	1.00E+07	-4.08E+01	0.00E+00	He+2	total
+* @endverbatim
+ * elem1, istat1, elem2, istate2 are the two ions - the first is ionizing the second is reombining
+ * a,b,c,d are the fit
+ * Tmin and tmax are the temperatures over which to fit 
+ * delta E is the energy defect used to compute heating
+ * deltaE/k is the boltzman factor used to comute the ionization rate - zero for most reconrds
+ * the last two comlumns just store info from K+F about levels etc.
+
+*/
+
+        case 'X':
+          nparam =
+            sscanf (aline,
+                    "%*s %d %d %d %d %le %le %le %le %le %le %le %le", &z, &istate, &z2, &istate2, &a, &b, &c, &d, &tmin, &tmax, &delta_E,
+                    &delta_E_ovr_k);
+          if (nparam != 12)
+          {
+            Error ("Something wrong with charge exchange data\n");
+            Error ("Get_atomic_data %s\n", aline);
+            exit (0);
+          }
+          charge_exchange[n_charge_exchange].nion1 = charge_exchange[n_charge_exchange].nion2 = -1;
+          for (n = 0; n < nions; n++)   //Loop over ions to find the correct place to put the data
+          {
+            if (ion[n].z == z && ion[n].istate == istate)       // this works out which ion we are dealing with
+            {
+              charge_exchange[n_charge_exchange].nion1 = n;
+            }
+            else if (ion[n].z == z2 && ion[n].istate == istate2)
+            {
+              charge_exchange[n_charge_exchange].nion2 = n;
+            }
+          }
+          if (charge_exchange[n_charge_exchange].nion1 > -1 && charge_exchange[n_charge_exchange].nion2 > -1)   //Only read in if we have both ions in our data
+          {
+            charge_exchange[n_charge_exchange].a = a;
+            charge_exchange[n_charge_exchange].b = b;
+            charge_exchange[n_charge_exchange].c = c;
+            charge_exchange[n_charge_exchange].d = d;
+            charge_exchange[n_charge_exchange].tmax = tmax;
+            charge_exchange[n_charge_exchange].tmin = tmin;
+            charge_exchange[n_charge_exchange].energy_defect = delta_E * EV2ERGS;
+            charge_exchange[n_charge_exchange].delta_e_ovr_k = delta_E_ovr_k;
+            if (ion[charge_exchange[n_charge_exchange].nion1].z == 1)   //Assign *recombination* tates only to the televant ion. 
+              ion[charge_exchange[n_charge_exchange].nion2].n_ch_ex = n_charge_exchange;
+            n_charge_exchange++;
+          }
+          break;
+
 /**
  * @section Fluorescent photon yield from inner shell ionization - not currently used but read in.
 		  now not read in - see #499
@@ -2661,6 +2736,8 @@ SCUPS    1.132e-01   2.708e-01   5.017e-01   8.519e-01   1.478e+00
 
   }
 
+
+
   Log ("Data of %3d elements, %3d ions, %5d levels, %5d lines, and %5d topbase records\n", nelements, nions, nlevels, nlines, ntop_phot);
   Log
     ("Macro   %3d elements, %3d ions, %5d levels, %5d lines, and %5d topbase records\n",
@@ -2680,6 +2757,7 @@ SCUPS    1.132e-01   2.708e-01   5.017e-01   8.519e-01   1.478e+00
   Log ("We have read in %3d Badnell totl Radiative rate coefficients\n", n_total_rr);
   Log ("We have read in %3d Badnell GS   Radiative rate coefficients over the temp range %e to %e\n", n_bad_gs_rr, gstmin, gstmax);
   Log ("We have read in %3d Scaled electron temperature frequency averaged gaunt factors\n", gaunt_n_gsqrd);
+  Log ("We have read in %3d Charge exchange rates\n", n_charge_exchange);
   Log ("The minimum frequency for photoionization is %8.2e\n", phot_freq_min);
   Log ("The minimum frequency for inner shell ionization is %8.2e\n", inner_freq_min);
 
@@ -2809,6 +2887,9 @@ or zero so that simple checks of true and false can be used for them */
       exit (0);
     }
   }
+
+
+
 
   for (n = 0; n < nlevels; n++)
   {

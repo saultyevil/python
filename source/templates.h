@@ -450,7 +450,7 @@ double tb_logpow(double freq, void *params);
 double tb_exp(double freq, void *params);
 /* matrix_ion.c */
 int matrix_ion_populations(PlasmaPtr xplasma, int mode);
-int populate_ion_rate_matrix(double rate_matrix[nions][nions], double pi_rates[nions], double inner_rates[n_inner_tot], double rr_rates[nions], double b_temp[nions], double xne);
+int populate_ion_rate_matrix(double rate_matrix[nions][nions], double pi_rates[nions], double inner_rates[n_inner_tot], double rr_rates[nions], double b_temp[nions], double xne, double nh1, double nh2);
 int solve_matrix(double *a_data, double *b_data, int nrows, double *x, int nplasma);
 /* para_update.c */
 int communicate_estimators_para(void);
@@ -568,6 +568,9 @@ double logg(double mass, double rwd);
 /* import_calloc.c */
 void calloc_import(int coord_type, int ndom);
 void free_import(int coord_type, int ndom);
+/* charge_exchange.c */
+int compute_ch_ex_coeffs(double T);
+double ch_ex_heat(WindPtr one, double t_e);
 /* frame.c */
 int check_frame(PhotPtr p, enum frame desired_frame, char *msg);
 int observer_to_local_frame(PhotPtr p_in, PhotPtr p_out);

@@ -274,7 +274,7 @@ main (argc, argv)
       fprintf (fptr, "%e ", (plasmamain[nplasma].lum_lines + plasmamain[nplasma].cool_rr + plasmamain[nplasma].cool_dr) / vol); //Line cooling must include all recombination cooling
       fprintf (fptr, "%e ", (plasmamain[nplasma].lum_ff) / vol);        //ff cooling
       fprintf (fptr, "%e ", plasmamain[nplasma].rho);   //density
-      fprintf (fptr, "%e ", plasmamain[nplasma].rho * rho2nh);  //hydrogen number density
+      fprintf (fptr, "%e \n", plasmamain[nplasma].rho * rho2nh);        //hydrogen number density
       fprintf (fptr2, "%d %d %e %e %e ", i, j, wmain[plasmamain[nplasma].nwind].rcen, wmain[plasmamain[nplasma].nwind].thetacen / RADIAN, vol); //output geometric things
       fprintf (fptr2, "%e ", plasmamain[nplasma].rho);  //density
       fprintf (fptr2, "%e ", plasmamain[nplasma].ne);

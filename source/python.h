@@ -840,6 +840,7 @@ typedef struct plasma
                                                    and heat_photo. SS June 04. */
   double heat_photo, heat_z;    /*photoionization heating total and of metals */
   double heat_auger;            /* photoionization heating due to inner shell ionizations */
+  double heat_ch_ex;
   double abs_photo, abs_auger;  /* this is the energy absorbed from the photon due to these processes - different from 
                                    the heating rate because of the binding energy */
   double w;                     /*The dilution factor of the wind */
@@ -911,7 +912,6 @@ typedef struct plasma
   double cool_rr, cool_rr_metals;       /*fb luminosity & fb of metals metals */
   double lum_tot, lum_tot_old;  /* The specific radiative luminosity in frequencies defined by freqmin
                                    and freqmax.  This will depend on the last call to total_emission */
-
   double cool_tot_ioniz;
   double lum_lines_ioniz, lum_ff_ioniz, cool_adiabatic_ioniz;
   double lum_rr_ioniz;
@@ -921,7 +921,6 @@ typedef struct plasma
   double cool_rr_ioniz, cool_rr_metals_ioniz;   /*fb luminosity & fb of metals metals */
   double lum_tot_ioniz;         /* The specfic radiative luminosity in frequencies defined by freqmin
                                    and freqmax.  This will depend on the last call to total_emission */
-
   double heat_shock;            /*1805 ksl - An extra heating term added to allow for shock heating of the plasma (Implementef for FU Ori Project */
 
   /* JM 1807 -- these routines are for the BF_SIMPLE_EMISSIVITY_APPROACH
