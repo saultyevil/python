@@ -176,6 +176,7 @@ calculate_ionization (restart_stat)
     nphot_to_define = (long) NPHOT;
 
     define_phot (p, freqmin, freqmax, nphot_to_define, 0, iwind, 1);
+    photon_checks (p, freqmin, freqmax, "Check before transport");
 
     /* Zero the arrays, and other variables that need to be zeroed after the photons are generated. */
 
@@ -188,11 +189,6 @@ calculate_ionization (restart_stat)
     {
       qdisk.heat[n] = qdisk.nphot[n] = qdisk.w[n] = qdisk.ave_freq[n] = 0;
     }
-
-
-
-    photon_checks (p, freqmin, freqmax, "Check before transport");
-
 
 
     zz = 0.0;
@@ -576,13 +572,13 @@ make_spectra (restart_stat)
     define_phot (p, freqmin, freqmax, nphot_to_define, 1, iwind, 0);
 
     /* TODAY */
-    if (modes.save_photons)
-    {
-      for (n = 0; n < NPHOT; n++)
-      {
-        save_photons (&p[n], "CREATE");
-      }
-    }
+//OLD    if (modes.save_photons)
+//OLD    {
+//OLD      for (n = 0; n < NPHOT; n++)
+//OLD      {
+//OLD        save_photons (&p[n], "CREATE");
+//OLD      }
+//OLD    }
 
     for (icheck = 0; icheck < NPHOT; icheck++)
     {

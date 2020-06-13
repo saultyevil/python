@@ -64,13 +64,12 @@ WindPtr (w);
   double trad, nh;
 
   /*1108 NSH csum added to sum compton heating 1204 NSH icsum added to sum induced compton heating */
-  double wtest, xsum, psum, fsum, lsum, csum, icsum, ausum;
+  double wtest, xsum, psum, fsum, lsum, csum, icsum, ausum, chexsum;
   double cool_sum, lum_sum, rad_sum;    //1706 - the total cooling and luminosity of the wind
   double apsum, aausum, abstot; //Absorbed photon energy from PI and auger
   double c_rec, n_rec, o_rec, fe_rec;   //1701- NSH more outputs to show cooling from a few other elements
   double c_lum, n_lum, o_lum, fe_lum;   //1708- NSH and luminosities as well
   double cool_dr_metals;
-  double F_x_tot, F_y_tot, F_z_tot;
   int nn;                       //1701 - loop variable to compute recomb cooling
 
   double volume;
@@ -108,7 +107,7 @@ WindPtr (w);
    */
 
   size_of_commbuffer =
-    8 * (n_inner_tot + 10 * nions + nlte_levels + 3 * nphot_total + 15 * NXBANDS + 126) * (floor (NPLASMA / np_mpi_global) + 1);
+    8 * (n_inner_tot + 10 * nions + nlte_levels + 3 * nphot_total + 15 * NXBANDS + 133) * (floor (NPLASMA / np_mpi_global) + 1);
   commbuffer = (char *) malloc (size_of_commbuffer * sizeof (char));
 
   /* JM 1409 -- Initialise parallel only variables */
@@ -270,7 +269,7 @@ WindPtr (w);
 
     plasmamain[n].xi *= 4. * PI;
     plasmamain[n].xi /= (volume * nh);
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
     {
       plasmamain[n].rad_force_es[i] = plasmamain[n].rad_force_es[i] * (volume * plasmamain[n].ne) / (volume * VLIGHT);
 /* Normalise the computed flux in cells by band */
@@ -278,6 +277,7 @@ WindPtr (w);
       plasmamain[n].F_UV[i] = plasmamain[n].F_UV[i] / volume;
       plasmamain[n].F_Xray[i] = plasmamain[n].F_Xray[i] / volume;
     }
+
 
     /* If geo.adiabatic is true, then calculate the adiabatic cooling using the current, i.e
      * previous value of t_e.  Note that this may not be  best way to determine the cooling.
@@ -299,7 +299,6 @@ WindPtr (w);
       plasmamain[n].heat_shock = shock_heating (&w[nwind]);
     else
       plasmamain[n].heat_shock = 0;
-
 
     /* Calculate the densities in various ways depending on the ioniz_mode */
 
@@ -403,9 +402,9 @@ WindPtr (w);
         MPI_Pack (plasmamain[n].xave_freq, NXBANDS, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (plasmamain[n].xsd_freq, NXBANDS, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (plasmamain[n].nxtot, NXBANDS, MPI_INT, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        MPI_Pack (plasmamain[n].F_vis, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        MPI_Pack (plasmamain[n].F_UV, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        MPI_Pack (plasmamain[n].F_Xray, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].F_vis, 4, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].F_UV, 4, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].F_Xray, 4, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].max_freq, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].lum_lines, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].lum_ff, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
@@ -413,6 +412,7 @@ WindPtr (w);
         MPI_Pack (&plasmamain[n].comp_nujnu, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].cool_comp, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].cool_dr, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (&plasmamain[n].heat_ch_ex, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].cool_di, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].cool_rr, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].lum_rr, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
@@ -433,9 +433,9 @@ WindPtr (w);
         MPI_Pack (&plasmamain[n].lum_tot_ioniz, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].heat_shock, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (plasmamain[n].dmo_dt, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        MPI_Pack (plasmamain[n].rad_force_es, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        MPI_Pack (plasmamain[n].rad_force_ff, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        MPI_Pack (plasmamain[n].rad_force_bf, 3, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].rad_force_es, 4, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].rad_force_ff, 4, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+        MPI_Pack (plasmamain[n].rad_force_bf, 4, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].gain, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].converge_t_r, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
         MPI_Pack (&plasmamain[n].converge_t_e, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
@@ -546,9 +546,9 @@ WindPtr (w);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].xave_freq, NXBANDS, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].xsd_freq, NXBANDS, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].nxtot, NXBANDS, MPI_INT, MPI_COMM_WORLD);
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_vis, 3, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_UV, 3, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_Xray, 3, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_vis, 4, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_UV, 4, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].F_Xray, 4, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].max_freq, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].lum_lines, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].lum_ff, 1, MPI_DOUBLE, MPI_COMM_WORLD);
@@ -556,6 +556,7 @@ WindPtr (w);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].comp_nujnu, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].cool_comp, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].cool_dr, 1, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].heat_ch_ex, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].cool_di, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].cool_rr, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].lum_rr, 1, MPI_DOUBLE, MPI_COMM_WORLD);
@@ -576,9 +577,9 @@ WindPtr (w);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].lum_tot_ioniz, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].heat_shock, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].dmo_dt, 3, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].rad_force_es, 3, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].rad_force_ff, 3, MPI_DOUBLE, MPI_COMM_WORLD);
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].rad_force_bf, 3, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].rad_force_es, 4, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].rad_force_ff, 4, MPI_DOUBLE, MPI_COMM_WORLD);
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, plasmamain[n].rad_force_bf, 4, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].gain, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].converge_t_r, 1, MPI_DOUBLE, MPI_COMM_WORLD);
         MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].converge_t_e, 1, MPI_DOUBLE, MPI_COMM_WORLD);
@@ -691,6 +692,7 @@ WindPtr (w);
     }
     fprintf (fptr3, "nplasma %i\n", NPLASMA);
 
+    fprintf (fptr4, "model %i\n", geo.ioniz_mode);
     fprintf (fptr4, "nbands %i\n", geo.nxfreq);
     fprintf (fptr4, "nplasma %i\n", NPLASMA);
     for (i = 0; i < geo.nxfreq + 1; i++)
@@ -710,7 +712,7 @@ WindPtr (w);
 
 
 
-  xsum = psum = ausum = lsum = fsum = csum = icsum = apsum = aausum = abstot = 0;       //1108 NSH zero the new csum counter for compton heating
+  xsum = psum = ausum = lsum = fsum = csum = icsum = apsum = aausum = abstot = chexsum = 0;     //1108 NSH zero the new csum counter for compton heating
 
   for (nplasma = 0; nplasma < NPLASMA; nplasma++)
   {
@@ -742,6 +744,7 @@ WindPtr (w);
     icsum += plasmamain[nplasma].heat_ind_comp; //1205 NSH Increment the induced compton heating counter
     apsum += plasmamain[nplasma].abs_photo;
     aausum += plasmamain[nplasma].abs_auger;
+    chexsum += plasmamain[nplasma].heat_ch_ex;
 
     /* JM130621- bugfix for windsave bug- needed so that we have the luminosities from ionization
        cycles in the windsavefile even if the spectral cycles are run */
@@ -1041,8 +1044,10 @@ WindPtr (w);
 
       /* 1108 NSH Added commands to report compton heating */
       Log
-        ("OUTPUT Absorbed_flux(ergs-1cm-3)    %8.2e  (photo %8.2e ff %8.2e compton %8.2e induced_compton %8.2e lines %8.2e auger %8.2e )\n",
-         xsum / w[n].vol, psum / w[n].vol, fsum / w[n].vol, csum / w[n].vol, icsum / w[n].vol, lsum / w[n].vol, ausum / w[n].vol);
+        ("OUTPUT Absorbed_flux(ergs-1cm-3)    %8.2e  (photo %8.2e ff %8.2e compton %8.2e induced_compton %8.2e lines %8.2e auger %8.2e charge_ex %8.2e )\n",
+         xsum / w[n].vol, psum / w[n].vol, fsum / w[n].vol, csum / w[n].vol, icsum / w[n].vol, lsum / w[n].vol, ausum / w[n].vol,
+         chexsum / w[n].vol);
+
 
       /* 1110 NSH Added this line to report all cooling mechanisms, including those that do not generate photons. */
       Log
@@ -1050,9 +1055,8 @@ WindPtr (w);
          cool_sum / w[n].vol, geo.cool_rr / w[n].vol,
          geo.lum_ff / w[n].vol, geo.cool_comp / w[n].vol,
          geo.cool_dr / w[n].vol, geo.cool_di / w[n].vol, geo.cool_adiabatic / w[n].vol, geo.lum_lines / w[n].vol);
-      Log
-        ("OUTPUT Wind_luminosity(ergs-1cm-3)     %8.2e (recomb %8.2e ff %8.2e lines %8.2e ) after update\n",
-         lum_sum / w[n].vol, geo.lum_rr / w[n].vol, geo.lum_ff / w[n].vol, geo.lum_lines / w[n].vol);
+      Log ("OUTPUT Wind_luminosity(ergs-1cm-3)     %8.2e (recomb %8.2e ff %8.2e lines %8.2e ) after update\n", lum_sum / w[n].vol,
+           geo.lum_rr / w[n].vol, geo.lum_ff / w[n].vol, geo.lum_lines / w[n].vol);
       /* NSH 1701 calculate the recombination cooling for other elements */
 
       c_rec = n_rec = o_rec = fe_rec = 0.0;
@@ -1121,20 +1125,17 @@ WindPtr (w);
         }
         Log ("\n");
       }
-      Log ("F_es %i %e %e %e\n", nshell, plasmamain[nshell].rad_force_es[0], plasmamain[nshell].rad_force_es[1],
-           plasmamain[nshell].rad_force_es[2]);
+      Log ("radial F_es %i %e \n", nshell, plasmamain[nshell].rad_force_es[0]);
+      Log ("radial F_bf %i %e \n", nshell, plasmamain[nshell].rad_force_bf[0]);
+      Log ("radial F_ff %i %e \n", nshell, plasmamain[nshell].rad_force_ff[0]);
 
-      F_x_tot = F_y_tot = F_z_tot = 0.0;
+      Log ("Radial Visible flux %e \n", plasmamain[nshell].F_vis[0]);
+      Log ("Radial UV      flux %e \n", plasmamain[nshell].F_UV[0]);
+      Log ("Radial Xray    flux %e \n", plasmamain[nshell].F_Xray[0]);
 
-      Log ("Visible flux %e %e %e\n", plasmamain[nshell].F_vis[0], plasmamain[nshell].F_vis[1], plasmamain[nshell].F_vis[2]);
-      Log ("UV.     flux %e %e %e\n", plasmamain[nshell].F_UV[0], plasmamain[nshell].F_UV[1], plasmamain[nshell].F_UV[2]);
-      Log ("X-ray   flux %e %e %e\n", plasmamain[nshell].F_Xray[0], plasmamain[nshell].F_Xray[1], plasmamain[nshell].F_Xray[2]);
 
-      F_x_tot = plasmamain[nshell].F_vis[0] + plasmamain[nshell].F_UV[0] + plasmamain[nshell].F_Xray[0];
-      F_y_tot = plasmamain[nshell].F_vis[1] + plasmamain[nshell].F_UV[1] + plasmamain[nshell].F_Xray[1];
-      F_z_tot = plasmamain[nshell].F_vis[2] + plasmamain[nshell].F_UV[2] + plasmamain[nshell].F_Xray[2];
 
-      Log ("Flux_tot %e %e %e\n", F_x_tot, F_y_tot, F_z_tot);
+      Log ("Total Radial   flux %e \n", plasmamain[nshell].F_vis[0] + plasmamain[nshell].F_UV[0] + plasmamain[nshell].F_Xray[0]);
 
     }
   }
@@ -1197,6 +1198,7 @@ wind_rad_init ()
     plasmamain[n].heat_comp = 0.0;      //1108 NSH Zero the compton heating for the cell
     plasmamain[n].heat_ind_comp = 0.0;  //1108 NSH Zero the induced compton heating for the cell
     plasmamain[n].heat_auger = 0.0;     //1108 NSH Zero the auger heating for the cell
+    plasmamain[n].heat_ch_ex = 0.0;     //1108 NSH Zero the charge_exchange heating for the cell
 
     /* zero the counters that record the flow into and out of the 
        ionization pool in indivisible packet mode */
@@ -1205,11 +1207,11 @@ wind_rad_init ()
 
     for (i = 0; i < 3; i++)
       plasmamain[n].dmo_dt[i] = 0.0;    //Zero the radiation force calculation
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
       plasmamain[n].rad_force_es[i] = 0.0;      //Zero the radiation force calculation
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
       plasmamain[n].rad_force_ff[i] = 0.0;      //Zero the radiation force calculation
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
       plasmamain[n].rad_force_bf[i] = 0.0;      //Zero the radiation force calculation
 
 
@@ -1226,7 +1228,7 @@ wind_rad_init ()
       plasmamain[n].fmax[i] = geo.xfreq[i];     /* Set the maximum frequency to the min frequency in the band */
     }
 
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 4; i++)
       plasmamain[n].F_vis[i] = plasmamain[n].F_UV[i] = plasmamain[n].F_Xray[i] = 0.0;
 
 

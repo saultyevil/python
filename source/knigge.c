@@ -240,24 +240,32 @@ kn_velocity (ndom, x, v)
 
   ldist = sqrt ((r - rzero) * (r - rzero) + x[2] * x[2]);
 
-/* Take the thickness of the disk into account if that is necessary.  */
+/* Take the thickness of the disk into account if that is necessary.  
+ * 
+ * For this, we calculate where the streamline hits the disk surface
+ * and we assume we want the velocity at this point to be determined
+ * by the base velocity at this radial distance and we want the
+ * velocity to change depending on the poloidal distance from this
+ * point.  We do not adjust the angle of the outflow in any way.
+ */
 
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
   {
-    xtest[0] = r;               // Define xtest in the +xz plane
+
+    xtest[0] = r;               // Define xtest in the +z plane
     xtest[1] = 0;
     xtest[2] = fabs (x[2]);
-    ptest.x[0] = rzero;         // Define ptest at the intersection of the streamline and x axis
+    ptest.x[0] = rzero;         // Define ptest to be the footpoint extended to xy plane
     ptest.x[1] = 0.0;
     ptest.x[2] = EPSILON;
-    ptest.lmn[0] = sin (theta); // lmn is along the streamline toward xtest
+    ptest.lmn[0] = sin (theta); // ptest direction is along the stream line
     ptest.lmn[1] = 0.0;
     ptest.lmn[2] = cos (theta);
     s = ds_to_disk (&ptest, 1);
-    move_phot (&ptest, s);      // Now test photon is at disk surface
-    vsub (ptest.x, xtest, xtest);
+    move_phot (&ptest, s);      // Now move the test photon to  disk surface
+    vsub (ptest.x, xtest, xtest);       // Poloidal distance is just the distance between these two points.
     ldist = length (xtest);
-    rzero = length (ptest.x);
+    rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
   }
 
 
@@ -355,6 +363,7 @@ kn_rho (ndom, x)
   double v[3], rho;
   struct photon ptest;
   double s, theta;
+//  double xtest[3];
 
   DomainPtr one_dom;
 
@@ -366,22 +375,43 @@ kn_rho (ndom, x)
   r = sqrt (x[0] * x[0] + x[1] * x[1]); //rho coordinate of the point we have been given
   rzero = r / (1. + fabs (x[2] / dd));  //rho at the base for this streamline
 
-  /* If the disk is thick we need to modify the position of rzero */
+  /* If the disk is thick we need to modify the position of rzero. 
+   * 
+   * We define rho so that at the base it has the rho expected
+   * at the same radial position, and let it decline as expected
+   * given the radial velocity*/
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
   {
     theta = atan (rzero / dd);
-    ptest.x[0] = rzero;
+
+//OLD    ptest.x[0] = rzero;
+//OLD    ptest.x[1] = 0.0;
+//OLD    ptest.x[2] = EPSILON;
+//OLD    ptest.lmn[0] = cos (theta);
+//OLD    ptest.lmn[1] = 0.0;
+//OLD    ptest.lmn[2] = sin (theta);
+//OLD    s = ds_to_disk (&ptest, 1);
+//OLD    move_phot (&ptest, s);      // Now test photon is at disk surface
+//OLD    rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
+
+//    xtest[0] = r;               // Define xtest in the +xz plane
+//    xtest[1] = 0;
+//    xtest[2] = fabs (x[2]);
+    ptest.x[0] = rzero;         // Define ptest at the intersection of the streamline and x axis
     ptest.x[1] = 0.0;
     ptest.x[2] = EPSILON;
-    ptest.lmn[0] = cos (theta);
+    ptest.lmn[0] = sin (theta); // lmn is along the streamline toward xtest
     ptest.lmn[1] = 0.0;
-    ptest.lmn[2] = sin (theta);
+    ptest.lmn[2] = cos (theta);
     s = ds_to_disk (&ptest, 1);
     move_phot (&ptest, s);      // Now test photon is at disk surface
+//    vsub (ptest.x, xtest, xtest);
+//    ldist = length (xtest);
     rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
   }
 
-  kn_velocity (ndom, x, v);
+  kn_velocity (ndom, x, v);     /* This takes into account the disk thickness */
+
   vqr = sqrt (v[0] * v[0] + v[2] * v[2]);       //poloidal velocity
   vzero = kn_vzero (rzero);     //polidal velocity at base
   if ((r * vqr) > 0)            // If statement to assure denominator is not zero
@@ -467,6 +497,7 @@ kn_wind_mdot_integral (double r, void *params)
   double x, ratio;
   double tref;
 
+  (void) params;
 
   tref = tdisk (geo.mstar, geo.disk_mdot, geo.rstar);
   ratio = r / geo.rstar;

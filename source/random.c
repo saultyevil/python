@@ -129,9 +129,7 @@ randvcos (lmn, north)
   double l, m, n;               /* the individual direction cosines in the rotated frame */
   double q, jumps[5];
   struct basis nbasis;
-  int echeck, cdf_gen_from_func ();
-  int create_basis (), project_from ();
-  double vcos (), cdf_get_rand ();
+  int echeck;
   double phi;
 
   /*** 
@@ -202,8 +200,9 @@ this is simple. Otherwise one must do a coordinate rotation. */
  *
  * @brief the appropriate distribution for Eddington limb darkininge 
  *
- * @param [in] double x  cos theta 
- * @return     The probablity density for emiingin    
+ * @param [in] double x       cos theta
+ * @param [in] void * params  Unused parameters for passing to the GSL integrator
+ * @return     The probability density for emiingin
  *
  * @details
  *
@@ -211,7 +210,7 @@ this is simple. Otherwise one must do a coordinate rotation. */
  *
  *
  * ### Notes ###
- * The routine calls vcos which actually containes the Eddinggton 
+ * The routine calls vcos which actually contains the Eddington
  * approximation (aka linear limb darkening)
  *
  * See Hubeny & Mihalas Equation 17.17  
@@ -222,11 +221,12 @@ this is simple. Otherwise one must do a coordinate rotation. */
 
 
 double
-vcos (x)
-     double x;
+vcos (double x, void *params)
 {
   double a, b;
   double z;
+
+  (void) params;
 
   a = 0.5;
   b = 1.5;

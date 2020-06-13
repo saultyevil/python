@@ -384,7 +384,10 @@ double
 compton_func (double f, void *params)
 {
   double ans;
+
+  (void) params;
   ans = (sigma_compton_partial (f, x1) / sigma_max) - sigma_rand;
+
   return (ans);
 }
 
@@ -519,6 +522,9 @@ double
 comp_cool_integrand (double nu, void *params)
 {
   double value;
+
+  (void) params;
   value = THOMPSON * beta (nu) * mean_intensity (xplasma, nu, 2);
+
   return (value);
 }

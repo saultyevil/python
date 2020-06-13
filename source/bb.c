@@ -110,12 +110,8 @@ double
 planck (t, freqmin, freqmax)
      double t, freqmin, freqmax;
 {
-  FILE *fopen ();
   double freq, alpha, y;
-  double planck_d (), cdf_get_rand_limit ();
-  double get_rand_pow ();
-  int cdf_gen_from_func (), cdf_to_file (), echeck;
-  int cdf_limit ();
+  int echeck;
 
 
   /*First time through create the array containing the proper boundaries for the integral
@@ -541,14 +537,15 @@ init_integ_planck_d ()
 double
 planck_d (double alpha, void *params)
 {
-  return (planck_d_2 (alpha));
+  return (planck_d_2 (alpha, params));
 }
 
 
 double
-planck_d_2 (double alpha)
+planck_d_2 (double alpha, void *params)
 {
   double x;
+  (void) params;
   if (alpha < EPSILON || alpha > ALPHABIG)
     return (0);
   x = (alpha * alpha * alpha) / (exp (alpha) - 1);

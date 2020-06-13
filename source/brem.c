@@ -4,38 +4,42 @@
  * @author nsh
  * @date   October, 2015
  *
- * @brief  Functions to allow a Bremstrahlung type input spectrum
+ * @brief  Functions to allow a Bremsstrahlung type input spectrum
  *
- * This was added as part of the Rad-hydro effort and is itended
+ * This was added as part of the Rad-hydro effort and is intended
  * to allow a spectrum to match the assumed spectrum in the Blondin
  * heating and cooling rates. Note that this spectrum is very
  * similar in some ways to a blackbody spectrum - essentially
- * a power law turning into a high frequency exponential dropoff
+ * a power law turning into a high frequency exponential drop off
  * and so there is a great deal of similarity with routines in
  * bb.c There is scope here for simplification.
  ***********************************************************/
 
 #include <stdio.h>
-#include <strings.h>
 #include <math.h>
-#include <string.h>
 #include <stdlib.h>
 
 #include "atomic.h"
 #include "python.h"
-#include "log.h"
 
 
 /**********************************************************/
 /**
- * @brief      The integrand used in qromb to compute the luminosity of a bremstrahlung source
+ * @brief      The integrand used in num_int to compute the luminosity of a
+ *             Bremsstrahlung source
  *
- * @param [in] double  freq		The frequency at which to compute the bremstrahlung luminosity
- * @return     					The luminosity at frwquency freq
+ * @param [in] double  freq		 The frequency at which to compute the
+ *                             Bremsstrahlung luminosity
+ * @param [in] void *  params  UNUSED parameters required for num_int
+ *
+ * @return     				 The luminosity at frequency freq
  *
  * @details
  * Since geo.const_agn is a luminosity, this function returns a luminosity
  * with units ergs/s
+ *
+ * params is unused, but the function pointer num_int requires it. It is re-cast
+ * to void  to avoid compiler warnings.
  *
  * ### Notes ###
  * 10/15 - Written by NSH
@@ -46,6 +50,7 @@ double
 integ_brem (double freq, void *params)
 {
   double answer;
+  (void) params;
   answer = geo.const_agn * pow (freq, geo.brem_alpha) * exp ((-1.0 * PLANCK * freq) / (BOLTZMANN * geo.brem_temp));
   return (answer);
 }
@@ -54,17 +59,22 @@ integ_brem (double freq, void *params)
 
 /**********************************************************/
 /**
- * @brief      The integrand for integrating a dimensionless bremstrahlung spectrum
+ * @brief      The integrand for integrating a dimensionless Bremsstrahlung
+ *             spectrum
  *
- * @param [in] double  alpha	h*freq/k_b/T -
- * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
- * @return     					luminosity of bremstrahlung function at alpha
+ * @param [in] double  alpha	  h*freq/k_b/T -
+ * @param [in] void *  params   UNUSED parameters required for num_int
+ *
+ * @return     					luminosity of Bremsstrahlung function at alpha
  *
  * @details
- * This produces a dimensinless bremstrahlung spectrum so that one
+ * This produces a dimensionless Bremsstrahlung spectrum so that one
  * can break fast changing parts of the spectrum (i.e. the exponential
  * drop off) into chunks to ensure we get a properly defnined spectrum
  * of randomly generated photons.
+ *
+ * params is unused, but the function pointer num_int requires it. It is re-cast
+ * to void  to avoid compiler warnings.
  *
  * ### Notes ###
  * 10/15 - Written by NSH
@@ -72,10 +82,10 @@ integ_brem (double freq, void *params)
  **********************************************************/
 
 double
-brem_d (alpha)
-     double alpha;
+brem_d (double alpha, void *params)
 {
   double answer;
+  (void) params;
   answer = pow (alpha, geo.brem_alpha) * exp (-1.0 * alpha);
   return (answer);
 }
@@ -89,11 +99,11 @@ brem_d (alpha)
 
 #define BREM_ALPHAMIN 0.01      // Region below which we will use a low frequency approximation
 #define BREM_ALPHAMAX 2.        // Region above which we will use a high frequency approximation
-#define BREM_ALPHABIG 100.      //  Region over which can maximmally integrate the bremstrahlung function
+#define BREM_ALPHABIG 100.      //  Region over which can maximmally integrate the Bremsstrahlung function
 
 
 /* These variables are used to store details of a previously made cdf. If we are getting
- random frequency photons fron a bremstrahlung spectrum, we will not want to re-create the cdf
+ random frequency photons fron a Bremsstrahlung spectrum, we will not want to re-create the cdf
  every time we need a new photon - which could be millions of times - so we only remake the cdf
  if the temperature of the spectrum has changed (unlikely) or the frequency bands have
  changed (this will happen as we move thruogh the photon generation bands) */
@@ -115,7 +125,7 @@ double brem_lo_freq_alphamin, brem_lo_freq_alphamax, brem_hi_freq_alphamin, brem
 
 /**********************************************************/
 /** brem_set is the array that cdf_gen_from_func uses to esablish the
- * specific points in the cdf of the dimensionless bremstrahlung function.
+ * specific points in the cdf of the dimensionless Bremsstrahlung function.
  * The intention is get a smoooth spectrum. These used to be called 'jumps'
  **********************************************************/
 double brem_set[] = {
@@ -129,7 +139,7 @@ double brem_set[] = {
 
 /**********************************************************/
 /**
- * @brief      Obtain a random frequency photon from a bremstrahlung spectrum
+ * @brief      Obtain a random frequency photon from a Bremsstrahlung spectrum
  *
  * @param [in] double  freqmin   Minimum frequency to be generated
  * @param [in] double  freqmax   Maximum frequency to be generated
@@ -137,7 +147,7 @@ double brem_set[] = {
  *
  * @details
  * This subroutine is used solely to generate random photon frequencies
- * from a bremstrahlung type spectrum. The temperature of the spectrum (defining
+ * from a Bremsstrahlung type spectrum. The temperature of the spectrum (defining
  * the high frequency exponential dropoff exp(-hnu/kT)) and the spectrasl index
  * of the low frequency part of the spectrum are defined in the geo structure.
  * This code is heavily based upon planck and shares a great deal of code
@@ -241,7 +251,7 @@ get_rand_brem (freqmin, freqmax)
       brem_hi_freq_alphamin = BREM_ALPHAMAX;    //Set a lower bound to the range where we can use the exponential approximation
 
 /* This test is baciscally asking if there is any part of the frequency range that falls in the
-	range whwere we need to use the proper bremstrahlung spectrum */
+	range whwere we need to use the proper Bremsstrahlung spectrum */
 
     if (brem_alphamin < BREM_ALPHAMAX && brem_alphamax > BREM_ALPHAMIN)
     {

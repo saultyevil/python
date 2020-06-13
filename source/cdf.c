@@ -67,7 +67,7 @@ double *pdf_array;
  * @brief      Generate a cumulative distrubution function (cdf) from a function
 
  * @param [in, out] CdfPtr  cdf    	A ptr to a cdf structure
- * @param [in] double *func  		The probablility density function to be integrated  to create the pdf
+ * @param [in] double *func  		The probablility density function to be integrated to create the pdf
  * @param [in] double xmin,xmax		The range over which the function is to be integrated
  * @param [in] int njumps			The number of points at which we want to force a break in the cdf
  * @param [in] double jump			an array of points in the x-corrdinates at which we want to force points
@@ -89,7 +89,7 @@ double *pdf_array;
 int
 cdf_gen_from_func (cdf, func, xmin, xmax, njumps, jump)
      CdfPtr cdf;
-     double (*func) (double);
+     double (*func) (double, void *);
      double xmin, xmax;
      double jump[];
      int njumps;
@@ -99,8 +99,7 @@ cdf_gen_from_func (cdf, func, xmin, xmax, njumps, jump)
   int j, m, mm, n;
   int njump_min, njump_max;
   int icheck, pdfsteps;
-  int cdf_check (), calc_cdf_array ();
-  double gen_array_from_func (), delta;
+  double delta;
 
   njump_min = njump_max = 0;
 
@@ -252,6 +251,9 @@ cdf_gen_from_func (cdf, func, xmin, xmax, njumps, jump)
  * distribution of the function in equally spaced steps between xmin and xmax.  The CDF is properly
  * normalized.
  *
+ * The function to represent the PDF is required to have arguments double and void *, due to the GSL integrator used
+ * in num_int. As the void * parameter is unused, we pass NULL instead of an array of extra parameters.
+ *
  * ### Notes ###
  *
  * 10oct - ksl -This is rather brute force.  An alternative would have been to have increased the density of points
@@ -266,7 +268,7 @@ cdf_gen_from_func (cdf, func, xmin, xmax, njumps, jump)
 
 double
 gen_array_from_func (func, xmin, xmax, pdfsteps)
-     double (*func) (double);
+     double (*func) (double, void *);
      double xmin, xmax;
      int pdfsteps;
 {
@@ -305,7 +307,7 @@ gen_array_from_func (func, xmin, xmax, pdfsteps)
     x = xmin + (n + 0.5) * xstep;       /*The next value of x - it is midway between points on the required cdf because we
                                            will be adding the new z value onto the cumlative total, we assume the function is best approximated over the
                                            whole rage from x[n] to x[n+1] by using the value of the function between the two */
-    if ((z = (*func) (x)) < 0 || z > VERY_BIG || sane_check (z))        //check the function return is sensible
+    if ((z = (*func) (x, NULL)) < 0 || z > VERY_BIG || sane_check (z))        //check the function return is sensible
     {
       Error ("pdf_gen_from_func: probability density %g < 0 at %g\n", z, x);
     }
@@ -320,7 +322,7 @@ gen_array_from_func (func, xmin, xmax, pdfsteps)
       Log ("pdf_gen_from_func: ZOWIE  n %d z %g pdf_array[n] %g x %g\n", n, z, pdf_array[n], x);
       for (m = 0; m < n; m += 100)
       {
-        z = (*func) (x);
+        z = (*func) (x, NULL);
         Log ("pdf_gen_from_func: zowie n %d x %g z %g pdf_array %g\n", m, x = xmin + (0.5 * m) * xstep, z, pdf_array[m]);
       }
     }

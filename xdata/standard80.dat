@@ -71,3 +71,7 @@ data/atomic/gffint.dat
 #
 data/atomic/di_dere.dat
 #
+#Next charge exchange
+#
+data/atomic/charge_exchange.dat
+#

@@ -176,6 +176,7 @@ fb_topbase_partial2 (double freq, void *params)
 {
   double partial;
 
+  (void) params;
   partial = fb_topbase_partial (freq);
 
   return (partial);
@@ -403,8 +404,12 @@ total_fb (one, t, f1, f2, fb_choice, mode)
   xplasma->cool_rr_metals = 0.0;
   xplasma->lum_rr_metals = 0.0;
 
+  /*
+   * This loop is now over nions - 1, to avoid out of bounds access and above
+   * the final ion there is nothing for it to recombine from.
+   */
 
-  for (nion = 0; nion < nions; nion++)
+  for (nion = 0; nion < nions - 1; nion++)
   {
     if (xplasma->density[nion] > DENSITY_PHOT_MIN)
     {
@@ -414,22 +419,20 @@ total_fb (one, t, f1, f2, fb_choice, mode)
         {
           total += xplasma->lum_rr_ion[nion] =
             xplasma->vol * xplasma->ne * xplasma->density[nion + 1] * integ_fb (t, f1, f2, nion, fb_choice, mode);
-          if (ion[nion].z > 3)
+          if (ion[nion].z > 2)
             xplasma->lum_rr_metals += xplasma->lum_rr_ion[nion];
         }
         else                    // we are calculating a cooling rate
         {
           total += xplasma->cool_rr_ion[nion] =
             xplasma->vol * xplasma->ne * xplasma->density[nion + 1] * integ_fb (t, f1, f2, nion, fb_choice, mode);
-          if (ion[nion].z > 3)
+          if (ion[nion].z > 2)
             xplasma->cool_rr_metals += xplasma->cool_rr_ion[nion];
-
         }
       }
       else if (mode == INNER_SHELL)     // at present we do not compute a luminosity from DR
         total += xplasma->cool_dr_ion[nion] =
           xplasma->vol * xplasma->ne * xplasma->density[nion + 1] * integ_fb (t, f1, f2, nion, fb_choice, mode);
-
     }
 
   }
@@ -688,7 +691,7 @@ num_recomb (xplasma, t_e, mode)
   for (nelem = 0; nelem < nelements; nelem++)
   {
     imin = ele[nelem].firstion;
-    imax = imin + ele[nelem].nions;
+    imax = ele[nelem].lastion;
     for (i = imin; i < imax; i++)
     {
       if (xplasma->density[i] > DENSITY_PHOT_MIN)

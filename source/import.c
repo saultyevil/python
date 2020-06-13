@@ -54,6 +54,8 @@ import_wind (ndom)
 {
   char filename[LINELENGTH];
 
+  sprintf (filename, "%s", "e.g. foo.txt");
+
   rdstr ("Wind.model2import", filename);
 
   calloc_import (zdom[ndom].coord_type, ndom);

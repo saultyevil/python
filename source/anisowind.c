@@ -32,7 +32,7 @@
  *   a new anisotropic direction in geo.scatter_mode = SCATTER_MODE_THERMAL
  *
  * @param [in,out] PhotPtr  p   The photon being scattered
- * @param [out] int *  nnscat   The number of times the phton
+ * @param [out] int *  nnscat   The number of times the photon
  * scattered internally before escaping the local scattering region
  *
  * @return     0 for success. Also modifies the photon ptr p

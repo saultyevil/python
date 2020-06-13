@@ -27,6 +27,10 @@ value determined by values in python.h to a values which are adjustable from
 within python */
 
 
+#define REL_MODE_LINEAR 0      /*Only make v/c corrections when doing frame transfers*/
+#define REL_MODE_FULL   1      /*Make full corrections for special relativity*/
+
+  int rel_mode;                 /* How doppler effects are treated */
 
 
 
@@ -476,6 +480,7 @@ struct geometry
 
   int rt_mode;                  /* radiative transfer mode. 2 for Macro Atom method,  1 for non-Macro Atom methods  */
 
+
   /* Define the choices for calculating the FB, see, e.g. integ_fb */
 
 #define FB_FULL         0       /* Calculate fb emissivity including energy associated with the threshold */
@@ -835,7 +840,8 @@ typedef struct plasma
                                                    and heat_photo. SS June 04. */
   double heat_photo, heat_z;    /*photoionization heating total and of metals */
   double heat_auger;            /* photoionization heating due to inner shell ionizations */
-  double abs_photo, abs_auger;  /* this is the energy absorbed from the photon due to these processes - different from 
+  double heat_ch_ex;
+  double abs_photo, abs_auger;  /* this is the energy absorbed from the photon due to these processes - different from
                                    the heating rate because of the binding energy */
   double w;                     /*The dilution factor of the wind */
 
@@ -861,16 +867,16 @@ typedef struct plasma
                                    The sense is ionization from ion[n], and recombinations 
                                    to each ion[n].  */
   double *inner_ioniz, *inner_recomb;
-  int *scatters;                /* The number of scatters in this cell for each ion.*/
+  int *scatters;                /* The number of scatters in this cell for each ion. */
   double *xscatters;            /* Diagnostic measure of energy scattered out of beam on extract. */
   double *heat_ion;             /* The amount of energy being transferred to the electron pool
-                                   by this ion via photoionization.*/
-  double *heat_inner_ion;             /* The amount of energy being transferred to the electron pool
-                                       by this ion via photoionization.*/
+                                   by this ion via photoionization. */
+  double *heat_inner_ion;       /* The amount of energy being transferred to the electron pool
+                                   by this ion via photoionization. */
   double *cool_rr_ion;          /* The amount of energy being released from the electron pool
-                                   by this ion via recombination.*/
+                                   by this ion via recombination. */
   double *lum_rr_ion;           /* The recombination luminosity
-                                   by this ion via recombination.*/
+                                   by this ion via recombination. */
 
   double *cool_dr_ion;
   double j, ave_freq;           /*Respectively mean intensity, intensity_averaged frequency, 
@@ -881,15 +887,15 @@ typedef struct plasma
   double fmin_mod[NXBANDS];     /* the minimum freqneucy that the model should be applied for */
   double fmax_mod[NXBANDS];     /* the maximum frequency that the model should be applied for */
 
-  /* banded, directional fluxes */
-  double F_vis[3];
-  double F_UV[3];
-  double F_Xray[3];
+  /* banded, directional fluxes - last element is used for the sum of magnitude of (flux)*/
+  double F_vis[4];
+  double F_UV[4];
+  double F_Xray[4];
 
   /* The term direct here means from photons which have not been scattered. These are photons which have been
      created by the central object, or the disk, or in the simple case the wind, but which have not undergone
      any kind of interaction which would change their direction
-  */
+   */
   double j_direct, j_scatt;     /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double ip_direct, ip_scatt;   /* 1309 NSH mean intensity due to direct photons and scattered photons */
   double xsd_freq[NXBANDS];     /* 1208 NSH the standard deviation of the frequency in the band */
@@ -906,7 +912,6 @@ typedef struct plasma
   double cool_rr, cool_rr_metals;       /*fb luminosity & fb of metals metals */
   double lum_tot, lum_tot_old;  /* The specific radiative luminosity in frequencies defined by freqmin
                                    and freqmax.  This will depend on the last call to total_emission */
-
   double cool_tot_ioniz;
   double lum_lines_ioniz, lum_ff_ioniz, cool_adiabatic_ioniz;
   double lum_rr_ioniz;
@@ -916,7 +921,6 @@ typedef struct plasma
   double cool_rr_ioniz, cool_rr_metals_ioniz;   /*fb luminosity & fb of metals metals */
   double lum_tot_ioniz;         /* The specfic radiative luminosity in frequencies defined by freqmin
                                    and freqmax.  This will depend on the last call to total_emission */
-
   double heat_shock;            /*1805 ksl - An extra heating term added to allow for shock heating of the plasma (Implementef for FU Ori Project */
 
   /* JM 1807 -- these routines are for the BF_SIMPLE_EMISSIVITY_APPROACH
@@ -929,9 +933,9 @@ typedef struct plasma
                                  */
 
   double dmo_dt[3];             /*Radiative force of wind */
-  double rad_force_es[3];       /*Radiative force of wind */
-  double rad_force_ff[3];       /*Radiative force of wind */
-  double rad_force_bf[3];       /*Radiative force of wind */
+  double rad_force_es[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
+  double rad_force_ff[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
+  double rad_force_bf[4];       /*Radiative force of wind - 4th element is sum of magnitudes*/
 
 
 
@@ -963,10 +967,10 @@ typedef struct plasma
   } spec_mod_type[NXBANDS];     /* A switch to say which type of representation we are using for this band in this cell. 
                                    Negative means we have no useful representation, 0 means power law, 1 means exponential */
 
-  double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell*/
+  double pl_alpha[NXBANDS];     /*Computed spectral index for a power law spectrum representing this cell */
   double pl_log_w[NXBANDS];     /*This is the log version of the power law weight. It is in an attempt to allow very large 
-                                  values of alpha to work with the PL spectral model to avoide NAN problems. 
-                                  The pl_w version can be deleted once testing is complete */
+                                   values of alpha to work with the PL spectral model to avoide NAN problems.
+                                   The pl_w version can be deleted once testing is complete */
 
 
   double exp_temp[NXBANDS];     /* The effective temperature of an exponential representation of the radiation field in a cell */
@@ -1097,7 +1101,7 @@ int size_Jbar_est, size_gamma_est, size_alpha_est;
 #define IONMODE_ML93 3          // Lucy Mazzali
 #define IONMODE_MATRIX_BB 8     // matrix solver BB model
 #define IONMODE_MATRIX_SPECTRALMODEL 9  // matrix solver spectral model based on power laws
-#define IONMODE_MATRIX_ESTIMATORS 10  // matrix solver spectral model based on power laws
+#define IONMODE_MATRIX_ESTIMATORS 10    // matrix solver spectral model based on power laws
 
 // and the corresponding modes in nebular_concentrations
 #define NEBULARMODE_TR 0        // LTE using t_r
@@ -1109,17 +1113,17 @@ int size_Jbar_est, size_gamma_est, size_alpha_est;
 #define NEBULARMODE_PAIRWISE_SPECTRALMODEL 7    // pairwise spectral models (power law or expoentials)
 #define NEBULARMODE_MATRIX_BB 8 // matrix solver BB model
 #define NEBULARMODE_MATRIX_SPECTRALMODEL 9      // matrix solver spectral model
-#define NEBULARMODE_MATRIX_ESTIMATORS 10      // matrix solver spectral model
+#define NEBULARMODE_MATRIX_ESTIMATORS 10        // matrix solver spectral model
 
 
 
 typedef struct photon
 {
-  double x[3];                  /* The position of packet */
-  double lmn[3];                /* Direction cosines of the packet */
-  double freq, freq_orig;       /* current and original frequency of this packet */
-  double w, w_orig;             /* current and original weight of this packet */
-  double tau;                   /* optical depth of the photon since its creation or last interaction */
+  double x[3];                                  /* The position of packet */
+  double lmn[3];                                /* Direction cosines of the packet */
+  double freq, freq_orig, freq_orig_loc;        /* current, original frequency redshifted and unredshifted) of this packet */
+  double w, w_orig;                             /* current and original weight of this packet */
+  double tau;                                   /* optical depth of the photon since its creation or last interaction */
   enum istat_enum
   {
     P_INWIND = 0,               //in wind,
@@ -1136,6 +1140,12 @@ typedef struct photon
     P_LOFREQ_FF = 11,           //records a photon that had too low a frequency
     P_REPOSITION_ERROR = 12     //A photon passed through the disk due to dfudge pushing it through incorrectly
   } istat;                      /*status of photon. */
+
+  enum frame
+  {
+    F_LOCAL = 0,
+    F_OBSERVER = 1
+  } frame;
 
   int nscat;                    /*Number of scatters for this photon */
   int nres;                     /*For line scattering, indicates the actual transition; 
@@ -1176,7 +1186,7 @@ typedef struct photon
   int np;                       /* The photon number, which used ease tracking a photon for diagnostic
                                    purposes */
   double path;                  /* The total path length of a photon (used for reverberation calcuations) */
-  double ds;                    /* the distance a photon has moved since its creattion or last interaction */
+  double ds;                    /* the distance a photon has moved since its creation or last interaction */
 }
 p_dummy, *PhotPtr;
 

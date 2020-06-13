@@ -802,5 +802,6 @@ setup_dfudge ()
     dfudge = geo.rmax / 1.e10;
   }
 
+
   return (dfudge);
 }

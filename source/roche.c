@@ -421,7 +421,8 @@ phi (double s, void *params)
 {
   struct photon pp;
   double x1, x2, z, z1, z2, z3;
-  double length ();
+
+  (void) params;
 
   if (phi_init == 0)
   {
@@ -482,6 +483,9 @@ dphi_ds (double s, void *params)
   double phi (), x1, x2;
   void *dummy_par = NULL;
   double dx, z;
+
+  (void) params;
+
   if ((dx = 0.001 * geo.a) < EPS)
     dx = EPS;
 
@@ -518,6 +522,8 @@ double
 roche_width (double x, void *params)
 {
   double rho, smax;
+
+  (void) params;
 
   if (x < geo.l1)
     smax = geo.l1;

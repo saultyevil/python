@@ -391,8 +391,6 @@ rtheta_make_grid_import (w, ndom)
     theta = w[nn].thetacen / RADIAN;
 
     w[nn].rcen = imported_model[ndom].wind_midx[imported_model[ndom].i[n]];
-
-
     w[nn].xcen[0] = w[nn].rcen * sin (theta);
     w[nn].xcen[1] = 0;
     w[nn].xcen[2] = w[nn].rcen * cos (theta);

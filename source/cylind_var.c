@@ -135,11 +135,11 @@ cylvar_ds_in_cell (ndom, p)
  * 	when the disk is vertically extended.
  *
  * @param [in out] WindPtr  w   The structure which defines the wind in Python
- * @param [in out] int  ndom   The domain number of interest
+ * @param [in] int  ndom   The domain number of interest
  * @return     Always returns 0
  *
  * @details
- * The cylvar coordinate system basically adds and offset determined
+ * The cylvar coordinate system basically adds an offset determined
  * by zdisk(r) to each z position in the grid.  Beyond geo.diskrad
  * the coordinate system stays fixed in the z direction (on the
  * assumption that the forumula for the disk is not valid there.)
@@ -148,7 +148,6 @@ cylvar_ds_in_cell (ndom, p)
  * veritical direction of the grid is always the same.
  *
  * ### Notes ###
- * ??? NOTES ???
  *
  **********************************************************/
 
@@ -161,6 +160,7 @@ cylvar_make_grid (w, ndom)
   double r, z_offset;
   int i, j, n;
   int ndim, mdim;
+  double xfudge;
 
   ndim = zdom[ndom].ndim;
   mdim = zdom[ndom].mdim;
@@ -255,7 +255,8 @@ cylvar_make_grid (w, ndom)
           zdom[ndom].zmax = w[n].x[2];
         }
       }
-
+      xfudge = fmin ((w[n].xcen[0] - w[n].x[0]), (w[n].xcen[2] - w[n].x[2]));
+      w[n].dfudge = XFUDGE * xfudge;
 
     }
   }

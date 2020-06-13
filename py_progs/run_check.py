@@ -103,14 +103,22 @@ def read_diag(root):
                 t_r.append(eval(words[2]))
                 t_e.append(eval(words[4]))
                 hc.append(eval(words[8]))
-        t_r=numpy.array(t_r)
-        t_e=numpy.array(t_e)
-        hc=numpy.array(hc)
+
+        if len(t_r)>0:
+            t_r=numpy.array(t_r)
+            t_e=numpy.array(t_e)
+            hc=numpy.array(hc)
 
 
-        t_r=t_r/ncells
-        t_e=t_e/ncells
-        hc=hc/ncells
+            t_r=t_r/ncells
+            t_e=t_e/ncells
+            hc=hc/ncells
+        else:
+            t_r=[]
+            t_e=[]
+            hc=[]
+            print('Read diag file, but there is not evidence of ionization cycles')
+
 
         return converged,converging,t_r,t_e,hc
 

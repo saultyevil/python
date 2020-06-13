@@ -87,9 +87,12 @@ translate (w, pp, tau_scat, tau, nres)
   int istat;
   int ndomain;
 
-  if (where_in_wind (pp->x, &ndomain) < 0)
+
+
+  if (where_in_wind (pp->x, &ndomain) < 0)      //If the return is negative, this means we are outside the wind
   {
-    istat = translate_in_space (pp);
+    istat = translate_in_space (pp);    //And so we should translate in space
+
   }
   else if ((pp->grid = where_in_grid (ndomain, pp->x)) >= 0)
   {
@@ -97,7 +100,7 @@ translate (w, pp, tau_scat, tau, nres)
   }
   else
   {
-    istat = pp->istat = -1;     /* It's not in the wind and it's not in the grid.  Bummer! */
+    istat = pp->istat = P_ERROR;        /* It's not in the wind and it's not in the grid.  Bummer! */
     Error ("translate: Found photon that was not in wind or grid, istat %i\n", where_in_wind (pp->x, &ndomain));
   }
 
@@ -185,11 +188,9 @@ translate_in_space (pp)
           break;
         }
       }
-
       /* So at this point we have either gotten out of the domain or we have found a cell that
        * is actually in the wind or we encoutered the error above
        */
-
       if (s > 0)
       {
         ds += s - DFUDGE;       /* We are going to add DFUDGE back later */
@@ -525,10 +526,11 @@ translate_in_wind (w, p, tau_scat, tau, nres)
 {
 
   int n;
-  double smax;
-  double ds_current;
+  double smax, s, ds_current;
   int istat;
   int nplasma;
+  int ndom, ndom_current;
+  int inwind;
 
   WindPtr one;
   PlasmaPtr xplasma;
@@ -548,18 +550,68 @@ return and record an error */
 //OLD    }
     return (n);                 /* Photon was not in grid */
   }
-
 /* Assign the pointers for the cell containing the photon */
 
   one = &wmain[n];              /* one is the grid cell where the photon is */
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
+  ndom = one->ndom;
+  inwind = one->inwind;
 
-  /*
-   * Calculate the maximum distance a photon can move in the current cell
-   */
 
-  smax = find_smax (p);
+
+/* Calculate the maximum distance the photon can travel in the cell */
+
+  if ((smax = ds_in_cell (ndom, p)) < 0)
+  {
+    return ((int) smax);
+  }
+  if (one->inwind == W_PART_INWIND)
+  {                             /* The cell is partially in the wind */
+    s = ds_to_wind (p, &ndom_current);  /* smax is set to be the distance to edge of the wind */
+    if (s < smax)
+      smax = s;
+    s = ds_to_disk (p, 0);      /* the 0 implies ds_to_disk can not return a negative distance */
+    if (s > 0 && s < smax)
+      smax = s;
+  }
+  else if (one->inwind == W_IGNORE)
+  {
+    smax += one->dfudge;
+    move_phot (p, smax);
+    return (p->istat);
+
+  }
+  else if (one->inwind == W_NOT_INWIND)
+  {                             /* The cell is not in the wind at all */
+
+    Error ("translate_in_wind: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
+    Error ("translate_in_wind: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
+    move_phot (p, smax);
+    return (p->istat);
+
+  }
+
+  if (modes.save_photons)
+  {
+    Diag ("smax  %10.3e tau_scat %10.3e tau %10.3e\n", smax, tau_scat, *tau);
+  }
+
+
+/* At this point we now know how far the photon can travel in it's current grid cell */
+
+  smax += one->dfudge;          /* dfudge is to force the photon through the cell boundaries. */
+
+/* Set limits the distance a photon can travel.  There are
+a good many photons which travel more than this distance without this
+limitation, at least in the standard 30 x 30 instantiation.  It does
+make small differences in the structure of lines in some cases.
+The choice of SMAX_FRAC can affect execution time.*/
+
+  if (smax > SMAX_FRAC * length (p->x))
+  {
+    smax = SMAX_FRAC * length (p->x);
+  }
 
   /* We now determine whether scattering prevents the photon from reaching the far edge of
      the cell.  calculate_ds calculates whether there are scatterings and makes use of the
@@ -700,192 +752,4 @@ return and record an error */
   }
 
   return (smax);
-}
-
-
-double xnorth[] = {
-  0., 0., 1.
-};
-
-double xsouth[] = {
-  0., 0., -1.
-};
-
-
-/**********************************************************/
-/**
- * @brief      determines whether the photon has reached a boundary, the central object, the disk or
- * reached the edges of the wind and, if so, modify the position of the photon, and return the appropriate
- * status.
- *
- * @param [in, out] PhotPtr  p   A photon at its new proposed location.  On exiting the routine
- * this will contain the position of the photon after taking boundaries (e.g wind cones)
- * into account.
- * @param [in] PhotPtr  pold   the previous position and direction of the photon. .
- * @param [out] double *  normal   A vector when the star or disk has been hit, which contains
- * the normal for the reflecting surface at the point the photon encountered the the boundary
- * @return   A status
- *
- * * The photon has hit the star				P_HIT_STAR
- * * The photon has hit the disk				P_HIT_DISK
- * * The photon has reached the edge of grid 		P_ESCAPE
- * * The status is undeterminable                   P_ERROR
- *
- * If a photon does not fall into one of these categories, walls returns the old status, which is stored in
- * p->istat
- *
- * @details
- *
- * walls is generally called after one has calculated how far a photon can travel in a cell
- * in order to see whether it has exited the wind region.  This is necessary because some
- * grid cells are not actually part of the wind, even though they are needed so that the
- * grid is regular.
- *
- * pold is the place where the photon was before the last attempt to move the photon forward.
- * p on input is a proposed location for photon before considering whethe one has hit a boundary. The
- * location of p is either at the edge of a cell, or at the position of a resonance.  So pold should
- * be a valid position for the photon, but p may need to be adjusted.
- *
- * If one of the walls has been hit, the moves the photon back to that wall, but not
- * othewise changed it.
- *
- * The routine also calculates the normal to the surface that was hit, which is intended to
- * be used by trans_phot to redirect the photon
- *
- * ### Notes ###
- *
- * Note that p and pold must be travelling in the same directon to work properly.  There is an
- * error check at the beginning of the routine to make sure this is the case.
- *
- *
- **********************************************************/
-int
-walls (p, pold, normal)
-     PhotPtr p, pold;
-     double *normal;
-{
-  double r, rho, rho_sq;
-  double xxx[3];
-  double s, z;
-  double theta, phi;
-
-  /* Check to see if the photon has hit the star. If so
-   * put the photon at the star surface and use that position
-   * to determine the normal to the surface, the assumption
-   * being that the star is located at the center of the
-   * coordinate grid.
-   */
-
-  r = dot (p->x, p->x);
-  s = ds_to_sphere (geo.rstar, pold);
-
-  if (r < geo.rstar_sq || p->ds > s)
-  {
-    stuff_phot (pold, p);
-    move_phot (p, s);
-    stuff_v (p->x, normal);
-    return (p->istat = P_HIT_STAR);
-  }
-
-  /* Check to see if it has hit the disk.
-   *
-   * For a vertically extended disk these means checking whether
-   * we are inside the maximum radius of the disk and then lookng
-   * comparing the z position of z to the height of the disk at
-   * that point*/
-
-  if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
-  {
-    rho = sqrt (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
-    if ((rho) < geo.diskrad && fabs (p->x[2]) <= (z = zdisk (rho)))
-    {
-      /* 0 here means to return VERY_BIG if one has missed the disk, something
-       * that should not happen
-       */
-
-      s = ds_to_disk (pold, 0);
-      if (s <= -1)              // -1 allows  for very small errors in the calculation of the distance to the disk
-      {
-        Error ("walls: %d The previous position %11.4e %11.4e %11.4e was inside the disk, correcting by  %11.4e \n", pold->np, pold->x[0],
-               pold->x[1], pold->x[2], s);
-      }
-      else if (s == VERY_BIG)
-      {
-        Error ("walls: %d Should not miss disk at this position %11.4e %11.4e %11.4e (%11.4e/%11.4e %11.4e/%11.4e %11.4e) \n", pold->np,
-               pold->x[0], pold->x[1], pold->x[2], rho, geo.diskrad, fabs (p->x[2]), z, ds_to_disk (pold, 1));
-        save_photons (pold, "Disk");
-      }
-      stuff_phot (pold, p);
-      move_phot (p, s - DFUDGE);
-
-      /* Finally, we must calculate the normal to the disk at this point */
-
-      theta = atan ((zdisk (r * (1. + EPSILON)) - z) / (EPSILON * r));
-      phi = atan2 (p->x[0], p->x[1]);
-
-      normal[0] = (-cos (phi) * sin (theta));
-      normal[1] = (-sin (phi) * sin (theta));
-      normal[2] = cos (theta);
-
-      if (p->x[2] < 0)
-      {
-        normal[2] *= -1;
-      }
-
-
-      return (p->istat = P_HIT_DISK);
-    }
-  }
-  else if (geo.disk_type == DISK_FLAT && p->x[2] * pold->x[2] < 0.0)
-  {                             /* Then the photon crossed the xy plane and probably hit the disk */
-    s = (-(pold->x[2])) / (pold->lmn[2]);
-
-    if (s < 0 && fabs (pold->x[2]) < wmain[pold->grid].dfudge && pold->lmn[2] * p->lmn[2] < 0.0)
-    {
-      Error ("walls: Reposition error\n");
-      return (p->istat = P_REPOSITION_ERROR);
-    }
-
-    if (s < 0)
-    {
-      Error ("walls: distance %g<0. Position %g %g %g \n", s, p->x[0], p->x[1], p->x[2]);
-      return (-1);
-    }
-
-    /* Check whether it hit the disk plane beyond the geo.diskrad**2 */
-    vmove (pold->x, pold->lmn, s, xxx);
-
-    if (dot (xxx, xxx) < geo.diskrad_sq)
-    {                           /* The photon has hit the disk */
-      stuff_phot (pold, p);     /* Move the photon to the point where it hits the disk */
-      move_phot (p, s - DFUDGE);
-
-      /* Now fill in the direction for the normal to the surface */
-      if (pold->x[2] > 0)
-      {
-        stuff_v (xnorth, normal);
-      }
-      else
-      {
-        stuff_v (xsouth, normal);
-      }
-      return (p->istat = P_HIT_DISK);
-    }
-
-  }
-
-  /* At this point we know the photon has not hit the disk or the star, so we now
-   * need to check if it has escaped the grid.  See note above regarding whether
-   * we ought to be checking this differently.  This definition is clearly coordinate
-   * system dependent.
-   */
-
-  rho_sq = (p->x[0] * p->x[0] + p->x[1] * p->x[1]);
-  if (rho_sq > geo.rmax_sq)
-    return (p->istat = P_ESCAPE);       /* The photon is coursing through the universe */
-
-  if (fabs (p->x[2]) > geo.rmax)
-    return (p->istat = P_ESCAPE);
-
-  return (p->istat);            /* The photon is still in the wind */
 }

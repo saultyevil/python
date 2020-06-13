@@ -355,6 +355,9 @@ double
 model_int (double lambda, void *params)
 {
   double answer;                //The interpolated answer
+
+  (void) params;
+
   if (lambda < comp[integ_spectype].xmod.w[0])  //Our wavelength is below where we have a model
     answer = 0.0;               //retuen zero
   else if (lambda > comp[integ_spectype].xmod.w[comp[integ_spectype].nwaves - 1])       //Our wavelength is above where we have a model

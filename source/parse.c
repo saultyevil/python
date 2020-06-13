@@ -149,6 +149,12 @@ parse_command_line (argc, argv)
         Log ("Enabling advanced/diagnostic inputs (@ commands)\n");
         j = i;
       }
+      else if (strcmp (argv[i], "-gamma") == 0)
+      {
+        rel_mode = REL_MODE_FULL;
+        Log ("Using only full special relativity for Doppler shifts, etc.\n");
+        j = i;
+      }
       else if (strcmp (argv[i], "-f") == 0)
       {
         modes.fixed_temp = 1;

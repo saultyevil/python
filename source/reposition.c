@@ -43,6 +43,7 @@ int
 reposition (PhotPtr p)
 {
   int n;
+  double s, s_disk, s_star;
 
   if (p->nres < 0)
     return (0);                 /* Do nothing for non-resonant scatters */
@@ -53,47 +54,70 @@ reposition (PhotPtr p)
     return (n);                 /* Photon was not in wind */
   }
 
-  move_phot (p, wmain[p->grid].dfudge);
+  s = wmain[p->grid].dfudge;
+
+  if (geo.disk_type != DISK_NONE)
+  {
+    s_disk = ds_to_disk (p, 1); // Allow negative values
+    if (s_disk > 0 && s_disk < s)
+    {
+      s = 0.1 * s_disk;
+    }
+  }
+  s_star = ds_to_sphere (geo.rstar, p);
+  if (s_star > 0 && s_star < s)
+  {
+    s = 0.1 * s_star;
+  }
+
+  move_phot (p, s);
 
   return (0);
 }
 
-/* ************************************************************************* */
-/**
- * @brief           Reposition a photon which was lost due to dfudge pushing
- *                  the photon into the disk
- *
- * @param[in,out]   PhotPtr   p     The photon to be repositioned
- *
- * @return          void
- *
- * @details
- *
- * For resonant scatters, this function will push the photon a distance away
- * from the location where it previously interacted to assure that the photon
- * does not interact with the same resonance twice.
- *
- * Created in response to issue #584 on the GitHub repository. The purpose of
- * this function is to calculate the distance to the surface of the accretion
- * disc and to make it some distance towards the disc instead of dfudge, which
- * previously pushed the photon through the disc plane accidentally.
- *
- * ************************************************************************** */
+/* The next routine has been removed because it should not longer be necessary
+   with the modifcations to repostion above.  It should be noted that this routine
+   as written would fail with vertically extended disks, so if it is needd then
+   it needs to be modified to reflect this.  A better approach prbably is to work
+   on reposition above.  ksl - 200514
+*/
 
-void
-reposition_lost_disk_photon (PhotPtr p)
-{
-  double smax;
+//OLD /* ************************************************************************* */
+//OLD /**
+//OLD  * @brief           Reposition a photon which was lost due to dfudge pushing
+//OLD  *                  the photon into the disk
+//OLD  *
+//OLD  * @param[in,out]   PhotPtr   p     The photon to be repositioned
+//OLD  *
+//OLD  * @return          void
+//OLD  *
+//OLD  * @details
+//OLD  *
+//OLD  * For resonant scatters, this function will push the photon a distance away
+//OLD  * from the location where it previously interacted to assure that the photon
+//OLD  * does not interact with the same resonance twice.
+//OLD  *
+//OLD  * Created in response to issue #584 on the GitHub repository. The purpose of
+//OLD  * this function is to calculate the distance to the surface of the accretion
+//OLD  * disc and to make it some distance towards the disc instead of dfudge, which
+//OLD  * previously pushed the photon through the disc plane accidentally.
+//OLD  *
+//OLD  * ************************************************************************** */
 
-  if (p->nres < 0)
-    return;                     /* Do nothing for non-resonant scatters */
-
-  if ((p->grid = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
-  {
-    Error ("%s:%s(%i): Photon not in grid\n", __FILE__, __func__, __LINE__);
-    return;                     /* Photon was not in wind */
-  }
-
-  smax = -p->x[2] / p->lmn[2] * 0.999;  // Move some distance toward the disc
-  move_phot (p, smax);
-}
+//OLD void
+//OLD reposition_lost_disk_photon (PhotPtr p)
+//OLD {
+//OLD   double smax;
+//OLD 
+//OLD   if (p->nres < 0)
+//OLD     return;                     /* Do nothing for non-resonant scatters */
+//OLD 
+//OLD   if ((p->grid = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
+//OLD   {
+//OLD     Error ("%s:%s(%i): Photon not in grid\n", __FILE__, __func__, __LINE__);
+//OLD     return;                     /* Photon was not in wind */
+//OLD   }
+//OLD 
+//OLD   smax = -p->x[2] / p->lmn[2] * 0.999;  // Move some distance toward the disc
+//OLD   move_phot (p, smax);
+//OLD }

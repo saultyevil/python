@@ -146,7 +146,7 @@ create_master_table (ndom, rootname)
   char filename[132];
   double *c[50], *converge;
   char column_name[50][20];
-  char one_line[1024], start[132], one_value[20];
+  char one_line[1024], start[1024], one_value[20];
   char name[132];               /* file name extension */
 
 
@@ -390,7 +390,7 @@ create_heat_table (ndom, rootname)
   char filename[132];
   double *c[50], *converge;
   char column_name[50][20];
-  char one_line[1024], start[132], one_value[20];
+  char one_line[1024], start[1024], one_value[20];
 
 
   int i, ii, jj;
@@ -601,7 +601,7 @@ create_convergence_table (ndom, rootname)
   char filename[132];
   double *c[50], *converge;
   char column_name[50][20];
-  char one_line[1024], start[132], one_value[20];
+  char one_line[1024], start[1024], one_value[20];
 
 
   int i, ii, jj;
@@ -807,7 +807,7 @@ create_ion_table (ndom, rootname, iz, ion_switch)
   int first_ion, number_ions;
   char element_name[20];
   int istate[50];
-  char one_line[1024], start[132], one_value[20];
+  char one_line[1024], start[1024], one_value[20];
   int nstart, ndim2;
   char name[132];               /* Name of extension for a
                                  * particular ion table */

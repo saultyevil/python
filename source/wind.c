@@ -457,6 +457,12 @@ wind_check (www, n)
 {
   int i, j, k, istart, istop;
   int ierr = 0;
+  int ndom, ndim, mdim;
+  double dxmin, dzmin;
+  double drmin, dtmin;
+  int outer_n, outer_m;
+  double delta;
+  double frac = 0.01;
 
   if (n < 0)
   {
@@ -513,6 +519,87 @@ wind_check (www, n)
     Error ("wind_check: Something is very seriously wrong with the wind.  %d problems Exiting\n", ierr);
     Exit (0);
   }
+
+
+/* Now perform some checks to ensure DFUDGE is unlikely to punch through any cells  */
+/* This versions does not change DFUDGE but simply logs places where problems might arise */
+
+
+  delta = frac * DFUDGE;
+
+  for (ndom = 0; ndom < geo.ndomain; ndom++)
+  {
+    ndim = zdom[ndom].ndim;
+    mdim = zdom[ndom].mdim;
+    if (zdom[ndom].coord_type == RTHETA)
+    {
+      drmin = 1e99;
+      dtmin = 1e99;
+      for (i = 0; i < ndim; i++)
+      {
+        for (j = 0; j < mdim; j++)
+        {
+          wind_ij_to_n (ndom, i, j, &n);
+          if (wmain[n].vol > 0.0)
+          {
+            wind_ij_to_n (ndom, i + 1, j, &outer_n);
+            wind_ij_to_n (ndom, i, j + 1, &outer_m);
+            drmin = fabs (wmain[outer_n].r - wmain[n].r);
+            dtmin = fabs (wmain[n].r * (wmain[outer_m].theta - wmain[n].theta) / RADIAN);
+            if (drmin < delta || dtmin < delta)
+            {
+              Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, drmin, dtmin);
+            }
+          }
+        }
+      }
+    }
+    else if (zdom[ndom].coord_type == CYLIND || zdom[ndom].coord_type == CYLVAR)
+    {
+      dxmin = 1e99;
+      dzmin = 1e99;
+      for (i = 0; i < ndim; i++)
+      {
+        for (j = 0; j < mdim; j++)
+        {
+          wind_ij_to_n (ndom, i, j, &n);
+          if (wmain[n].vol > 0.0)
+          {
+            wind_ij_to_n (ndom, i + 1, j, &outer_n);
+            wind_ij_to_n (ndom, i, j + 1, &outer_m);
+            dxmin = fabs (wmain[outer_n].x[0] - wmain[n].x[0]);
+            dzmin = fabs (wmain[outer_m].x[2] - wmain[n].x[2]);
+
+            if (dxmin < delta || dzmin < delta)
+            {
+              Error ("wind_check: DFUDGE may be large in cell %d %d (%.1e %.1e)\n", i, j, dxmin, dzmin);
+            }
+          }
+        }
+      }
+    }
+    else if (zdom[ndom].coord_type == SPHERICAL)
+    {
+      drmin = 1e99;
+      for (i = 0; i < ndim; i++)
+      {
+        if (wmain[i].vol > 0.0)
+        {
+          drmin = fabs (wmain[i + 1].r - wmain[i].r);
+          if (drmin < delta)
+          {
+            Error ("wind_check: DFUDGE may be large in cell %d (%.1e)\n", i, drmin);
+          }
+        }
+      }
+    }
+    else
+    {
+      Error ("wind_check: Disaster - unknown wind type\n");
+      Exit (0);
+    }
+  }
+
   Log ("Wind_check: Punchthrough distance DFUDGE %e www[1].x[2] %e\n", DFUDGE, www[1].x[2]);
   return (0);
 }

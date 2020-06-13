@@ -110,6 +110,8 @@ main (argc, argv)
   time_max = -1;
   set_max_time (files.root, time_max);
 
+  rel_mode = REL_MODE_LINEAR;
+
 
   /* Set the verbosity level for logging.  To get more info raise the verbosity level to a higher number. To
      get less set the verbosity to a lower level. The verbosity can be reset from the comamnd line */
@@ -586,6 +588,7 @@ main (argc, argv)
      sets the push through distance depending on the size of the system.
    */
 
+//  DFUDGE = setup_dfudge ();
   DFUDGE = setup_dfudge ();
 
   /* Next line finally defines the wind if this is the initial time this model is being run */
@@ -645,7 +648,7 @@ main (argc, argv)
 
 
   disk_init (geo.rstar, geo.diskrad, geo.mstar, geo.disk_mdot, freqmin, freqmax, 0, &geo.f_disk);
-  qdisk_init ();                /* Initialize a disk qdisk to store the information about photons impinging on the disk */
+  qdisk_init (geo.rstar, geo.diskrad, geo.mstar, geo.disk_mdot);        /* Initialize a disk qdisk to store the information about photons impinging on the disk */
   xsignal (files.root, "%-20s Finished initialization for %s\n", "NOK", files.root);
   check_time (files.root);
 

@@ -58,9 +58,11 @@ stuff_phot (pin, pout)
   pout->w_orig = pin->w_orig;
   pout->freq = pin->freq;
   pout->freq_orig = pin->freq_orig;
+  pout->freq_orig_loc = pin->freq_orig_loc;
   pout->tau = pin->tau;
 
   pout->istat = pin->istat;
+  pout->frame = pin->frame;
   pout->nres = pin->nres;
   pout->nrscat = pin->nrscat;
   pout->nscat = pin->nscat;
@@ -72,6 +74,8 @@ stuff_phot (pin, pout)
   pout->np = pin->np;
 
   pout->path = pin->path;
+
+  pout->ds = pin->ds;
 
   return (0);
 }
@@ -103,10 +107,11 @@ move_phot (pp, ds)
      double ds;
 {
 
-  pp->ds = ds;
   pp->x[0] += pp->lmn[0] * ds;
   pp->x[1] += pp->lmn[1] * ds;
   pp->x[2] += pp->lmn[2] * ds;
+
+  pp->ds += ds;
   pp->path += fabs (ds);
   return (0);
 }
@@ -413,7 +418,7 @@ ds_to_cone (cc, p)
 
 /**********************************************************/
 /**
- * @brief      Calculate the pathlenth along a line of sight defined by
+ * @brief      Calculate the path length along a line of sight defined by
  * 	a photon p to a sphere centered on the origin.
  *
  * @param [in] double  r   The radius of the sphere

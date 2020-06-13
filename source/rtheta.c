@@ -136,6 +136,7 @@ rtheta_make_grid (w, ndom)
   double dr, theta, thetacen, dtheta, dlogr;
   int i, j, n;
   int mdim, ndim;
+  double xfudge;
 
   /* Set zmax if this has not alrady been done.
    */
@@ -154,7 +155,6 @@ rtheta_make_grid (w, ndom)
      to propagate. */
 
 /* Next two lines for linear intervals */
-//OLD  dtheta = 90. / (mdim - 3);
   dtheta = 90. / (mdim - 2);
 
 
@@ -208,6 +208,9 @@ rtheta_make_grid (w, ndom)
 
       w[n].xcen[0] = w[n].rcen * sin (thetacen);
       w[n].xcen[2] = w[n].rcen * cos (thetacen);
+
+      xfudge = (w[n].xcen[0] - w[n].x[0]);
+      w[n].dfudge = XFUDGE * xfudge;
 
     }
   }

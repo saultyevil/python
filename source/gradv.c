@@ -59,7 +59,6 @@ dvwind_ds (p)
 
   ndom = wmain[p->grid].ndom;
 
-
   /* We want the change in velocity along the line of sight, but we
      need to be careful because of the fact that we have elected to
      combine the upper and lower hemispheres in the wind array.  Since
@@ -86,11 +85,9 @@ dvwind_ds (p)
     struct photon pnew;
     double v1[3], v2[3], diff[3];
     double ds;
-
     /* choose a small distance which is dependent on the cell size */
     vsub (pp.x, wmain[pp.grid].x, diff);
     ds = 0.001 * length (diff);
-
     /* calculate the velocity at the position of the photon */
     /* note we use model velocity, which could potentially be slow,
        but avoids interpolating (see #118) */

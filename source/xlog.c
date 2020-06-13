@@ -137,8 +137,9 @@ int log_verbosity = 5;          // A parameter which can be used to suppress wha
  *
  * ###Notes###
  *
- * The routine will exit is log the file can not be opened
- *
+ * The routine will exit if log the file can not be opened. If the log file can
+ * be opened, then atexit is used to ensure that upon normal termination that
+ * the log file buffer is flushed and the log file closed.
  *
  **********************************************************/
 
@@ -219,16 +220,18 @@ Log_append (filename)
  *
  * ###Notes###
  *
+ * One should not need to worry about when closing the log file and missing some
+ * output, as fflush is used to flush the buffer and write to file.
  *
  **********************************************************/
 
-int
+void
 Log_close ()
 {
-  fclose (diagptr);
   init_log = 0;
+  fflush (diagptr);
+  fclose (diagptr);
   free (errorlog);              // Release the error summary structure
-  return (0);
 }
 
 /* The next routine allows the user to change the amount of reporting that is

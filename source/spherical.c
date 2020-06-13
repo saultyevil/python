@@ -131,6 +131,7 @@ spherical_make_grid (w, ndom)
   double dr, dlogr;
   int j, n;
   int ndim;
+  double xfudge;
 
 
   ndim = zdom[ndom].ndim;
@@ -158,14 +159,16 @@ spherical_make_grid (w, ndom)
 
     /* Now calculate the positions of these points in the xz plane.
        There is a choice about how one does this.  Here we  have elected
-       to calculate this at a 45 degree angle.  in the hopes this will
-       be a reasonable portion of the wind in a biconical flow.
+       to calculate this at a 45 degree anglein the hopes this will
+       be a reasonable place in the wind in a biconical flow.
      */
 
     w[n].x[1] = w[n].xcen[1] = 0.0;
     w[n].x[0] = w[n].x[2] = w[n].r * sin (PI / 4.);
     w[n].xcen[0] = w[n].xcen[2] = w[n].rcen * sin (PI / 4.);
 
+    xfudge = (w[n].xcen[0] - w[n].x[0]);
+    w[n].dfudge = XFUDGE * xfudge;
   }
 
   return (0);

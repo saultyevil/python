@@ -30,7 +30,7 @@ int sv_zero_r_ndom;
  *
  *  Gets mdot for this wind component, initialize the parameters needed to define a SV wind, and then request those
  *  parameters as inputs.   Calculate the normalization factor needed to convert the global mass loss rate to the
- *  mass loss rate per unite area.
+ *  mass loss rate per unit area.
  *
  * ###Notes###
  *
@@ -121,7 +121,6 @@ get_sv_wind_params (ndom)
 
   sdom = ndom;
 
-//  zdom[ndom].mdot_norm = qromb (sv_wind_mdot_integral, zdom[ndom].sv_rmin, zdom[ndom].sv_rmax, 1e-6);
   zdom[ndom].mdot_norm = num_int (sv_wind_mdot_integral, zdom[ndom].sv_rmin, zdom[ndom].sv_rmax, 1e-6);
 
   return (0);
@@ -136,12 +135,20 @@ get_sv_wind_params (ndom)
  *
  * @param [in] double  x[]   the position for which one desires the velocity
  * @param [out] double  v[]  the calcualted velocity at that postion
- * @param [in, out] int  ndom the domain number 
+ * @param [in] int  ndom the domain number 
  * @return     The amplitude of the velocity is returned
  * 	
  *
  * ###Notes###
  *
+ * In addition to the standard SV law where the base velocity
+ * is fixed, this supports a base velocity law which follows
+ * the KWD prescription for the base velocity.
+ *
+ * For a vertically extended disk, we want the base of the
+ * wind to have same base velocity as that for a flat disk
+ * in the poloidal direction and proper rotational velocity
+ * for that particular radial velocity.  
  *
  **********************************************************/
 
@@ -156,18 +163,19 @@ sv_velocity (x, v, ndom)
   double xtest[3];
   double s;
   double vzero;
+  double ldist_orig, rzero_orig;
 
   zzz = v_escape = vzero = -99.;
 
 
-  rzero = sv_find_wind_rzero (ndom, x);
+  rzero_orig = rzero = sv_find_wind_rzero (ndom, x);
   theta = sv_theta_wind (ndom, rzero);
 
   r = sqrt (x[0] * x[0] + x[1] * x[1]);
-  ldist = sqrt ((r - rzero) * (r - rzero) + x[2] * x[2]);
+  ldist_orig = ldist = sqrt ((r - rzero) * (r - rzero) + x[2] * x[2]);
 
   /* Calculate the poloidal distance for a vertically extended disk ksl 111124 */
-  if (geo.disk_type == DISK_VERTICALLY_EXTENDED)
+  if (geo.disk_type == DISK_VERTICALLY_EXTENDED && rzero < zdom[ndom].sv_rmax)
   {
     xtest[0] = r;               // Define xtest in the +z plane
     xtest[1] = 0;
@@ -175,13 +183,14 @@ sv_velocity (x, v, ndom)
     ptest.x[0] = rzero;         // Define ptest to be the footpoint extended to xy plane
     ptest.x[1] = 0.0;
     ptest.x[2] = EPSILON;
-    ptest.lmn[0] = sin (theta); // 56d -- ptest direction is along stream line
+    ptest.lmn[0] = sin (theta); // ptest direction is along the stream line
     ptest.lmn[1] = 0.0;
     ptest.lmn[2] = cos (theta);
     s = ds_to_disk (&ptest, 1);
     move_phot (&ptest, s);      // Now move the test photon to  disk surface
-    vsub (ptest.x, xtest, xtest);       // Poloidal distance is just the distance beteen these two points.
-    ldist = length (x);
+    vsub (ptest.x, xtest, xtest);       // Poloidal distance is just the distance between these two points.
+    ldist = length (xtest);
+    rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
   }
 
   /* Depending on the mode, we can set the initial velocity as fixed or by the sound speed. See #482. */
@@ -234,6 +243,10 @@ sv_velocity (x, v, ndom)
     Error ("sv_velocity: rzero %f theta %f ldist %f zzz %f v_escape %f vl %f\n", rzero, theta, ldist, zzz, v_escape, vl);
   }
 
+//OLD  Log ("SV Vel %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e \n", x[0], x[1], x[2], rzero_orig, rzero, ldist_orig, ldist, vl,
+//OLD       speed);
+
+
 
   return (speed);
 
@@ -281,24 +294,24 @@ sv_rho (ndom, x)
   r = sqrt (x[0] * x[0] + x[1] * x[1]);
   ldist = sqrt ((r - rzero) * (r - rzero) + x[2] * x[2]);
 
-  if (geo.disk_type == DISK_VERTICALLY_EXTENDED)        /* These are corrections for a vertically extended disk */
+
+  if (geo.disk_type == DISK_VERTICALLY_EXTENDED && rzero < zdom[ndom].sv_rmax)
   {
     xtest[0] = r;               // Define xtest in the +z plane
     xtest[1] = 0;
     xtest[2] = fabs (x[2]);
-    ptest.x[0] = rzero;
+    ptest.x[0] = rzero;         // Define ptest to be the footpoint extended to xy plane
     ptest.x[1] = 0.0;
     ptest.x[2] = EPSILON;
-    ptest.lmn[0] = cos (theta);
+    ptest.lmn[0] = sin (theta); // ptest direction is along the stream line
     ptest.lmn[1] = 0.0;
-    ptest.lmn[2] = sin (theta);
+    ptest.lmn[2] = cos (theta);
     s = ds_to_disk (&ptest, 1);
-    move_phot (&ptest, s);      // Now test photon is at disk surface
-    vsub (ptest.x, xtest, xtest);
+    move_phot (&ptest, s);      // Now move the test photon to  disk surface
+    vsub (ptest.x, xtest, xtest);       // Poloidal distance is just the distance between these two points.
     ldist = length (xtest);
-    rzero = length (ptest.x);
+    rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
   }
-
 
 /* Reduced by a factor of 2 to account for radiation on both sides of the disk */
   dmdot_da = zdom[ndom].wind_mdot * pow (rzero, zdom[ndom].sv_lambda) * cos (theta) / zdom[ndom].mdot_norm / 2.;
@@ -469,6 +482,8 @@ sv_zero_r (double r, void *params)
   double theta;
   double rho, rho_guess;
 
+  (void) params;
+
   /* sv_zero_r_ndom should be set to the domain number before calling sv_zero_r */
 
   theta = sv_theta_wind (sv_zero_r_ndom, r);
@@ -483,24 +498,25 @@ sv_zero_r (double r, void *params)
 
 /**********************************************************/
 /** 
- * @brief      double (r) finds the angle at which the wind emerges from at a specific
- * 	radius r on surface of the disk
+ * @brief      find the angle at which the wind emerges from at a specific
+ * 	radius on surface of the disk
  *
  * @param [in] int  ndom   The domain number
  * @param [in] double  r   a radial distance on the surface of the disk
  * @return   An angle (in radians) 
  *
  * As long as r is between sv_rmin and sv_rmax, sv_theta_wind returns the
- * 	angle given by the SV prescription.
+ * angle given by the SV prescription.
  * 	
- * 	Inside sv_rmin, it returns a value which smoothly goes from thetamin to 0
- * 	as the radius goes to 0.
+ * Inside sv_rmin, it returns a value which smoothly goes from thetamin to 0
+ * as the radius goes to 0.
  * 	
- * 	Outside sv_rmax, it returns sv_thetamax
+ * Outside sv_rmax, it returns sv_thetamax
  *
  *
  * ###Notes###
  *
+ * Theta is measuered from the z axis.
  *
  **********************************************************/
 
@@ -516,9 +532,11 @@ sv_theta_wind (ndom, r)
     return (atan (tan (zdom[ndom].sv_thetamin * r / zdom[ndom].sv_rmin)));
   if (r >= zdom[ndom].sv_rmax)
     return (zdom[ndom].sv_thetamax);
+
   theta = zdom[ndom].sv_thetamin +
-    (zdom[ndom].sv_thetamax -
-     zdom[ndom].sv_thetamin) * pow ((r - zdom[ndom].sv_rmin) / (zdom[ndom].sv_rmax - zdom[ndom].sv_rmin), zdom[ndom].sv_gamma);
+    (zdom[ndom].sv_thetamax - zdom[ndom].sv_thetamin) *
+    pow ((r - zdom[ndom].sv_rmin) / (zdom[ndom].sv_rmax - zdom[ndom].sv_rmin), zdom[ndom].sv_gamma);
+
   return (theta);
 
 }
@@ -528,13 +546,17 @@ sv_theta_wind (ndom, r)
 
 /**********************************************************/
 /** 
- * @brief      The integrand required to calculate the normalization factor between the global mass loss rate and the mass loss per unit area at a particular place on the disk
+ * @brief      The integrand required to calculate the normalization 
+ *             factor between the global mass loss rate and the mass 
+ *              loss per unit area at a particular place on the disk
  *
- * @param [in] double  r   A position (radius) on the disk
- * @param [in] void  params   An extra (unused) variable to make it paletable for the gsl integrator
+ * @param [in] double  r        A position (radius) on the disk
+ * @param [in] void    params   An extra (unused) variable to make it paletable for the gsl integrator
  * @return     The value of the integrand 
  *
- * The SV model is defined in terms of a mass loss rate per unit area.  mdot is the total mass loss rate from the disk.  In order to connect the local and global rates one
+ * The SV model is defined in terms of a mass loss rate per unit area.  
+ * mdot is the total mass loss rate from the disk.  In order to connect 
+ * the local and global rates one
  * must integrate the local mass loss rate and renormalize this.  
  *
  * ###Notes###
@@ -548,7 +570,9 @@ sv_wind_mdot_integral (double r, void *params)
 {
   double x;
 
+  (void) params;
   x = 2 * PI * pow (r, zdom[sdom].sv_lambda + 1.) * cos (sv_theta_wind (sdom, r));
+
   return (x);
 
 }

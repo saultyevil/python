@@ -292,12 +292,12 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
 
 
         pylab.subplot(611)
-        pylab.title('%s vs %s for %s' % (run1,run2,model))
+        pylab.title('%s (1) vs %s (2) for %s' % (run1,run2,model))
         flux1=xsmooth(spec1['Created'],21)
         flux2=xsmooth(spec2['Created'],21)
         diff_created=flux2-flux1
-        pylab.loglog(spec1['Freq.'],flux1,label='Created')
-        pylab.loglog(spec2['Freq.'],flux2,label='Created')
+        pylab.loglog(spec1['Freq.'],flux1,label='Created1')
+        pylab.loglog(spec2['Freq.'],flux2,label='Created2')
         y=pylab.ylim()
         pylab.ylim(y[1]/1e5,y[1])
 
@@ -305,8 +305,8 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
         flux1=xsmooth(spec1['Emitted'],21)
         flux2=xsmooth(spec2['Emitted'],21)
         diff_emitted=flux2-flux1
-        pylab.loglog(spec1['Freq.'],flux1,label='Emitted')
-        pylab.loglog(spec2['Freq.'],flux2,label='Emitted')
+        pylab.loglog(spec1['Freq.'],flux1,label='Emitted1')
+        pylab.loglog(spec2['Freq.'],flux2,label='Emitted2')
         y=pylab.ylim()
         pylab.ylim(y[1]/1e5,y[1])
         pylab.ylabel('Flux')
@@ -319,8 +319,8 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
         flux1=xsmooth(spec1['CenSrc'],21)
         flux2=xsmooth(spec2['CenSrc'],21)
         diff_CenSrc=flux2-flux1
-        pylab.loglog(spec1['Freq.'],flux1,label='CenSrc')
-        pylab.loglog(spec2['Freq.'],flux2,label='CenSrc')
+        pylab.loglog(spec1['Freq.'],flux1,label='CenSrc1')
+        pylab.loglog(spec2['Freq.'],flux2,label='CenSrc2')
         y=pylab.ylim()
     # pylab.ylim(y[1]/1e5,y[1])
 
@@ -328,8 +328,8 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
         flux1=xsmooth(spec1['Disk'],21)
         flux2=xsmooth(spec2['Disk'],21)
         diff_disk=flux2-flux1
-        pylab.loglog(spec1['Freq.'],flux1,label='Disk')
-        pylab.loglog(spec2['Freq.'],flux2,label='Disk')
+        pylab.loglog(spec1['Freq.'],flux1,label='Disk1')
+        pylab.loglog(spec2['Freq.'],flux2,label='Disk2')
         y=pylab.ylim()
     # pylab.ylim(y[1]/1e5,y[1])
 
@@ -337,8 +337,8 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
         flux1=xsmooth(spec1['Wind'],21)
         flux2=xsmooth(spec2['Wind'],21)
         diff_wind=flux2-flux1
-        pylab.loglog(spec1['Freq.'],flux1,label='Wind')
-        pylab.loglog(spec2['Freq.'],flux2,label='Wind')
+        pylab.loglog(spec1['Freq.'],flux1,label='Wind1')
+        pylab.loglog(spec2['Freq.'],flux2,label='Wind2')
         y=pylab.ylim()
         pylab.ylim(y[1]/1e5,y[1])
         pylab.ylabel('Flux')
@@ -347,6 +347,7 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
         pylab.tight_layout()
 
         pylab.subplot(613)
+        pylab.title('Old (2) - New (1)')
         pylab.semilogx(spec1['Freq.'],diff_created,label='Created')
         pylab.semilogx(spec1['Freq.'],diff_emitted,label='Emitted')
         pylab.semilogx(spec1['Freq.'],diff_CenSrc,label='CenSrc')
@@ -369,39 +370,67 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
         spec1=ascii.read(spec_name1)
         spec2=ascii.read(spec_name2)
 
-
         pylab.subplot(614)
         flux1=xsmooth(spec1['Created'],21)
         flux2=xsmooth(spec2['Created'],21)
         diff_created=flux2-flux1
         pylab.plot(spec1['Lambda'],flux1,label='Created1')
         pylab.plot(spec2['Lambda'],flux2,label='Created2')
+
+        flux1=xsmooth(spec1['Emitted'],21)
+        flux2=xsmooth(spec2['Emitted'],21)
+        diff_emitted=flux2-flux1
+        pylab.plot(spec1['Lambda'],flux1,label='Emitted1')
+        pylab.plot(spec2['Lambda'],flux2,label='Emitted2')
+
+        ymax=numpy.max(flux1)
+        ymin=numpy.min(flux1)
+        pylab.ylim(0.5*ymin,1.5*ymax)
+
         pylab.legend(loc='best')
         pylab.ylabel('Flux')
         pylab.tight_layout()
     # pylab.xlabel('Wavelength')
 
         pylab.subplot(615)
-        flux1=xsmooth(spec1['Emitted'],21)
-        flux2=xsmooth(spec2['Emitted'],21)
-        diff_emitted=flux2-flux1
-        pylab.plot(spec1['Lambda'],flux1,label='Emitted1')
-        pylab.plot(spec2['Lambda'],flux2,label='Emitted2')
+        spec_list=spec1.colnames[9:]
+        i=len(spec_list)//2
+        # print(i,spec_list[i])
+        name=spec_list[i]
+        # print(spec1.colnames[9:])
+
+        flux1=xsmooth(spec1[name],21)
+        flux2=xsmooth(spec2[name],21)
+        diff_spec=flux2-flux1
+        pylab.plot(spec1['Lambda'],flux1,label=name)
+        pylab.plot(spec2['Lambda'],flux2,label=name)
+
+
+
+
         pylab.legend(loc='best')
         pylab.ylabel('Flux')
         pylab.tight_layout()
     # pylab.xlabel('Wavelength')
 
         pylab.subplot(616)
+        pylab.title('Old (2) - New (1)')
         pylab.plot(spec1['Lambda'],diff_created,label='Created')
         pylab.plot(spec1['Lambda'],diff_emitted,label='Emitted')
+        pylab.plot(spec1['Lambda'],diff_spec,label=name)
         pylab.legend(loc='best')
         pylab.ylabel('Flux Difference')
         pylab.xlabel('Wavelength')
         pylab.tight_layout()
 
+
+
+
     else:
         print('Error: either %s or %s are missing' % (spec_name1,spec_name2))
+
+
+
 
 
     pylab.draw()

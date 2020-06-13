@@ -409,15 +409,17 @@ rdpar_init ()
  * 	routines, like rdpar for processing a line of input whether
  * 	it comes from the command line or from a .pf file
  *
- * @param [in, out] char  question[]   ???
- * @param [in, out] char  dummy[]   ???
+ * @param [in] char  question[]    The keyword and or question 
+ * @param [in, out] char  dummy[]   The suggested answer
  * @return     When the routine returns NORMAL or OLD the input has been 
  * 	successfully processed
  *
  *
  * ###Notes###
  *
- * At present this is merely a steering routine
+ * At present this is merely a steering routine, which calls
+ * the routines that process an input variable from either 
+ * the command line or from the input file
  *
  **********************************************************/
 
@@ -562,7 +564,6 @@ string_process_from_file (question, dummy)
   char *ccc, *index (), *fgets ();
   int nwords = 0;               // Initialise to avoid warning
   int wordlength;
-//OLD  char old_question[LINELEN];
   char xfirstword[LINELEN], xquestion[LINELEN];
   int i;
 
