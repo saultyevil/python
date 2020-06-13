@@ -18,7 +18,7 @@ cmake_minimum_required(VERSION 3.0)
 
 # Set the Python version
 
-set(PYTHON_VERSION 84cm)
+set(PYTHON_VERSION 84f)
 message(STATUS "Python version : ${PYTHON_VERSION}")
 
 # The C standard is being set to 99, although if we follow this standard is
@@ -78,9 +78,9 @@ endif(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
 
 set(PYTHON_SOURCE
         source/agn.c source/anisowind.c source/bands.c source/bb.c
-        source/bilinear.c source/brem.c source/cdf.c source/compton.c
-        source/continuum.c source/cooling.c source/corona.c source/cv.c
-        source/cylind_var.c source/cylindrical.c source/density.c
+        source/bilinear.c source/brem.c source/cdf.c source/charge_exchange.c
+        source/compton.c source/continuum.c source/cooling.c source/corona.c
+        source/cv.c source/cylind_var.c source/cylindrical.c source/density.c
         source/diag.c source/dielectronic.c source/direct_ion.c source/disk.c
         source/disk_init.c source/emission.c source/estimators.c
         source/extract.c source/frame.c source/get_atomicdata.c
