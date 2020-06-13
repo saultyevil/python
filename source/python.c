@@ -74,8 +74,6 @@ main (argc, argv)
   int get_models ();            // Note: Needed because get_models cannot be included in templates.h
   int dummy_spectype;
 
-  FILE *fopen ();
-
   int opar_stat, restart_stat;
   double time_max;              // The maximum time the program is allowed to run before halting
   double lstar;                 // The luminosity of the star, iv it exists
@@ -83,7 +81,7 @@ main (argc, argv)
   int my_rank;                  // these two variables are used regardless of parallel mode
   int np_mpi;                   // rank and number of processes, 0 and 1 in non-parallel
 
-
+  char dummy[LINELENGTH];
 
 
 
@@ -669,16 +667,10 @@ main (argc, argv)
     wind_paths_evaluate (w, my_rank);
   }
 
-  /*
-   * Perform the optical depth diagnostics routines
-   */
-
-  tau_spectrum_main (w);
-
 /* XXXX - THE CALCULATION OF A DETAILED SPECTRUM IN A SPECIFIC REGION OF WAVELENGTH SPACE */
 
-  freqmax = VLIGHT / (geo.swavemin * 1.e-8);
-  freqmin = VLIGHT / (geo.swavemax * 1.e-8);
+  freqmax = VLIGHT / (geo.swavemin * ANGSTROM);
+  freqmin = VLIGHT / (geo.swavemax * ANGSTROM);
 
   /* Perform the initilizations required to handle macro-atoms during the detailed
      calculation of the spectrum.
@@ -714,5 +706,32 @@ main (argc, argv)
   /* XXXX - Execute  CYCLES TO CREATE THE DETAILED SPECTRUM */
   make_spectra (restart_stat);
 
-  return (0);
+  /*
+   * Perform the optical depth diagnostics routines
+   */
+
+  optical_depth_diagnostics (w);
+
+#ifdef MPI_ON
+  sprintf (dummy, "End of program, Thread %d only", rank_global);       // added so we make clear these are just errors for thread ngit status
+  error_summary (dummy);        // Summarize the errors that were recorded by the program
+  Log ("Run py_error.py for full error report.\n");
+#else
+  error_summary ("End of program");     // Summarize the errors that were recorded by the program
+#endif
+
+#ifdef MPI_ON
+  MPI_Finalize ();
+  Log_parallel ("Thread %d Finalized. All done\n", rank_global);
+#endif
+
+  xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
+  Log ("\nBrief Run Summary\nAt program completion, the elapsed TIME was %f\n", timer ());
+  Log ("There were %d of %d ionization cycles and %d of %d spectral cycles run\n", geo.wcycle, geo.wcycles, geo.pcycle, geo.pcycles);
+  Log ("Convergence statistics for the wind after the ionization calculation:\n");
+  check_convergence ();
+  Log ("Information about luminosities and apparent fluxes due to various portions of the system:\n");
+  phot_status ();
+
+  return (EXIT_SUCCESS);
 }

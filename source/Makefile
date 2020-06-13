@@ -181,7 +181,7 @@ python_source= bb.c get_atomicdata.c python.c photon2d.c photon_gen.c parse.c \
 		import.c import_spherical.c import_cylindrical.c import_rtheta.c\
 		reverb.c paths.c setup.c run.c brem.c synonyms.c walls.c \
 		setup_reverb.c setup_line_transfer.c cv.c import_calloc.c \
-		charge_exchange.c frame.c tau_spectrum.o
+		charge_exchange.c frame.c tau_spectrum.c
 
 
 #

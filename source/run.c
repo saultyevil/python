@@ -660,30 +660,5 @@ make_spectra (restart_stat)
     delay_dump_combine (np_mpi_global); // Combine results if necessary
 #endif
 
-
-/* Finally done */
-
-#ifdef MPI_ON
-  sprintf (dummy, "End of program, Thread %d only", rank_global);       // added so we make clear these are just errors for thread ngit status    
-  error_summary (dummy);        // Summarize the errors that were recorded by the program
-  Log ("Run py_error.py for full error report.\n");
-#else
-  error_summary ("End of program");     // Summarize the errors that were recorded by the program
-#endif
-
-
-#ifdef MPI_ON
-  MPI_Finalize ();
-  Log_parallel ("Thread %d Finalized. All done\n", rank_global);
-#endif
-
-
-  xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
-  Log ("\nBrief Run Summary\nAt program completion, the elapsed TIME was %f\n", timer ());
-  Log ("There were %d of %d ionization cycles and %d of %d spectral cycles run\n", geo.wcycle, geo.wcycles, geo.pcycle, geo.pcycles);
-  Log ("Convergence statistics for the wind after the ionization calculation:\n");
-  check_convergence ();
-  Log ("Information about luminosities and apparent fluxes due to various portions of the system:\n");
-  phot_status ();
   return EXIT_SUCCESS;
 }
