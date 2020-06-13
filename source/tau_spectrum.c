@@ -50,11 +50,11 @@ static const struct edges EDGES[] = {
   {1.394384e+16, "HeIIEdge"}
 };
 
-static int NANGLES;                                    // The number of inclination angles
-static const int NTAU = sizeof EDGES / sizeof *EDGES;  // The number of optical depths for the simple calculation
-static int NBINS_SPEC = NWAVE;                         // The number of bins for the spectra - modified for large frequency range
+static int NANGLES;             // The number of inclination angles
+static const int NTAU = sizeof EDGES / sizeof *EDGES;   // The number of optical depths for the simple calculation
+static int NBINS_SPEC = NWAVE;  // The number of bins for the spectra - modified for large frequency range
 
-#define LAUNCH_DOMAIN 0        // For now, assume we only care about photons starting in domain 0
+#define LAUNCH_DOMAIN 0         // For now, assume we only care about photons starting in domain 0
 
 /* ************************************************************************** */
 /**
@@ -169,7 +169,7 @@ write_optical_depth_spectrum (const double *tau_spectrum, const double freq_min,
 
   for (ifreq = 0; ifreq < NBINS_SPEC; ifreq++)
   {
-    wavelength = VLIGHT / frequency / ANGSTROM;  // TODO check correct conversion
+    wavelength = VLIGHT / frequency / ANGSTROM; // TODO check correct conversion
     fprintf (filep, "%-12e %-12e ", frequency, wavelength);
     for (ispec = 0; ispec < NANGLES; ispec++)
       fprintf (filep, "%-12e ", tau_spectrum[ispec * NBINS_SPEC + ifreq]);
@@ -245,21 +245,19 @@ mpi_gather_spectra (double *const spec, const int nspec)
  * ************************************************************************** */
 
 static int
-calculate_tau_across_cell (WindPtr w, PhotPtr pextract, double *col_den, double *tau)
+calculate_tau_across_cell (WindPtr w, PhotPtr p, double *col_den, double *tau)
 {
   int istat;
   int ndom, nplasma;
   double kappa_tot, density;
-  double smax;
-  double v_inner[3], v_outer[3], v_check[3];
-  double v_extract, v_far, vc, vch;
+  double smax, diff;
   double freq_inner, freq_outer;
   double mean_freq;
   WindPtr wind_cell;
   PlasmaPtr plasma_cell;
-  struct photon p_far, p_mid;
+  struct photon p_start, p_stop, p_now;
 
-  if ((pextract->grid = where_in_grid (w[pextract->grid].ndom, pextract->x)) < 0)
+  if ((p->grid = where_in_grid (w[p->grid].ndom, p->x)) < 0)
   {
     Error ("%s : %i : pextract is not in grid\n", __FILE__, __LINE__);
     return EXIT_FAILURE;
@@ -270,9 +268,9 @@ calculate_tau_across_cell (WindPtr w, PhotPtr pextract, double *col_den, double 
    * column density can be calculated
    */
 
-  wind_cell = &w[pextract->grid];
+  wind_cell = &w[p->grid];
   ndom = wind_cell->ndom;
-  nplasma = w[pextract->grid].nplasma;
+  nplasma = w[p->grid].nplasma;
   plasma_cell = &plasmamain[nplasma];
   density = plasma_cell->rho;
 
@@ -280,54 +278,45 @@ calculate_tau_across_cell (WindPtr w, PhotPtr pextract, double *col_den, double 
    * smax should be the transverse distance of the cell the photon is in
    */
 
-  smax = find_smax (pextract);
+  smax = find_smax (p);
   if (smax < 0)
   {
     Error ("%s : %i : abnormal value of smax for photon\n", __FILE__, __LINE__);
     return EXIT_FAILURE;
   }
 
-  /*
-   * Calculate the velocity at both sides of the cell
+  observer_to_local_frame (p, &p_start);
+  stuff_phot (p, &p_stop);
+  move_phot (&p_stop, smax);
+  observer_to_local_frame (&p_stop, &p_stop);
+
+  /* At this point p_start and pstop are in the local frame
+   * at the and p_stop is at the maximum distance it can
+   * travel.  We want to check that the frequncy shift is
+   * not too great along the path that a linear approximation
+   * to the change in frequency is not reasonable
    */
 
-  stuff_phot (pextract, &p_far);
-  move_phot (&p_far, smax);
-  vwind_xyz (ndom, pextract, v_inner);
-  v_extract = dot (pextract->lmn, v_inner);
-  vwind_xyz (ndom, &p_far, v_outer);
-  v_far = dot (p_far.lmn, v_outer);
+  diff = 1;
+#define MAXDIFF VCHECK/VLIGHT   /* The same as our old velocity requirement */
 
-  /*
-   * Check to see if the velocity is monotonic across the cell by calculating
-   * the velocity at the midpoint of the path. If it is not monotonic, then
-   * reduce smax
-   */
-
-  vc = VLIGHT;
-  while (vc > VCHECK && smax > DFUDGE)
+  while (smax > DFUDGE)
   {
-    stuff_phot (pextract, &p_mid);
-    move_phot (&p_mid, smax / 2.);
-    vwind_xyz (ndom, &p_mid, v_check);
-    vch = dot (p_mid.lmn, v_check);
-    vc = fabs (vch - 0.5 * (v_extract + v_far));
-    if (vc > VCHECK)
+    stuff_phot (p, &p_now);
+    move_phot (&p_now, smax * 0.5);
+    observer_to_local_frame (&p_now, &p_now);
+    diff = fabs (p_now.freq - 0.5 * (p_start.freq + p_stop.freq)) / p_start.freq;
+    if (diff < MAXDIFF)
     {
-      stuff_phot (&p_mid, &p_far);
-      smax *= 0.5;
-      v_far = vch;
+      break;
     }
+    stuff_phot (&p_now, &p_stop);
+    smax *= 0.5;
   }
 
-  /*
-   * Doppler shift the photons from the global to the local frame of rest
-   * TODO update to new frame treatment
-   */
-
-  freq_inner = pextract->freq * (1.0 - v_extract / VLIGHT);
-  freq_outer = p_far.freq * (1.0 - v_far / VLIGHT);
-  mean_freq = (freq_inner + freq_outer) / 2.0;
+  freq_inner = p_start.freq;
+  freq_outer = p_stop.freq;
+  mean_freq = 0.5 * (freq_inner + freq_outer);
 
   /*
    * Now we can finally calculate the opacity due to all the continuum
@@ -343,7 +332,7 @@ calculate_tau_across_cell (WindPtr w, PhotPtr pextract, double *col_den, double 
 
   if (geo.rt_mode == RT_MODE_2LEVEL)
   {
-    kappa_tot += radiation (pextract, smax);
+    kappa_tot += radiation (p, smax);
   }
   else if (geo.rt_mode == RT_MODE_MACRO)
   {
@@ -363,8 +352,8 @@ calculate_tau_across_cell (WindPtr w, PhotPtr pextract, double *col_den, double 
 
   *col_den += smax * density;
   *tau += smax * kappa_tot;
-  move_phot (pextract, smax);
-  istat = pextract->istat;
+  move_phot (p, smax);
+  istat = p->istat;
 
   return istat;
 }
@@ -401,7 +390,7 @@ extract_tau (WindPtr w, PhotPtr porig, double *col_den, double *tau)
   double norm[3];
   struct photon pextract;
 
-  istat = P_INWIND;               // assume photon is in wind for initialisation reasons
+  istat = P_INWIND;             // assume photon is in wind for initialisation reasons
   stuff_phot (porig, &pextract);
 
   nspace = 0;
@@ -549,6 +538,7 @@ create_tau_photon (PhotPtr pout, double nu, double *lmn)
   pout->w = pout->w_orig = geo.f_tot;
   pout->tau = 0.0;
   pout->x[0] = pout->x[1] = pout->x[2] = 0;
+  pout->frame = F_OBSERVER;
   move_phot (pout, geo.rstar + DFUDGE);
   reposition_tau_photon (pout);
 
@@ -597,7 +587,7 @@ init_sightlines (void)
       Error ("%s : %i : cannot allocate %d bytes for observers array\n", __FILE__, __LINE__, mem_req);
       Exit (1);
     }
-    else  // Use else to avoid compiler warning
+    else                        // Use else to avoid compiler warning
     {
       for (iangle = MSPEC; iangle < MSPEC + geo.nangles; iangle++)
       {

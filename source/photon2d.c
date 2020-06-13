@@ -429,17 +429,18 @@ find_smax (PhotPtr p)
   one = &wmain[n];              /* one is the grid cell where the photon is */
   ndom = one->ndom;
 
+/* Calculate the maximum distance the photon can travel in the cell */
+
   if ((smax = ds_in_cell (ndom, p)) < 0)
   {
     return ((int) smax);
   }
-
   if (one->inwind == W_PART_INWIND)
   {                             /* The cell is partially in the wind */
     s = ds_to_wind (p, &ndom_current);  /* smax is set to be the distance to edge of the wind */
     if (s < smax)
       smax = s;
-    s = ds_to_disk (p, 0);      /* ds_to_disk can return a negative distance */
+    s = ds_to_disk (p, 0);      /* the 0 implies ds_to_disk can not return a negative distance */
     if (s > 0 && s < smax)
       smax = s;
   }
@@ -448,24 +449,27 @@ find_smax (PhotPtr p)
     smax += one->dfudge;
     move_phot (p, smax);
     return (p->istat);
+
   }
   else if (one->inwind == W_NOT_INWIND)
   {                             /* The cell is not in the wind at all */
-    Error ("find_smax: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
-    Log ("find_smax: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
+
+    Error ("translate_in_wind: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
+    Error ("translate_in_wind: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
     move_phot (p, smax);
     return (p->istat);
+
   }
 
-  /* At this point we now know how far the photon can travel in it's current grid cell */
+/* At this point we now know how far the photon can travel in it's current grid cell */
 
   smax += one->dfudge;          /* dfudge is to force the photon through the cell boundaries. */
 
-  /* Set limits the distance a photon can travel.  There are
-     a good many photons which travel more than this distance without this
-     limitation, at least in the standard 30 x 30 instantiation.  It does
-     make small differences in the structure of lines in some cases.
-     The choice of SMAX_FRAC can affect execution time. */
+/* Set limits the distance a photon can travel.  There are
+a good many photons which travel more than this distance without this
+limitation, at least in the standard 30 x 30 instantiation.  It does
+make small differences in the structure of lines in some cases.
+The choice of SMAX_FRAC can affect execution time.*/
 
   if (smax > SMAX_FRAC * length (p->x))
   {
@@ -524,13 +528,10 @@ translate_in_wind (w, p, tau_scat, tau, nres)
 
 
 {
-
   int n;
-  double smax, s, ds_current;
+  double smax, ds_current;
   int istat;
   int nplasma;
-  int ndom, ndom_current;
-  int inwind;
 
   WindPtr one;
   PlasmaPtr xplasma;
@@ -555,62 +556,12 @@ return and record an error */
   one = &wmain[n];              /* one is the grid cell where the photon is */
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
-  ndom = one->ndom;
-  inwind = one->inwind;
 
-
-
-/* Calculate the maximum distance the photon can travel in the cell */
-
-  if ((smax = ds_in_cell (ndom, p)) < 0)
-  {
-    return ((int) smax);
-  }
-  if (one->inwind == W_PART_INWIND)
-  {                             /* The cell is partially in the wind */
-    s = ds_to_wind (p, &ndom_current);  /* smax is set to be the distance to edge of the wind */
-    if (s < smax)
-      smax = s;
-    s = ds_to_disk (p, 0);      /* the 0 implies ds_to_disk can not return a negative distance */
-    if (s > 0 && s < smax)
-      smax = s;
-  }
-  else if (one->inwind == W_IGNORE)
-  {
-    smax += one->dfudge;
-    move_phot (p, smax);
-    return (p->istat);
-
-  }
-  else if (one->inwind == W_NOT_INWIND)
-  {                             /* The cell is not in the wind at all */
-
-    Error ("translate_in_wind: Grid cell %d of photon is not in wind, moving photon %.2e\n", n, smax);
-    Error ("translate_in_wind: photon %d position: x %g y %g z %g\n", p->np, p->x[0], p->x[1], p->x[2]);
-    move_phot (p, smax);
-    return (p->istat);
-
-  }
+  smax = find_smax (p);
 
   if (modes.save_photons)
   {
     Diag ("smax  %10.3e tau_scat %10.3e tau %10.3e\n", smax, tau_scat, *tau);
-  }
-
-
-/* At this point we now know how far the photon can travel in it's current grid cell */
-
-  smax += one->dfudge;          /* dfudge is to force the photon through the cell boundaries. */
-
-/* Set limits the distance a photon can travel.  There are
-a good many photons which travel more than this distance without this
-limitation, at least in the standard 30 x 30 instantiation.  It does
-make small differences in the structure of lines in some cases.
-The choice of SMAX_FRAC can affect execution time.*/
-
-  if (smax > SMAX_FRAC * length (p->x))
-  {
-    smax = SMAX_FRAC * length (p->x);
   }
 
   /* We now determine whether scattering prevents the photon from reaching the far edge of
