@@ -77,6 +77,7 @@ cooling (xxxplasma, t)
 
   /* we now call xtotal emission which computes the cooling rates for processes which can, in principle, make photons. */
 
+
   xxxplasma->cool_tot =
     xxxplasma->cool_adiabatic + xxxplasma->cool_dr + xxxplasma->cool_di +
     xxxplasma->cool_comp + xtotal_emission (&wmain[xxxplasma->nwind], 0., VERY_BIG);
@@ -350,14 +351,14 @@ shock_heating (one)
 double
 wind_cooling ()
 {
-  double cool, lum_lines, cool_rr, lum_ff, cool_comp, cool_dr, cool_di, cool_adiab, heat_adiab;
+  double cool, lum_lines, cool_rr, lum_ff, cool_comp, cool_dr, cool_di, cool_adiab, heat_adiab, cool_ch_ex;
   double nonthermal;
   int n;
   double x;
   int nplasma;
 
 
-  cool = lum_lines = cool_rr = lum_ff = cool_comp = 0;
+  cool = lum_lines = cool_rr = lum_ff = cool_comp = cool_ch_ex = 0;
   cool_dr = cool_di = cool_adiab = heat_adiab = 0;      //1108 NSH Zero the new counter 1109 including DR counter 1408 and the DI counter
   nonthermal = 0;
 

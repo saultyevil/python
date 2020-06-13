@@ -524,6 +524,7 @@ calc_te (PlasmaPtr xplasma, double tmin, double tmax)
 
   xxxplasma = xplasma;
 
+  xxxplasma->heat_tot += xxxplasma->heat_ch_ex;
 
   xplasma->t_e = tmin;
   z1 = zero_emit (tmin);
