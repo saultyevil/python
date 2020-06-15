@@ -669,8 +669,8 @@ main (argc, argv)
 
 /* XXXX - THE CALCULATION OF A DETAILED SPECTRUM IN A SPECIFIC REGION OF WAVELENGTH SPACE */
 
-  freqmax = VLIGHT / (geo.swavemin * 1.e-8);
-  freqmin = VLIGHT / (geo.swavemax * 1.e-8);
+  freqmax = VLIGHT / (geo.swavemin * ANGSTROM);
+  freqmin = VLIGHT / (geo.swavemax * ANGSTROM);
 
   /* Perform the initilizations required to handle macro-atoms during the detailed
      calculation of the spectrum.
@@ -710,7 +710,7 @@ main (argc, argv)
    * Perform the optical depth diagnostics routines
    */
 
-  tau_spectrum_main (w);
+  optical_depth_diagnostics (w);
 
 #ifdef MPI_ON
   sprintf (dummy, "End of program, Thread %d only", rank_global);       // added so we make clear these are just errors for thread ngit status
@@ -720,12 +720,10 @@ main (argc, argv)
   error_summary ("End of program");     // Summarize the errors that were recorded by the program
 #endif
 
-
 #ifdef MPI_ON
   MPI_Finalize ();
   Log_parallel ("Thread %d Finalized. All done\n", rank_global);
 #endif
-
 
   xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
   Log ("\nBrief Run Summary\nAt program completion, the elapsed TIME was %f\n", timer ());
@@ -735,5 +733,5 @@ main (argc, argv)
   Log ("Information about luminosities and apparent fluxes due to various portions of the system:\n");
   phot_status ();
 
-  return (0);
+  return (EXIT_SUCCESS);
 }

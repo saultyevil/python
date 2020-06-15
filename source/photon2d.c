@@ -91,8 +91,7 @@ translate (w, pp, tau_scat, tau, nres)
 
   if (where_in_wind (pp->x, &ndomain) < 0)      //If the return is negative, this means we are outside the wind
   {
-    istat = translate_in_space (pp);    //And so we should translate in space
-
+    istat = translate_in_space (pp);
   }
   else if ((pp->grid = where_in_grid (ndomain, pp->x)) >= 0)
   {
@@ -535,7 +534,7 @@ translate_in_wind (w, p, tau_scat, tau, nres)
      int *nres;
 {
   int n;
-  double smax, s, ds_current;
+  double smax, ds_current;
   int istat;
   int nplasma;
 
