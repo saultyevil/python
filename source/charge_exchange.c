@@ -44,7 +44,7 @@ compute_ch_ex_coeffs (double T)
   double T_used;
 
   /*first compute the (metal) recombination rates. There is an approximation to use for ions without a rate (generally those
-  above 4x ionized) so we compute a rate for all ions other thasn the neutral ions and hydrogen */
+     above 4x ionized) so we compute a rate for all ions other thasn the neutral ions and hydrogen */
 
   for (n = 0; n < nions; n++)
   {
@@ -57,7 +57,7 @@ compute_ch_ex_coeffs (double T)
       else
       {
         m = ion[n].n_ch_ex;
-        if (T < charge_exchange[m].tmin) /*Follow cloudy here - outside the applicable temperature range, use the rate for the last temperature */
+        if (T < charge_exchange[m].tmin)        /*Follow cloudy here - outside the applicable temperature range, use the rate for the last temperature */
           T_used = charge_exchange[m].tmin;
         else if (T > charge_exchange[m].tmax)
           T_used = charge_exchange[m].tmax;
@@ -138,9 +138,9 @@ ch_ex_heat (one, t_e)
   x = 0;                        //zero the luminosity
 
 
-  compute_ch_ex_coeffs (t_e);        //Calculate the charge exchange rate coefficients for this cell
+  compute_ch_ex_coeffs (t_e);   //Calculate the charge exchange rate coefficients for this cell
 
-  for (n = 0; n < nions; n++) //We need the hydrogen densities, get them here via a rather belt and braces approach
+  for (n = 0; n < nions; n++)   //We need the hydrogen densities, get them here via a rather belt and braces approach
   {
     if (ion[n].z == 1 && ion[n].istate == 1)
     {
@@ -169,9 +169,9 @@ ch_ex_heat (one, t_e)
       }
     }
   }
-  
- /* and now the ionization effect */ 
-  
+
+  /* and now the ionization effect */
+
   for (n = 0; n < n_charge_exchange; n++)
     if (ion[charge_exchange[n].nion2].z == 1)   //A hydrogen recomb - metal ionization rate
     {

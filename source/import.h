@@ -37,8 +37,7 @@
 
  struct
 {
-
-int init_temperature;        // initialise to t.wind.init if TRUE
+  int init_temperature;        // initialise to t.wind.init if TRUE
   int ncell;                    // the total number of cells read in
   int ndim, mdim;               // the number of coordinates in the n and m dimensions
   int *i, *j;                   // the i (row) and j (column) elements
