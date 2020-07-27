@@ -107,7 +107,7 @@ double PHOT_RANGE;              /* When a variable number of photons are called 
 int NPHOT_MAX;                  /* The maximum number of photon bundles created per cycle */
 int NPHOT;                      /* The number of photon bundles created, defined in setup.c */
 
-#define NWAVE  			  10000 //This is the number of wavelength bins in spectra that are produced
+#define NWAVE  			  50000 //This is the number of wavelength bins in spectra that are produced
 #define MAXSCAT 			2000
 
 /* Define the structures */
@@ -385,6 +385,10 @@ struct geometry
   double tmax;                  /*NSH 120817 the maximum temperature of any element of the model
                                    - used to help estimate things for an exponential representation of the spectrum in a cell */
 
+#define DISK_MISSED 0
+#define DISK_HIT_TOP 1
+#define DISK_HIT_BOT 2
+#define DISK_HIT_EDGE  3
 
 #define DISK_NONE   0
 #define DISK_FLAT   1
@@ -1118,6 +1122,8 @@ typedef struct photon
   double freq, freq_orig, freq_orig_loc;        /* current, original frequency redshifted and unredshifted) of this packet */
   double w, w_orig;                             /* current and original weight of this packet */
   double tau;                                   /* optical depth of the photon since its creation or last interaction */
+
+#define N_ISTAT 13 // number of entries in the istat_enum
   enum istat_enum
   {
     P_INWIND = 0,               //in wind,
