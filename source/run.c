@@ -260,7 +260,7 @@ calculate_ionization (restart_stat)
 
 
     photon_checks (p, freqmin, freqmax, "Check after transport");
-    spectrum_create (p, freqmin, freqmax, geo.nangles, geo.select_extract);
+    spectrum_create (p, geo.nangles, geo.select_extract);
 
 
 
@@ -551,7 +551,6 @@ make_spectra (restart_stat)
     nphot_to_define = (long) NPHOT *(long) geo.pcycles;
     define_phot (p, freqmin, freqmax, nphot_to_define, 1, iwind, 0);
 
-    /* TODAY */
 //OLD    if (modes.save_photons)
 //OLD    {
 //OLD      for (n = 0; n < NPHOT; n++)
@@ -573,7 +572,7 @@ make_spectra (restart_stat)
 
     trans_phot (w, p, geo.select_extract);
 
-    spectrum_create (p, freqmin, freqmax, geo.nangles, geo.select_extract);
+    spectrum_create (p, geo.nangles, geo.select_extract);
 
 /* Write out the detailed spectrum each cycle so that one can see the statistics build up! */
     renorm = ((double) (geo.pcycles)) / (geo.pcycle + 1.0);
@@ -643,5 +642,43 @@ make_spectra (restart_stat)
 
 /* Finally done */
 
+#ifdef MPI_ON
+  sprintf (dummy, "End of program, Thread %d only", rank_global);       // added so we make clear these are just errors for thread ngit status    
+  error_summary (dummy);        // Summarize the errors that were recorded by the program
+  Log ("Run py_error.py for full error report.\n");
+#else
+  error_summary ("End of program");     // Summarize the errors that were recorded by the program
+#endif
+
+
+#ifdef MPI_ON
+  MPI_Finalize ();
+  Log_parallel ("Thread %d Finalized. All done\n", rank_global);
+#endif
+
+
+  xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
+  Log ("\nBrief Run Summary\nAt program completion, the elapsed TIME was %f\n", timer ());
+  Log ("There were %d of %d ionization cycles and %d of %d spectral cycles run\n", geo.wcycle, geo.wcycles, geo.pcycle, geo.pcycles);
+  if (geo.rt_mode == RT_MODE_MACRO)
+  {
+    if (nlevels_macro == 0)
+    {
+      Log ("THIS WAS A MACROATOM CALCULATION WITH NO MACROLEVELS. (Use for diagnostics only)\n");
+    }
+    else
+    {
+      Log ("This was a macro-atom calculation\n");
+    }
+  }
+  else
+  {
+    Log ("This was a simple atom calculation\n");
+  }
+
+  Log ("Convergence statistics for the wind after the ionization calculation:\n");
+  check_convergence ();
+  Log ("Information about luminosities and apparent fluxes due to various portions of the system:\n");
+  phot_status ();
   return EXIT_SUCCESS;
 }

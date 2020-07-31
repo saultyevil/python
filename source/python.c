@@ -412,6 +412,22 @@ main (argc, argv)
   else
     Log ("There is no BH \n");
 
+  if (geo.rt_mode == RT_MODE_MACRO)
+  {
+    if (nlevels_macro == 0)
+    {
+      Error ("THIS IS A MACROATOM CALCULATION WITH NO MACROLEVELS\n");
+    }
+    else
+    {
+      Log ("This is a macro-atom calculation\n");
+    }
+  }
+  else
+  {
+    Log ("This is a simple atom calculation\n");
+  }
+
   /* Describe the spectra which will be extracted and the way it will be extracted */
 
   /* First initialise things to semi-reasonable values */
