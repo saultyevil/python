@@ -32,8 +32,8 @@ int main(int argc, char *argv[]);
 int translate(WindPtr w, PhotPtr pp, double tau_scat, double *tau, int *nres);
 int translate_in_space(PhotPtr pp);
 double ds_to_wind(PhotPtr pp, int *ndom_current);
-double smax_in_cell (PhotPtr p);
 int translate_in_wind(WindPtr w, PhotPtr p, double tau_scat, double *tau, int *nres);
+double smax_in_cell(PhotPtr p);
 double ds_in_cell(int ndom, PhotPtr p);
 /* photon_gen.c */
 int define_phot(PhotPtr p, double f1, double f2, long nphot_tot, int ioniz_or_final, int iwind, int freq_sampling);
@@ -581,6 +581,7 @@ int observer_to_local_frame(PhotPtr p_in, PhotPtr p_out);
 int local_to_observer_frame(PhotPtr p_in, PhotPtr p_out);
 int observer_to_local_frame_disk(PhotPtr p_in, PhotPtr p_out);
 int local_to_observer_frame_disk(PhotPtr p_in, PhotPtr p_out);
+double observer_to_local_frame_ds(PhotPtr p, double ds_obs);
 /* tau_spectrum.c */
 void optical_depth_diagnostics(WindPtr w);
 /* py_wind_sub.c */

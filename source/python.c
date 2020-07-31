@@ -740,6 +740,21 @@ main (argc, argv)
   xsignal (files.root, "%-20s %s\n", "COMPLETE", files.root);
   Log ("\nBrief Run Summary\nAt program completion, the elapsed TIME was %f\n", timer ());
   Log ("There were %d of %d ionization cycles and %d of %d spectral cycles run\n", geo.wcycle, geo.wcycles, geo.pcycle, geo.pcycles);
+  if (geo.rt_mode == RT_MODE_MACRO)
+  {
+    if (nlevels_macro == 0)
+    {
+      Log ("THIS WAS A MACROATOM CALCULATION WITH NO MACROLEVELS. (Use for diagnostics only)\n");
+    }
+    else
+    {
+      Log ("This was a macro-atom calculation\n");
+    }
+  }
+  else
+  {
+    Log ("This was a simple atom calculation\n");
+  }
   Log ("Convergence statistics for the wind after the ionization calculation:\n");
   check_convergence ();
   Log ("Information about luminosities and apparent fluxes due to various portions of the system:\n");
