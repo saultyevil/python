@@ -719,7 +719,10 @@ create_optical_depth_spectrum (WindPtr w)
   for (i = 0; i < NSIGHTLINES; i++)
   {
     Log ("  - Creating spectrum: %s\n", SIGHTLINES[i].name);
+
     current_freq = mpi_lower * dfreq;
+    if (current_freq < freq_min)
+      current_freq = freq_min;
 
     for (j = mpi_lower; j < mpi_upper; j++)
     {
