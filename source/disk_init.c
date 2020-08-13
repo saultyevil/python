@@ -411,7 +411,7 @@ read_non_standard_disk_profile (filename)
 
   if ((fptr = fopen (filename, "r")) == NULL)
   {
-    Error ("Could not open filename %s\n", filename);
+    Error ("read_non_standard_disk_profile: unable to open temperature profile with filename %s\n", filename);
     Exit (1);
   }
 
@@ -450,15 +450,19 @@ read_non_standard_disk_profile (filename)
     }
   }
 
-  if (geo.diskrad > blmod.r[blmod.n_blpts - 1])
+  free (line);
+  if (fclose (fptr))            // warn, but do not exit
+    Error ("read_non_standard_disk_profile: couldn't close the temperature profile file\n");
+
+  geo.diskrad = blmod.r[blmod.n_blpts - 1];
+  if (sane_check (geo.diskrad))
   {
-    Error ("read_non_standard_disk_profile: The disk radius (%.2e) exceeds rmax (%.2e) in the temperature profile\n", geo.diskrad,
-           blmod.r[blmod.n_blpts - 1]);
-    Log ("read_non_standard_disk_profile: Portions of the disk outside are treated as part of a steady state disk\n");
+    Error ("read_non_standard_disk_profile: insane value for the disk radius of %g\n", geo.diskrad);
+    Exit (1);
   }
 
-  free (line);
-  fclose (fptr);
+  Log ("geo.diskrad  %e\n", geo.diskrad);
+
 
   return (0);
 }

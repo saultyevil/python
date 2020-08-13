@@ -81,17 +81,26 @@ tdisk (m, mdot, r)
  *
  *  - DISK_TPROFILE_READIN  the returned temperature is interpolated from values that
  *    been read in
+ *  - DISK_TPROFILE_EDDINGTON_CRITICAL  the returned temperature is that from an
+ *    accretion disc which is near or exceeds the Eddington accretion rate
  *
  *  In addition for a standard profile, this is where disk heading can optionally
- *  be taken into account
- *
+ *  be taken into account. NOTE that this does mean with an Eddington critical
+ *  profile, disk heating is not taken into account.
  *
  * ###Notes###
  *
- * A reference for the standard steady state disk is Wade, 1984 MNRAS 208, 381
+ * A reference for the standard steady state disk is Wade, 1984 MNRAS 208, 381.
+ * A reference for the Eddington critical disc is Strubbe & Quataert, 2009,
+ * MNRAS 400, 2070
  *
  * An analytic profile used for Sim+05 to model certain YSO winds was removed in
- * 1907
+ * July 2019.
+ *
+ * TODO: the section of the code which calculates the Eddington critical profile
+ * could be improved as it recalculates constants each time this function
+ * is called. The performance hit of this is minimal as this function is not
+ * called many times, hence for now it will be left like this.
  *
  **********************************************************/
 
@@ -100,11 +109,11 @@ teff (t, x)
      double t, x;
 {
   double q;
+  double q1, q2, q3;
   double theat, r;
   double temp;
-  int kkk;
+  int n, kkk;
   double rg, risco, fnt, ledd;
-  double q1, q2, q3;
 
   if (x < 1)
   {
@@ -117,8 +126,38 @@ teff (t, x)
    *  steady state disk will be used instead
    */
 
-  if (geo.disk_tprofile == DISK_TPROFILE_READIN && x * geo.rstar < blmod.r[blmod.n_blpts - 1])
+  if (geo.disk_tprofile == DISK_TPROFILE_READIN)
   {
+    if (x * geo.rstar > blmod.r[blmod.n_blpts - 1])
+    {
+      Error ("teff: attempting to set a disk temperature at radius %e when maximum disk radius is %e\n", x * geo.rstar,
+             blmod.r[blmod.n_blpts - 1]);
+
+      /*
+       * The point of the next part of the code is to try and be more helpful to
+       * the user when this error happens. We loop over the domains to try and
+       * try to inform the user why the error actually happened. I think this
+       * should only affect the wind types in the check below.
+       */
+
+      for (n = 0; n < geo.ndomain; ++n)
+      {
+        switch (zdom[n].wind_type)
+        {
+          case SV:
+          case KNIGGE:
+          case IMPORT:
+          case HYDRO:
+            Error("teff: trying to find temperature for a part of the wind which does launch from the disk\n");
+          default:
+            break;
+        }
+      }
+
+      return 0;
+//      Exit(1);
+    }
+
     /* This is the case where the temperature profile is read in as an array, and so we
        simply find the array elements that bracket the requested radius and do a linear
        interpolation to calculate the temperature at the requested radius. */

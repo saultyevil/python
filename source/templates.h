@@ -466,7 +466,7 @@ int get_domain_params(int ndom);
 int get_wind_params(int ndom);
 int setup_windcone(void);
 /* setup_disk.c */
-double get_disk_params(void);
+int get_disk_params(void);
 /* photo_gen_matom.c */
 double get_kpkt_f(void);
 double get_kpkt_heating_f(void);

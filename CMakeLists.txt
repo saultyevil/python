@@ -27,7 +27,7 @@ message(STATUS "Python version : ${PYTHON_VERSION}")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_COMPILER mpicc)
-add_definitions(-Wall -Wextra -O3 -D MPI_ON)
+add_definitions(-Wall -Wextra -D MPI_ON)
 
 # Setup any include directories, as well as any library directories. This is
 # used to link the GSL directories
@@ -104,7 +104,7 @@ set(PYTHON_SOURCE
         source/trans_phot.c source/vvector.c source/walls.c source/wind.c
         source/wind2d.c source/wind_sum.c source/wind_updates2d.c
         source/wind_util.c source/windsave.c source/windsave2table_sub.c
-        source/xlog.c source/zeta.c
+        source/xlog.c source/zeta.c source/charge_exchange.c
         )
 
 set(PY_WIND_SOURCE

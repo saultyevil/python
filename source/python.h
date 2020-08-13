@@ -413,9 +413,8 @@ struct geometry
 #define DISK_TPROFILE_STANDARD           0       // This is a standard Shakura-Sunyaev disk. The profile depends on mstar and mdot_disk
 #define DISK_TPROFILE_READIN             1       // Here the temperature profile for the disk is simply read in as a function of radius
 #define DISK_TPROFILE_EDDINGTON_CRITICAL 2       // This is a basically the modified Shakura-Synyaev disk profile from Strubbe & Quataert (2009)
-//OLD #define DISK_TPROFILE_YSO               2       // The so-called YSO option was created for the YSO case
-  int disk_tprofile;            /* This is an variable used to specify a standard accretion disk (0) or
-                                   one that has been read in and stored. */
+
+  int disk_tprofile;            /* This is an variable used to specify the accretion disc temperature profile. */
   double disk_mdot;             /* mdot of  DISK */
   double diskrad, diskrad_sq;
   double disk_z0, disk_z1;      /* For vertically extended disk, z=disk_z0*(r/diskrad)**disk_z1 *diskrad */
