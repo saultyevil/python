@@ -372,6 +372,11 @@ structure does not have this property! */
           ion[nions].ip = p * EV2ERGS;
           ion[nions].nmax = nmax;
 /* Use the keyword IonM to classify the ion as a macro-ion (IonM) or not (simply Ion) */
+          if (ion[nions].g != 1 && ion[nions].istate == (ion[nions].z + 1)) // RG addressing bug #749
+          {
+              Error("g is >1 for bare ion! setting to 1\n");
+              ion[nions].g = 1;
+          }
           if (strncmp (word, "IonM", 4) == 0)
           {
             ion[nions].macro_info = 1;
