@@ -79,8 +79,6 @@ radiation (PhotPtr p, double ds)
   double density, ft, tau, tau2;
   double energy_abs_obs, energy_abs_cmf;
   int n, nion;
-  double q, x, z;
-  double w_ave, w_in, w_out;
   double q, x, z, z_obs;
   double w_ave_obs, w_in, w_out;
   int nconf;
