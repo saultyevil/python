@@ -93,7 +93,7 @@ set(PYTHON_SOURCE
         source/compton.c source/continuum.c source/cooling.c source/corona.c
         source/cv.c source/cylind_var.c source/cylindrical.c source/density.c
         source/diag.c source/dielectronic.c source/direct_ion.c source/disk.c
-        source/disk_init.c source/emission.c source/estimators.c
+        source/disk_init.c source/emission.c source/estimators.c source/estimators_simple.c
         source/extract.c source/frame.c source/get_models.c source/gradv.c
         source/gridwind.c source/homologous.c source/hydro_import.c
         source/import.c source/import_calloc.c source/import_cylindrical.c

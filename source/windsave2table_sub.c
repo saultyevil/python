@@ -424,57 +424,66 @@ create_heat_table (ndom, rootname)
   c[5] = get_one (ndom, "w");
   strcpy (column_name[5], "w");
 
-  c[6] = get_one (ndom, "heat_tot");
-  strcpy (column_name[6], "heat_tot");
+  c[6] = get_one (ndom, "ave_freq");
+  strcpy (column_name[6], "ave_freq");
 
-  c[7] = get_one (ndom, "heat_comp");
-  strcpy (column_name[7], "heat_comp");
+  c[7] = get_one (ndom, "j");
+  strcpy (column_name[7], "j");
 
-  c[8] = get_one (ndom, "heat_lines");
-  strcpy (column_name[8], "heat_lines");
+  c[8] = get_one (ndom, "lum_tot");
+  strcpy (column_name[8], "lum_tot");
 
-  c[9] = get_one (ndom, "heat_ff");
-  strcpy (column_name[9], "heat_ff");
+  c[9] = get_one (ndom, "heat_tot");
+  strcpy (column_name[9], "heat_tot");
 
-  c[10] = get_one (ndom, "heat_photo");
-  strcpy (column_name[10], "heat_photo");
+  c[10] = get_one (ndom, "heat_comp");
+  strcpy (column_name[10], "heat_comp");
 
-  c[11] = get_one (ndom, "heat_auger");
-  strcpy (column_name[11], "heat_auger");
+  c[11] = get_one (ndom, "heat_lines");
+  strcpy (column_name[11], "heat_lines");
 
-  c[12] = get_one (ndom, "cool_tot");
-  strcpy (column_name[12], "cool_tot");
+  c[12] = get_one (ndom, "heat_ff");
+  strcpy (column_name[12], "heat_ff");
 
-  c[13] = get_one (ndom, "cool_comp");
-  strcpy (column_name[13], "cool_comp");
+  c[13] = get_one (ndom, "heat_photo");
+  strcpy (column_name[13], "heat_photo");
 
-  c[14] = get_one (ndom, "lum_lines");
-  strcpy (column_name[14], "lum_lines");
+  c[14] = get_one (ndom, "heat_auger");
+  strcpy (column_name[14], "heat_auger");
 
-  c[15] = get_one (ndom, "cool_dr");
-  strcpy (column_name[15], "cool_dr");
+  c[15] = get_one (ndom, "cool_tot");
+  strcpy (column_name[15], "cool_tot");
 
-  c[16] = get_one (ndom, "lum_ff");
-  strcpy (column_name[16], "lum_ff");
+  c[16] = get_one (ndom, "cool_comp");
+  strcpy (column_name[16], "cool_comp");
+
+  c[17] = get_one (ndom, "lum_lines");
+  strcpy (column_name[17], "lum_lines");
+
+  c[18] = get_one (ndom, "cool_dr");
+  strcpy (column_name[18], "cool_dr");
+
+  c[19] = get_one (ndom, "lum_ff");
+  strcpy (column_name[19], "lum_ff");
 
 
-  c[17] = get_one (ndom, "cool_rr");
-  strcpy (column_name[17], "cool_rr");
+  c[20] = get_one (ndom, "cool_rr");
+  strcpy (column_name[20], "cool_rr");
 
-  c[18] = get_one (ndom, "cool_adiab");
-  strcpy (column_name[18], "cool_adiab");
+  c[21] = get_one (ndom, "cool_adiab");
+  strcpy (column_name[21], "cool_adiab");
 
-  c[19] = get_one (ndom, "heat_shock");
-  strcpy (column_name[19], "heat_shock");
+  c[22] = get_one (ndom, "heat_shock");
+  strcpy (column_name[22], "heat_shock");
 
-  c[20] = get_one (ndom, "heat_lines_macro");
-  strcpy (column_name[20], "heat_lines_macro");
+  c[23] = get_one (ndom, "heat_lines_macro");
+  strcpy (column_name[23], "heat_lines_macro");
 
-  c[21] = get_one (ndom, "heat_photo_macro");
-  strcpy (column_name[21], "heat_photo_macro");
+  c[24] = get_one (ndom, "heat_photo_macro");
+  strcpy (column_name[24], "heat_photo_macro");
 
   /* This should be the maxium number above +1 */
-  ncols = 22;
+  ncols = 25;
 
 
   converge = get_one (ndom, "converge");
@@ -788,7 +797,7 @@ create_convergence_table (ndom, rootname)
  *
  * ### Notes ###
  *
- * The routine calls get_ion_density mulitiple times, once for
+ * The routine calls get_ion mulitiple times, once for
  * each ion of an atom
  *
  **********************************************************/
@@ -1005,7 +1014,7 @@ get_ion (ndom, element, istate, iswitch, name)
   {
     x[n] = 0;
     nplasma = wmain[nstart + n].nplasma;
-    if (wmain[nstart + n].vol > 0.0 && plasmamain[nplasma].rho > 0.0)
+    if (wmain[nstart + n].inwind >= 0 && plasmamain[nplasma].rho > 0.0)
     {
       if (iswitch == 0)
       {
@@ -1114,7 +1123,7 @@ get_one (ndom, variable_name)
   for (n = 0; n < ndim2; n++)
   {
     x[n] = 0;
-    if (wmain[n + nstart].vol > 0.0)
+    if (wmain[n + nstart].inwind >= 0)
     {
       nplasma = wmain[n + nstart].nplasma;
 
@@ -1154,6 +1163,14 @@ get_one (ndom, variable_name)
       else if (strcmp (variable_name, "dt_e_old") == 0)
       {
         x[n] = plasmamain[nplasma].dt_e_old;
+      }
+      else if (strcmp (variable_name, "j") == 0)
+      {
+        x[n] = plasmamain[nplasma].j;
+      }
+      else if (strcmp (variable_name, "ave_freq") == 0)
+      {
+        x[n] = plasmamain[nplasma].ave_freq;
       }
       else if (strcmp (variable_name, "converge") == 0)
       {
@@ -1210,6 +1227,10 @@ get_one (ndom, variable_name)
       else if (strcmp (variable_name, "cool_comp") == 0)
       {
         x[n] = plasmamain[nplasma].cool_comp;
+      }
+      else if (strcmp (variable_name, "lum_tot") == 0)
+      {
+        x[n] = plasmamain[nplasma].lum_tot;
       }
       else if (strcmp (variable_name, "lum_lines") == 0)
       {

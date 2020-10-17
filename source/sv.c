@@ -244,10 +244,6 @@ sv_velocity (x, v, ndom)
     Error ("sv_velocity: rzero %f theta %f ldist %f zzz %f v_escape %f vl %f\n", rzero, theta, ldist, zzz, v_escape, vl);
   }
 
-//OLD  Log ("SV Vel %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e \n", x[0], x[1], x[2], rzero_orig, rzero, ldist_orig, ldist, vl,
-//OLD       speed);
-
-
 
   return (speed);
 

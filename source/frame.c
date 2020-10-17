@@ -140,8 +140,6 @@ observer_to_local_frame (p_in, p_out)
 
 
 
-  // beta=length(v)/VLIGHT;
-
   gamma = 1. / (sqrt (1 - (dot (v, v) / (VLIGHT * VLIGHT))));
 
   f_out = p_out->freq = f_in * gamma * (1. - vel / VLIGHT);
@@ -410,7 +408,7 @@ local_to_observer_frame_disk (p_in, p_out)
  *      in the local frame given a distance in the observer
  *      frame
  *
- * @param [in] PhotPtr  p        The photon in the observer frame                
+ * @param [in] PhotPtr  p_obs    The photon in the observer frame                
  * @param [in] double   ds_obs   The distance from a starting point
                                  for the photon to travel
  *
@@ -426,8 +424,8 @@ local_to_observer_frame_disk (p_in, p_out)
  **********************************************************/
 
 double
-observer_to_local_frame_ds (p, ds_obs)
-     PhotPtr p;
+observer_to_local_frame_ds (p_obs, ds_obs)
+     PhotPtr p_obs;
      double ds_obs;
 {
   WindPtr one;
@@ -442,19 +440,202 @@ observer_to_local_frame_ds (p, ds_obs)
   }
 
   /* Calculate the local velocity of the wind at this position */
-  one = &wmain[p->grid];
+  one = &wmain[p_obs->grid];
   ndom = one->ndom;
-  vwind_xyz (ndom, p, v);
-  vel = dot (p->lmn, v);
+  vwind_xyz (ndom, p_obs, v);
+  vel = dot (p_obs->lmn, v);
 
   gamma = 1. / sqrt (1 - (dot (v, v) / (VLIGHT * VLIGHT)));
 
+  ds_cmf = ds_obs;
 
-  ds_cmf = gamma * (1 + dot (p->lmn, v) / VLIGHT) * ds_obs;
+
+  ds_cmf *= gamma * (1 - dot (p_obs->lmn, v) / VLIGHT);
 
 
   return (ds_cmf);
 
+
+
+}
+
+/**********************************************************/
+/**
+ * @brief      calculate the distance a photon will travel
+ *      in the observer frame given a distance in the local
+ *      frame
+ *
+ * @param [in] PhotPtr  p_obs    The photon in the observer frame                
+ * @param [in] double   ds_cmf   The distance from a starting point
+                                 for the photon to travel
+ *
+ * @return    The distance in the observer frame         
+ *
+ *
+ * @details
+ *
+ * Note that the photon MUST BE in the observer frame here. 
+ *
+ *
+ * ### Notes ###
+ *
+ *
+ **********************************************************/
+
+double
+local_to_observer_frame_ds (p_obs, ds_cmf)
+     PhotPtr p_obs;
+     double ds_cmf;
+{
+  WindPtr one;
+  int ndom;
+  double v[3], vel;
+  double gamma;
+  double ds_obs;
+
+  if (rel_mode == REL_MODE_LINEAR)
+  {
+    return (ds_cmf);
+  }
+
+  /* Calculate the local velocity of the wind at this position */
+  one = &wmain[p_obs->grid];
+  ndom = one->ndom;
+  vwind_xyz (ndom, p_obs, v);
+  vel = dot (p_obs->lmn, v);
+
+  gamma = 1. / sqrt (1 - (dot (v, v) / (VLIGHT * VLIGHT)));
+
+  ds_obs = ds_cmf;
+  ds_obs /= gamma * (1 - dot (p_obs->lmn, v) / VLIGHT);
+
+
+  return (ds_obs);
+
+
+
+}
+
+/**********************************************************/
+/**
+ * @brief      calculate a velocity in the local frame given
+ *      a velocity in the observer frame
+ *      
+ *
+ * @param [in] double   *v_obs       A velocity in the observer frame                
+ * @param [in] double   *v           The velocity of the local frame as 
+ *                                   measured in the observers frame
+ * @param [out] double  *v_cmf       The peculiar velocity in the local frame
+ *
+ * @return    The speed in the local frame               
+ *
+ *
+ * @details
+ * This uses the standard special relativitistic velocity addition
+ * law to calculate a peculiar velocity in the local frame.
+ *
+ *
+ * ### Notes ###
+ *
+ *
+ **********************************************************/
+
+double
+observer_to_local_frame_velocity (v_obs, v, v_cmf)
+     double *v_obs;
+     double *v;
+     double *v_cmf;
+{
+  double gamma, c1, c2;
+  double a[3], b[3];
+  double vdotv;
+
+  if (rel_mode == REL_MODE_LINEAR)
+  {
+    vsub (v_obs, v, v_cmf);
+    return (length (v_cmf));
+  }
+
+  gamma = 1. / sqrt (1 - (dot (v, v) / (VLIGHT * VLIGHT)));
+
+  vdotv = dot (v_obs, v) / (VLIGHT * VLIGHT);
+
+  c1 = 1. / (1 - vdotv);
+  c2 = (gamma / (1 + gamma) * vdotv);
+
+  rescale (v_obs, 1. / gamma, a);
+  vsub (a, v, a);
+  rescale (v, c2, b);
+  vadd (a, b, a);
+  rescale (a, c1, v_cmf);
+
+/*  The transformation formula is
+   v_cmf=c1*(v_obs/xgamma-v+c2*v);
+*/
+  return length (v_cmf);
+
+
+}
+
+/**********************************************************/
+/**
+ * @brief      calculate a velocity in the observer frame
+ *      a velocity in the local frame
+ *      
+ *
+ * @param [in] double   *v_cmf       A peculiar velocity in the local frame                
+ * @param [in] double   *v           The velocity of the local frame in
+ *                                   the observers frame
+ * @param [out] double  *v_obs       The velocity in the global frame
+ *
+ * @return    The speed in the observer frame               
+ *
+ *
+ * @details
+ * This uses the standard special relativitistic velocity addition
+ * law to calculate a velocity in the observer frame from a "peculiar"
+ * velocity in the local frame.
+ *
+ *
+ *
+ * ### Notes ###
+ *
+ *
+ **********************************************************/
+
+double
+local_to_observer_frame_velocity (v_cmf, v, v_obs)
+     double *v_cmf;
+     double *v;
+     double *v_obs;
+{
+  double gamma, c1, c2;
+  double a[3], b[3];
+  double vdotv;
+
+  if (rel_mode == REL_MODE_LINEAR)
+  {
+    vadd (v_cmf, v, v_obs);
+    return (length (v_obs));
+  }
+
+  gamma = 1. / sqrt (1 - (dot (v, v) / (VLIGHT * VLIGHT)));
+
+  vdotv = dot (v_obs, v) / (VLIGHT * VLIGHT);
+
+  c1 = 1. / (1 + vdotv);
+  c2 = (gamma / (1 + gamma) * vdotv);
+
+  rescale (v_cmf, 1. / gamma, a);
+  vadd (a, v, a);
+  rescale (v, c2, b);
+  vadd (a, b, a);
+  rescale (a, c1, v_obs);
+
+/*  The transformation formula is
+   v_obs=c1*(v+v_cmf/xgamma+c2*v)
+*/
+  return length (v_obs);
 
 
 }
