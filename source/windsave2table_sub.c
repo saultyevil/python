@@ -70,6 +70,7 @@ do_windsave2table (root, ion_switch)
     create_master_table (ndom, rootname);
     create_heat_table (ndom, rootname);
     create_convergence_table (ndom, rootname);
+    create_velocity_gradient_table (ndom, rootname);
 
     if (ion_switch != 99)
     {
@@ -782,6 +783,182 @@ create_convergence_table (ndom, rootname)
 
 
 
+/**********************************************************/
+/**
+ * @brief      writes a selected variables related to issues about
+ * velocity gratients to an ascii file which can be read as an astropy table
+ *
+ *
+ * @param [in] int  ndom   The domain of interest
+ * @param [in, out] char  rootname[]   The rootname of the windsave file
+ * @return     Always returns 0
+ *
+ * @details
+ *
+ * ### Notes ###
+ *
+ * To add a variable one just needs to define the column_name
+ * and send the appropriate call to either get_one or get_ion.
+ *
+ *
+ **********************************************************/
+
+int
+create_velocity_gradient_table (ndom, rootname)
+     int ndom;
+     char rootname[];
+{
+  char filename[132];
+  double *c[50], *converge;
+  char column_name[50][20];
+  char one_line[1024], start[1024], one_value[20];
+
+
+  int i, ii, jj;
+  int nstart, ndim2;
+  int n, ncols;
+  FILE *fptr;
+
+  strcpy (filename, rootname);
+  strcat (filename, ".gradient.txt");
+
+
+  fptr = fopen (filename, "w");
+
+  /* Get the variables that one needs */
+
+  c[0] = get_one (ndom, "dv_x_dx");
+  strcpy (column_name[0], "dv_x_dx");
+
+  c[1] = get_one (ndom, "dv_y_dx");
+  strcpy (column_name[1], "dv_y_dx");
+
+  c[2] = get_one (ndom, "dv_z_dx");
+  strcpy (column_name[2], "dv_z_dx");
+
+  c[3] = get_one (ndom, "dv_x_dy");
+  strcpy (column_name[3], "dv_x_dy");
+
+  c[4] = get_one (ndom, "dv_y_dy");
+  strcpy (column_name[4], "dv_y_dy");
+
+  c[5] = get_one (ndom, "dv_z_dy");
+  strcpy (column_name[5], "dv_z_dy");
+
+  c[6] = get_one (ndom, "dv_x_dz");
+  strcpy (column_name[6], "dv_x_dz");
+
+  c[7] = get_one (ndom, "dv_y_dz");
+  strcpy (column_name[7], "dv_y_dz");
+
+  c[8] = get_one (ndom, "dv_z_dz");
+  strcpy (column_name[8], "dv_z_dz");
+
+  c[9] = get_one (ndom, "div_v");
+  strcpy (column_name[9], "div_v");
+
+  c[10] = get_one (ndom, "gamma");
+  strcpy (column_name[10], "gamma");
+
+  /* This should be the maxium number above +1 */
+  ncols = 11;
+
+
+
+  /* At this point all of the data has been collected */
+
+
+  nstart = zdom[ndom].nstart;
+  ndim2 = zdom[ndom].ndim2;
+
+  converge = get_one (ndom, "converge");
+
+
+  if (zdom[ndom].coord_type == SPHERICAL)
+  {
+
+
+    /*
+     * First assemble the header line
+     */
+
+    sprintf (start, "%9s %4s %6s %6s %9s %9s %9s ", "r", "i", "inwind", "converge", "v_x", "v_y", "v_z");
+    strcpy (one_line, start);
+    n = 0;
+    while (n < ncols)
+    {
+      sprintf (one_value, "%9s ", column_name[n]);
+      strcat (one_line, one_value);
+
+      n++;
+    }
+    fprintf (fptr, "%s\n", one_line);
+
+
+    /* Now assemble the lines of the table */
+
+    for (i = 0; i < ndim2; i++)
+    {
+      //This line is different from the two d case
+      sprintf (start, "%9.3e %4d %6d %8.0f %9.2e %9.2e %9.2e ",
+               wmain[nstart + i].r, i, wmain[nstart + i].inwind,
+               converge[i], wmain[nstart + i].v[0], wmain[nstart + i].v[1], wmain[nstart + i].v[2]);
+      strcpy (one_line, start);
+      n = 0;
+      while (n < ncols)
+      {
+        sprintf (one_value, "%9.2e ", c[n][i]);
+        strcat (one_line, one_value);
+        n++;
+      }
+      fprintf (fptr, "%s\n", one_line);
+    }
+  }
+  else
+  {
+
+    /* First assemble the header line */
+
+    sprintf (start, "%8s %8s %4s %4s %6s %8s %9s %9s %9s ", "x", "z", "i", "j", "inwind", "converge", "v_x", "v_y", "v_z");
+    strcpy (one_line, start);
+    n = 0;
+    while (n < ncols)
+    {
+      sprintf (one_value, "%9s ", column_name[n]);
+      strcat (one_line, one_value);
+
+      n++;
+    }
+    fprintf (fptr, "%s\n", one_line);
+
+
+    /* Now assemble the lines of the table */
+
+    for (i = 0; i < ndim2; i++)
+    {
+      wind_n_to_ij (ndom, nstart + i, &ii, &jj);
+      sprintf (start,
+               "%8.2e %8.2e %4d %4d %6d %8.0f %9.2e %9.2e %9.2e ",
+               wmain[nstart + i].xcen[0], wmain[nstart + i].xcen[2], ii,
+               jj, wmain[nstart + i].inwind, converge[i], wmain[nstart + i].v[0], wmain[nstart + i].v[1], wmain[nstart + i].v[2]);
+      strcpy (one_line, start);
+      n = 0;
+      while (n < ncols)
+      {
+        sprintf (one_value, "%9.2e ", c[n][i]);
+        strcat (one_line, one_value);
+        n++;
+      }
+      fprintf (fptr, "%s\n", one_line);
+    }
+  }
+
+  fclose (fptr);
+
+  return (0);
+}
+
+
 
 /**********************************************************/
 /**
@@ -1291,6 +1468,50 @@ get_one (ndom, variable_name)
       else if (strcmp (variable_name, "macro_bf_out") == 0)
       {
         x[n] = plasmamain[nplasma].bf_simple_ionpool_out;
+      }
+      else if (strcmp (variable_name, "dv_x_dx") == 0)
+      {
+        x[n] = wmain[n].v_grad[0][0];
+      }
+      else if (strcmp (variable_name, "dv_x_dy") == 0)
+      {
+        x[n] = wmain[n].v_grad[0][1];
+      }
+      else if (strcmp (variable_name, "dv_x_dz") == 0)
+      {
+        x[n] = wmain[n].v_grad[0][2];
+      }
+      else if (strcmp (variable_name, "dv_y_dx") == 0)
+      {
+        x[n] = wmain[n].v_grad[1][0];
+      }
+      else if (strcmp (variable_name, "dv_y_dy") == 0)
+      {
+        x[n] = wmain[n].v_grad[1][1];
+      }
+      else if (strcmp (variable_name, "dv_y_dz") == 0)
+      {
+        x[n] = wmain[n].v_grad[1][2];
+      }
+      else if (strcmp (variable_name, "dv_z_dx") == 0)
+      {
+        x[n] = wmain[n].v_grad[2][0];
+      }
+      else if (strcmp (variable_name, "dv_z_dy") == 0)
+      {
+        x[n] = wmain[n].v_grad[2][1];
+      }
+      else if (strcmp (variable_name, "dv_z_dz") == 0)
+      {
+        x[n] = wmain[n].v_grad[2][2];
+      }
+      else if (strcmp (variable_name, "div_v") == 0)
+      {
+        x[n] = wmain[n].div_v;
+      }
+      else if (strcmp (variable_name, "gamma") == 0)
+      {
+        x[n] = wmain[n].xgamma;
       }
       else
       {

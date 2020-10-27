@@ -113,6 +113,11 @@ observer_to_local_frame (p_in, p_out)
   double v[3], vel;
   double gamma;
   int i, ierr;
+//OLD  struct photon phot_dummy;
+
+
+
+//OLD  stuff_phot (p_in, &phot_dummy);
 
 
 
@@ -148,10 +153,16 @@ observer_to_local_frame (p_in, p_out)
 
   for (i = 0; i < 3; i++)
   {
-    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] - x * v[i]);
+//OLD    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] - x * v[i]);
+    p_out->lmn[i] = f_in / f_out * (p_in->lmn[i] - x * v[i]);
   }
 
   p_out->w *= (f_out / f_in);
+
+//OLD  if (length (p_out->lmn) < 0.9999999 || length (p_out->lmn) > 1.0000001)
+//OLD  {
+//OLD    Error ("observer_to_local_frame:  %11.4e -> %11.4e -> %11.4e \n", length (phot_dummy.lmn), length (p_in->lmn), length (p_out->lmn));
+//OLD  }
 
   return (ierr);
 }
@@ -200,8 +211,9 @@ local_to_observer_frame (p_in, p_out)
   int i;
   int ierr;
 
+//OLD  struct photon phot_dummy;
 
-
+//OLD  stuff_phot (p_in, &phot_dummy);
 
   ierr = check_frame (p_in, F_LOCAL, "local_to_observer_frame");
 
@@ -231,10 +243,16 @@ local_to_observer_frame (p_in, p_out)
 
   for (i = 0; i < 3; i++)
   {
-    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] + x * v[i]);
+//OLD    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] + x * v[i]);
+    p_out->lmn[i] = f_in / f_out * (p_in->lmn[i] + x * v[i]);
   }
 
   p_out->w *= (f_out / f_in);
+
+//OLD  if (length (p_out->lmn) < 0.9999999 || length (p_out->lmn) > 1.0000001)
+//OLD  {
+//OLD    Error ("local_to_observer_frame:  %11.4e -> %11.4e -> %11.4e \n", length (phot_dummy.lmn), length (p_in->lmn), length (p_out->lmn));
+//OLD  }
 
   return (ierr);
 }
@@ -279,6 +297,9 @@ observer_to_local_frame_disk (p_in, p_out)
   double gamma;
   int i, ierr;
 
+//OLD  struct photon phot_dummy;
+
+//OLD  stuff_phot (p_in, &phot_dummy);
 
 
   ierr = check_frame (p_in, F_OBSERVER, "Observer_to_local_frame_disk");
@@ -313,10 +334,17 @@ observer_to_local_frame_disk (p_in, p_out)
 
   for (i = 0; i < 3; i++)
   {
-    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] - x * v[i]);
+//OLD    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] - x * v[i]);
+    p_out->lmn[i] = f_in / f_out * (p_in->lmn[i] - x * v[i]);
   }
 
   p_out->w *= (f_out / f_in);
+
+//OLD  if (length (p_out->lmn) < 0.9999999 || length (p_out->lmn) > 1.0000001)
+//OLD  {
+//OLD    Error ("observer_to_local_frame_disk:  %11.4e -> %11.4e -> %11.4e \n", length (phot_dummy.lmn), length (p_in->lmn),
+//OLD           length (p_out->lmn));
+//OLD  }
 
   return (ierr);
 }
@@ -364,6 +392,9 @@ local_to_observer_frame_disk (p_in, p_out)
   double gamma;
   int i;
   int ierr;
+//OLD  struct photon phot_dummy;
+
+//OLD  stuff_phot (p_in, &phot_dummy);
 
   ierr = check_frame (p_in, F_LOCAL, "local_to_observer_frame_disk");
 
@@ -394,10 +425,19 @@ local_to_observer_frame_disk (p_in, p_out)
 
   for (i = 0; i < 3; i++)
   {
-    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] + x * v[i]);
+//OLD    p_out->lmn[i] = f_out / f_in * (p_in->lmn[i] + x * v[i]);
+    p_out->lmn[i] = f_in / f_out * (p_in->lmn[i] + x * v[i]);
   }
 
   p_out->w *= (f_out / f_in);
+
+
+//OLD  if (length (p_out->lmn) < 0.9999999 || length (p_out->lmn) > 1.0000001)
+//OLD  {
+//OLD    Error ("local_to_observer_frame_disk:  %11.4e -> %11.4e -> %11.4e \n", length (phot_dummy.lmn), length (p_in->lmn),
+//OLD           length (p_out->lmn));
+//OLD  }
+
 
   return (ierr);
 }
@@ -636,6 +676,133 @@ local_to_observer_frame_velocity (v_cmf, v, v_obs)
    v_obs=c1*(v+v_cmf/xgamma+c2*v)
 */
   return length (v_obs);
+
+
+}
+
+
+
+/**********************************************************/
+/**
+ * @brief      calculate how a 3-vector would look in the observer
+ *      frame given a 3-vector in the local frame.
+ *      
+ *
+ * @param [in]  double  V           the v  of the co-moving frame 
+ * @param [in]  double  dx_cmf      the 3 vector in the local frame
+ * @param [out] double  dx_obs     the resulting 3 vector in the obsevr frame
+ *
+ * @return    Always returns 0               
+ *
+ *
+ * @details
+ *
+ * ### Notes ###
+ *
+ * Except for the fact that the distance along the velocity vector
+ * gets contracted in the observer frame, this is identical to
+ * the routine observer_to_local_frame_ruler_transform
+ *
+ **********************************************************/
+
+int
+local_to_observer_frame_ruler_transform (v, dx_cmf, dx_obs)
+     double v[], dx_cmf[], dx_obs[];
+{
+
+  double beta, gamma, speed;
+  double lmn[3];
+  double ds_cmf_par, dx_cmf_par[3];
+  double dx_cmf_perp[3];
+  double dx_obs_par[3];
+
+  if (rel_mode == REL_MODE_LINEAR)
+  {
+    stuff_v (dx_cmf, dx_obs);
+    return (0);
+  }
+
+
+
+  speed = length (v);
+  beta = speed / VLIGHT;
+  gamma = 1. / (1. - beta * beta);
+
+
+  rescale (v, 1. / speed, lmn);
+  ds_cmf_par = dot (lmn, dx_cmf);
+  rescale (lmn, ds_cmf_par, dx_cmf_par);
+
+  vsub (dx_cmf, dx_cmf_par, dx_cmf_perp);
+
+  rescale (dx_cmf_par, 1. / gamma, dx_obs_par);
+
+  vadd (dx_obs_par, dx_cmf_perp, dx_obs);
+
+  return (0);
+
+
+}
+
+/**********************************************************/
+/**
+ * @brief      calculate how a 3-vector would look in the observer
+ *      frame given a 3-vector in the cmf frame.
+ *      
+ *
+ * @param [in]  double  V           the v  of the co-moving frame 
+ * @param [in] double   dx_obs      the 3 vector in the observer frame
+ * @param [out] double  dx_cmf     the resulting 3 vector in the local frame
+ *
+ * @return    Always returns 0               
+ *
+ *
+ * @details
+ *
+ * ### Notes ###
+ *
+ * Except for the fact that the distance along the velocity vector
+ * gets larger in the local frame, this is identical to
+ * the routine local_to_obseerver_frame_ruler_transform
+ *
+ **********************************************************/
+
+
+int
+observer_to_local_frame_ruler_transform (v, dx_obs, dx_cmf)
+     double v[], dx_obs[], dx_cmf[];
+{
+
+  double beta, gamma, speed;
+  double lmn[3];
+  double ds_obs_par, dx_obs_par[3];
+  double dx_obs_perp[3];
+  double dx_cmf_par[3];
+
+  if (rel_mode == REL_MODE_LINEAR)
+  {
+    stuff_v (dx_obs, dx_cmf);
+    return (0);
+  }
+
+
+
+  speed = length (v);
+  beta = speed / VLIGHT;
+  gamma = 1. / (1. - beta * beta);
+
+
+  rescale (v, 1. / speed, lmn);
+  ds_obs_par = dot (lmn, dx_obs);
+  rescale (lmn, ds_obs_par, dx_obs_par);
+
+  vsub (dx_obs, dx_obs_par, dx_obs_perp);
+
+  rescale (dx_obs_par, gamma, dx_cmf_par);
+
+  vadd (dx_cmf_par, dx_obs_perp, dx_cmf);
+
+  return (0);
 
 
 }

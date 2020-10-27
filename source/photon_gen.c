@@ -1262,7 +1262,7 @@ photon_checks (p, freqmin, freqmax, comment)
         Error ("photon_checks:   nphot  origin  freq     freqmin    freqmax\n");
         nlabel++;
       }
-      Error ("photon_checks: %id %5d %5d %10.4e %10.4e %10.4e freq or weight are not sane\n", nn, p[nn].origin, p[nn].nres, p[nn].freq,
+      Error ("photon_checks: %5d %5d %5d %10.4e %10.4e %10.4e freq or weight are not sane\n", nn, p[nn].origin, p[nn].nres, p[nn].freq,
              freqmin, freqmax);
       p[nn].freq = freqmax;
       nnn++;
@@ -1274,10 +1274,16 @@ photon_checks (p, freqmin, freqmax, comment)
         Error ("photon_checks:   nphot  origin  freq     freqmin    freqmax\n");
         nlabel++;
       }
-      Error ("photon_checks: %id %5d %5d %10.4e %10.4e %10.4e freq out of range\n", nn, p[nn].origin, p[nn].nres, p[nn].freq, freqmin,
+      Error ("photon_checks: %5d %5d %5d %10.4e %10.4e %10.4e freq out of range\n", nn, p[nn].origin, p[nn].nres, p[nn].freq, freqmin,
              freqmax);
       p[nn].freq = freqmax;
       nnn++;
+    }
+
+    if (length (p[nn].lmn) < 0.9999999 || length (p[nn].lmn) > 1.0000001)
+    {
+      Error ("photon_checks: %5d %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e  origin %d length lmn out of range %10.6f\n",
+             nn, p[nn].x[0], p[nn].x[1], p[nn].x[2], p[nn].lmn[0], p[nn].lmn[1], p[nn].lmn[2], p[nn].origin, length (p[nn].lmn));
     }
 
     if (check_frame (&p[nn], F_OBSERVER, "photon_checks: all photons shouuld be in OBSERVER frame\n"))

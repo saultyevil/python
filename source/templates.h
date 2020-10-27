@@ -488,6 +488,7 @@ int do_windsave2table(char *root, int ion_switch);
 int create_master_table(int ndom, char rootname[]);
 int create_heat_table(int ndom, char rootname[]);
 int create_convergence_table(int ndom, char rootname[]);
+int create_velocity_gradient_table(int ndom, char rootname[]);
 int create_ion_table(int ndom, char rootname[], int iz, int ion_switch);
 double *get_ion(int ndom, int element, int istate, int iswitch, char *name);
 double *get_one(int ndom, char variable_name[]);
@@ -567,6 +568,10 @@ int is_input_line_synonym_for_question(char question[], char input_line[]);
 int walls(PhotPtr p, PhotPtr pold, double *normal);
 /* xtest.c */
 int xtest(void);
+/* derivative.c */
+double f(double x, void *params);
+int get_derivative(void);
+int xmodel_vgrad(double ds_fraction, int ndom, double x[], double v_grad[][3]);
 /* setup_reverb.c */
 int get_meta_params(void);
 /* setup_line_transfer.c */
@@ -595,6 +600,8 @@ double observer_to_local_frame_velocity(double *v_obs, double *v, double *v_cmf)
 double local_to_observer_frame_velocity(double *v_cmf, double *v, double *v_obs);
 /* tau_spectrum.c */
 void optical_depth_diagnostics(WindPtr w);
+int local_to_observer_frame_ruler_transform(double v[], double dx_cmf[], double dx_obs[]);
+int observer_to_local_frame_ruler_transform(double v[], double dx_obs[], double dx_cmf[]);
 /* py_wind_sub.c */
 int zoom(int direction);
 int overview(WindPtr w, char rootname[]);
@@ -677,6 +684,7 @@ int do_windsave2table(char *root, int ion_switch);
 int create_master_table(int ndom, char rootname[]);
 int create_heat_table(int ndom, char rootname[]);
 int create_convergence_table(int ndom, char rootname[]);
+int create_velocity_gradient_table(int ndom, char rootname[]);
 int create_ion_table(int ndom, char rootname[], int iz, int ion_switch);
 double *get_ion(int ndom, int element, int istate, int iswitch, char *name);
 double *get_one(int ndom, char variable_name[]);

@@ -852,7 +852,7 @@ kpkt (p, nres, escape, mode)
          with the electron density. */
       if (cooling_bf[i] < 0)
       {
-        Error ("kpkt: bf cooling rate negative. Density was %g\n", upper_density);
+        Error ("kpkt: phot %d bf cooling rate negative. Density was %g\n", p->np, upper_density);
         Error ("alpha_sp(cont_ptr, xplasma,2) %g \n", alpha_sp (cont_ptr, xplasma, 2));
         Error ("i, ulvl, nphot_total, nion %d %d %d %d\n", i, ulvl, nphot_total, cont_ptr->nion);
         Error ("nlev, z, istate %d %d %d \n", cont_ptr->nlev, cont_ptr->z, cont_ptr->istate);
@@ -955,7 +955,7 @@ kpkt (p, nres, escape, mode)
          volumes are never zero. */
 
       cooling_ff = mplasma->cooling_ff = mplasma->cooling_ff_lofreq = 0.0;
-      Error ("kpkt: A scattering event in cell %d with vol = 0???\n", one->nwind);
+      Error ("kpkt: np %d A scattering event in cell %d with vol = 0???\n", p->np, one->nwind);
       *escape = 1;
       p->istat = P_ERROR_MATOM;
       return (0);
@@ -964,7 +964,7 @@ kpkt (p, nres, escape, mode)
 
     if (cooling_ff < 0)
     {
-      Error ("kpkt: ff cooling rate negative. Abort.");
+      Error ("kpkt: np %d ff cooling rate negative. Abort.", p->np);
       *escape = 1;
       p->istat = P_ERROR_MATOM;
       return (0);
@@ -995,8 +995,8 @@ kpkt (p, nres, escape, mode)
        Now, if cooling_adiabatic < 0 then set it to zero to avoid runs exiting for part in wind cells. */
     if (cooling_adiabatic < 0)
     {
-      Error ("kpkt: Adiabatic cooling negative! Major problem if inwind (%d) == 0\n", one->inwind);
-      Log ("kpkt: Setting adiabatic kpkt destruction probability to zero for this matom.\n");
+      Error ("kpkt: Photon %d. Adiabatic cooling negative! Major problem if inwind (%d) == 0\n", p->np, one->inwind);
+      Error ("kpkt: Photon %d. Setting adiabatic kpkt destruction probability to zero for this matom.\n", p->np);
       cooling_adiabatic = 0.0;
     }
 

@@ -240,8 +240,8 @@ sv_velocity (x, v, ndom)
   speed = (sqrt (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
   if (sane_check (speed))
   {
-    Error ("sv_velocity: x %f %f %f v %f %f %f\n", x[0], x[1], x[2], v[0], v[1], v[2]);
-    Error ("sv_velocity: rzero %f theta %f ldist %f zzz %f v_escape %f vl %f\n", rzero, theta, ldist, zzz, v_escape, vl);
+    Error ("sv_velocity: x %g %g %g v %f %f %f\n", x[0], x[1], x[2], v[0], v[1], v[2]);
+    Error ("sv_velocity: rzero %g theta %f ldist %f zzz %f v_escape %f vl %f\n", rzero, theta, ldist, zzz, v_escape, vl);
   }
 
 

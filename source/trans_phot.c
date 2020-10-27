@@ -234,13 +234,20 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
   stuff_phot (p, &pp);
   tau_scat = -log (1. - random_number (0.0, 1.0));
 
-
-
   weight_min = EPSILON * pp.w;
   istat = P_INWIND;
   tau = 0;
   icell = 0;
-  n = 0;                        /* Avoid 03 warning */
+  n = 0;
+
+
+  /* Next section is really to allow one to follow a specific photon for diagnositic purposes
+     This may be useful more generally but it should at least be commented out one diagnositcs
+     are complete */
+//OLD if (geo.wcycle == 1 && p->np == 5474)
+//OLD  {
+//OLD     Log ("Hello: Starting photon  %d in cycle %d we want to follow\n", p->np, geo.wcycle);
+//OLD   }
 
 
   if (modes.save_photons)

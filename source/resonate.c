@@ -102,8 +102,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   double diff;
 
 
-  one = &w[p->grid];            //pointer to the cell where the photon bundle is located.
-
+  one = &w[p->grid];
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
   ndom = one->ndom;
@@ -117,7 +116,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (ttau < 0.0)
   {
-    Error ("calculate_ds:  odd tau  %8.2e at %g entering calculate_ds\n", ttau, p->freq);
+    Error ("calculate_ds: Photon %d has negative tau  %8.2e at %g entering calculate_ds\n", p->np, ttau, p->freq);
   }
 
 
@@ -163,6 +162,11 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   freq_inner = p_start_cmf.freq;
   freq_outer = p_stop_cmf.freq;
+
+  if (freq_inner < 0 || freq_outer < 0)
+  {
+    Error ("Horrors: %d  %e %e\n", p_start_cmf.np, freq_inner, freq_outer);
+  }
 
 
 
