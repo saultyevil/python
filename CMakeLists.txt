@@ -24,7 +24,7 @@ cmake_minimum_required(VERSION 3.0)
 
 # Set the Python version
 
-set(PYTHON_VERSION 84g)
+set(PYTHON_VERSION 84_cm)
 message(STATUS "Python version : ${PYTHON_VERSION}")
 
 # The C standard is being set to 99, although if we follow this standard is
@@ -34,7 +34,7 @@ message(STATUS "Python version : ${PYTHON_VERSION}")
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_COMPILER mpicc)
-add_definitions(-Wall -Wextra -O3 -D MPI_ON)
+add_definitions(-Wall -Wextra -O2 -D MPI_ON)
 
 # Setup any include directories, as well as any library directories. This is
 # used to link the GSL directories
@@ -93,12 +93,13 @@ set(PYTHON_SOURCE
         source/compton.c source/continuum.c source/cooling.c source/corona.c
         source/cv.c source/cylind_var.c source/cylindrical.c source/density.c
         source/diag.c source/dielectronic.c source/direct_ion.c source/disk.c
-        source/disk_init.c source/emission.c source/estimators.c source/estimators_simple.c
-        source/extract.c source/frame.c source/get_models.c source/gradv.c
-        source/gridwind.c source/homologous.c source/hydro_import.c
-        source/import.c source/import_calloc.c source/import_cylindrical.c
-        source/import_rtheta.c source/import_spherical.c source/ionization.c
-        source/knigge.c source/levels.c source/lines.c source/macro_gov.c
+        source/disk_init.c source/emission.c source/estimators_macro.c
+        source/estimators_simple.c source/extract.c source/frame.c
+        source/get_models.c source/gradv.c source/gridwind.c source/homologous.c
+        source/hydro_import.c source/import.c source/import_calloc.c
+        source/import_cylindrical.c source/import_rtheta.c
+        source/import_spherical.c source/ionization.c source/knigge.c
+        source/levels.c source/lines.c source/macro_gov.c
         source/matom.c source/matom_diag.c source/matrix_ion.c
         source/para_update.c source/parse.c source/partition.c source/paths.c
         source/phot_util.c source/photo_gen_matom.c source/photon2d.c
@@ -114,7 +115,7 @@ set(PYTHON_SOURCE
         source/tau_spectrum.c source/time.c source/trans_phot.c source/vvector.c
         source/walls.c source/wind.c source/wind2d.c source/wind_sum.c
         source/wind_updates2d.c source/wind_util.c source/windsave.c
-        source/windsave2table_sub.c source/xlog.c source/zeta.c
+        source/windsave2table_sub.c source/xlog.c source/xtest.c source/zeta.c
 )
 
 set(PY_WIND_SOURCE
