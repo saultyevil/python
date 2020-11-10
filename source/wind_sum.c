@@ -223,7 +223,7 @@ xtemp_rad (w)
       {
         n = nstart + i * mdim + j;
         nplasma = w[n].nplasma;
-        if (wmain[nplasma].inwind >= 0)
+        if (wmain[n].inwind >= 0)
         {
           ntot = plasmamain[nplasma].ntot;
         }

@@ -20,6 +20,21 @@ EXTRA_FLAGS =
 LDFLAGS =
 
 
+# COMPILER_VERSION := $(shell expr `gcc -dumpversion`)
+ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
+	XVERSION := $(shell cc -v 2>&1 | head -1 )
+	COMPILER_VERSION := $(shell $(CC) -v 2>&1 | head -1 )
+else
+	COMPILER_VERSION := $(shell expr `gcc -dumpversion`)
+	XVERSION:= gcc $(shell expr `gcc -dumpversion`)
+endif
+
+
+# @echo 'Gotcha=' $(XVERSION)
+
+# COMPILER_PRINT_STRING = Compiling with mpicc wrapper, for compiler $(COMPILER_VERSION)
+# @echo  $(COMPILER_PRINT_STRING)
+
 # Check a load of compiler options
 # This is mostly to address GitHub issues #100
 ifeq (mpicc, $(CC))
@@ -29,7 +44,7 @@ ifeq (mpicc, $(CC))
 	# check what underlying compiler mpi is using, and the version
 	# we'll use this to print to the user and also to do some checks
 	MPI_COMPILER := $(shell mpicc --showme:command)
-	COMPILER_VERSION := $(shell expr `'$(CC)' -dumpversion`)
+	# COMPILER_VERSION := $(shell expr `'$(CC)' -dumpversion`)
 	COMPILER_PRINT_STRING = Compiling with mpicc wrapper, for compiler $(MPI_COMPILER) $(COMPILER_VERSION)
 
 	# if it's gcc we want to check if the version is 4.8 or later
@@ -48,7 +63,7 @@ else ifeq (gcc, $(CC))
 
 	# check the version
 	# we'll use this to print to the user and also to do some checks
-	COMPILER_VERSION := $(shell expr `gcc -dumpversion`)
+	# COMPILER_VERSION := $(shell expr `gcc -dumpversion`)
 
 	# if it's gcc we want to check if the version is 4.8 or later
 	# if it is then we'll disable aggressive loop optimizations, see #100
@@ -62,7 +77,7 @@ else	# you must be using clang or icc
 	MPI_FLAG =
 
 	# check the version we'll use this to print to the user
-	COMPILER_VERSION = $(shell expr `$(CC) -dumpversion`)
+	# COMPILER_VERSION = $(shell expr `$(CC) -dumpversion`)
 	COMPILER_PRINT_STRING = Compiling with $(CC) $(COMPILER_VERSION)
 endif
 
@@ -83,7 +98,12 @@ ifeq (D,$(firstword $(MAKECMDGOALS)))
 	CFLAGS = -g -pg -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
 	FFLAGS = -g -pg
 	PRINT_VAR = DEBUGGING, -g -pg -Wall flags
-	XDEBUG = True
+        XDEBUG = True
+	ifeq ($(shell $(CC) -v 2>&1 | grep -c "clang version"), 1)
+		CFLAGS = -g -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
+		FFLAGS = -g
+		PRINT_VAR = DEBUGGING, -g -Wall flags
+	endif
 else
 # Use this for large runs
 	CFLAGS = -O3 -Wall $(EXTRA_FLAGS) -I$(INCLUDE)  $(MPI_FLAG)
@@ -107,11 +127,13 @@ INDENT = yes
 
 startup:
 	@echo $(COMPILER_PRINT_STRING)			# prints out compiler information
+	@echo 'Compiler is really  $(XVERSION)'
 	@echo 'YOU ARE COMPILING FOR' $(PRINT_VAR)	# tells user if compiling for optimized or debug
 	@echo 'MPI_FLAG=' $(MPI_FLAG)
 	echo "#define VERSION " \"$(VERSION)\" > version.h
 	echo "#define GIT_COMMIT_HASH" \"$(GIT_COMMIT_HASH)\" >> version.h
 	echo "#define GIT_DIFF_STATUS" $(GIT_DIFF_STATUS)\ >> version.h
+
 
 # indent:
 # 	@echo $(INDENT_STRING)
