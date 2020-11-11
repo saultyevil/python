@@ -282,11 +282,12 @@ delay_dump_single (PhotPtr pp, int i_spec)
 {
   if (geo.reverb_filter_lines == -1 && pp->nres == -1)
   {
-    //If we're filtering out continuum photons and this is a continuum photon, throw it away.
+    //If we're filtering out all continuum photons and this is a continuum photon, throw it away.
     return (1);
   }
   else if (geo.reverb_filter_lines == -2 && pp->nres == -1 && pp->line_nres == -999)
   {
+    //If we're filtering out continuum photons and their children and this is a purely continuum photon, throw it away.
     return (1);
   }
   else if (geo.reverb_filter_lines > 0)
@@ -294,7 +295,7 @@ delay_dump_single (PhotPtr pp, int i_spec)
     //If we're filtering to *only* photons of given lines, is this one of them? If not, throw away
     int i, bFound = 0;
     for (i = 0; i < geo.reverb_filter_lines; i++)
-      if (pp->nres == geo.reverb_filter_line[i])
+      if (pp->nres == geo.reverb_filter_line[i] || pp->line_nres == geo.reverb_filter_line[i])
         bFound = 1;
     if (!bFound)
       return (1);
