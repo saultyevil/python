@@ -627,7 +627,7 @@ photo_gen_kpkt (p, weight, photstart, nphot)
     }
 
     p[n].freq = pp.freq;
-    p[n].nres = nres;
+    p[n].line_nres = p[n].nres = nres;
     p[n].w = pp.w;
 
 
@@ -809,7 +809,7 @@ photo_gen_matom (p, weight, photstart, nphot)
 
 
     p[n].freq = pp.freq;
-    p[n].nres = nres;
+    p[n].line_nres = p[n].nres = nres;
     p[n].frame = F_LOCAL;
 
 
