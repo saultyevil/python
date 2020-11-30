@@ -192,14 +192,12 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
     p[n].origin_orig = p[n].origin;
     p[n].np = n;
     p[n].ds = 0;
-    p[n].line_nres = -999;
     p[n].frame = F_OBSERVER;
     if (geo.reverb != REV_NONE && p[n].path < 0.0)      // SWM - Set path lengths for disk, star etc.
       simple_paths_gen_phot (&p[n]);
   }
 
   return (0);
-
 }
 
 
@@ -850,7 +848,7 @@ photo_gen_star (p, r, t, weight, f1, f2, spectype, istart, nphot)
     p[i].istat = p[i].nscat = p[i].nrscat = p[i].nmacro = 0;
     p[i].grid = 0;
     p[i].tau = 0.0;
-    p[i].nres = -1;             // It's a continuum photon
+    p[i].line_nres = p[i].nres = -1;    // It's a continuum photon
     p[i].nnscat = 1;
 
     if (spectype == SPECTYPE_BB)
@@ -958,7 +956,7 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
     p[i].w = weight;
     p[i].istat = p[i].nscat = p[i].nrscat = p[i].nmacro = 0;
     p[i].tau = 0;
-    p[i].nres = -1;             // It's a continuum photon
+    p[i].line_nres = p[i].nres = -1;    // It's a continuum photon
     p[i].nnscat = 1;
     if (geo.reverb_disk == REV_DISK_UNCORRELATED)
       p[i].path = 0;            //If we're assuming disk photons are uncorrelated, leave them at 0

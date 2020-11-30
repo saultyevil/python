@@ -405,9 +405,9 @@ save_photons (p, comment)
   save_photon_number += 1;
 
   fprintf (epltptr,
-           "PHOTON %3d %3d %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %3d %3d %s \n",
+           "PHOTON %3d %3d %10.4e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %3d %3d %3d %3d %5d %7d %7d %s \n",
            geo.wcycle, p->np, p->freq, p->w, p->x[0], p->x[1], p->x[2], p->lmn[0], p->lmn[1],
-           p->lmn[2], p->grid, p->istat, p->origin, p->nscat, p->nres, p->frame, comment);
+           p->lmn[2], p->grid, p->istat, p->origin, p->nscat, p->nres, p->line_nres, p->frame, comment);
 
   fflush (epltptr);
 
