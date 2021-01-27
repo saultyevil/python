@@ -161,6 +161,12 @@ parse_command_line (argc, argv)
         Log ("Using only old approach with linear Doppler shifts, etc.\n");
         j = i;
       }
+      else if (strcmp (argv[i], "-qclassic") == 0)
+      {
+        rel_mode = REL_MODE_FREQ_SHIT;
+        Log ("Using special relativity frequency shifts but not taking into account co-moving frame effects\n")l
+        j = i;
+      }
       else if (strcmp (argv[i], "-xtest") == 0)
       {
         run_xtest = TRUE;
