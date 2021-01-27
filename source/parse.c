@@ -164,7 +164,7 @@ parse_command_line (argc, argv)
       else if (strcmp (argv[i], "-qclassic") == 0)
       {
         rel_mode = REL_MODE_FREQ_SHIT;
-        Log ("Using special relativity frequency shifts but not taking into account co-moving frame effects\n")l
+        Log ("Using special relativity frequency shifts but not taking into account co-moving frame effects\n");
         j = i;
       }
       else if (strcmp (argv[i], "-xtest") == 0)
