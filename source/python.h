@@ -104,7 +104,7 @@ double PHOT_RANGE;              /* When a variable number of photons are called 
 int NPHOT_MAX;                  /* The maximum number of photon bundles created per cycle */
 int NPHOT;                      /* The number of photon bundles created, defined in setup.c */
 
-#define NWAVE  			  10000 //This is the number of wavelength bins in spectra that are produced
+#define NWAVE  			  50000 //This is the number of wavelength bins in spectra that are produced
 #define MAXSCAT 			2000
 
 /* Define the structures */
@@ -844,7 +844,7 @@ typedef struct plasma
   double heat_lines, heat_ff;
   double heat_comp;             /* The compton heating for the cell */
   double heat_ind_comp;         /* The induced compton heatingfor the cell */
-  double heat_lines_macro, heat_photo_macro;    /* bb and bf heating due to macro atoms. Subset of heat_lines 
+  double heat_lines_macro, heat_photo_macro;    /* bb and bf heating due to macro atoms. Subset of heat_lines
                                                    and heat_photo. SS June 04. */
   double heat_photo, heat_z;    /*photoionization heating total and of metals */
   double heat_auger;            /* photoionization heating due to inner shell ionizations */
@@ -936,7 +936,7 @@ typedef struct plasma
   double bf_simple_ionpool_in, bf_simple_ionpool_out;
 
   double comp_nujnu;            /* The integral of alpha(nu)nuj(nu) used to
-                                   compute compton cooling-  only needs computing once per cycle 
+                                   compute compton cooling-  only needs computing once per cycle
                                  */
 
   double dmo_dt[3];             /*Radiative force of wind */
@@ -1163,8 +1163,8 @@ typedef struct photon
   int nmacro;                   /* number of macro atom interactions */
 
   int nres;                     /*For line scattering, indicates the actual transition;
-                                   for continuum scattering, meaning 
-                                   depends on matom vs non-matom. See headers of emission.c 
+                                   for continuum scattering, meaning
+                                   depends on matom vs non-matom. See headers of emission.c
                                    or matom.c for details. */
   int line_nres;
   int nnscat;                   /* Used for the thermal trapping model of
