@@ -717,12 +717,6 @@ main (argc, argv)
   /* XXXX - Execute  CYCLES TO CREATE THE DETAILED SPECTRUM */
   make_spectra (restart_stat);
 
-  /*
-   * Perform the optical depth diagnostics routines
-   */
-
-  optical_depth_diagnostics (w);
-
 #ifdef MPI_ON
   sprintf (dummy, "End of program, Thread %d only", rank_global);       // added so we make clear these are just errors for thread ngit status
   error_summary (dummy);        // Summarize the errors that were recorded by the program
