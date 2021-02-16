@@ -26,14 +26,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <sys/stat.h>
 
 #include "atomic.h"
 #include "python.h"
 
 
 /**********************************************************/
-/** 
- * @brief      Save all of the strutures associated with the 
+/**
+ * @brief      Save all of the strutures associated with the
  * wind to a file
  *
  * @param [in] char  filename[]   The name of the file to write to
@@ -51,7 +52,7 @@
 
 int
 wind_save (filename)
-     char filename[];
+  char filename[];
 {
   FILE *fptr, *fopen ();
   char line[LINELENGTH];
@@ -130,7 +131,7 @@ in the plasma structure */
 
   Log_silent
     ("wind_write sizes: NPLASMA %d size_Jbar_est %d size_gamma_est %d size_alpha_est %d nlevels_macro %d\n",
-     NPLASMA, size_Jbar_est, size_gamma_est, size_alpha_est, nlevels_macro);
+      NPLASMA, size_Jbar_est, size_gamma_est, size_alpha_est, nlevels_macro);
 
   return (n);
 
@@ -151,15 +152,15 @@ in the plasma structure */
 
 
 /**********************************************************/
-/** 
- * @brief      Read back the windsavefile 
+/**
+ * @brief      Read back the windsavefile
  *
  * @param [in] char  filename[]   The full name of the windsave file
- * @return     The number of successful reads, or -1 if the file cannot 
+ * @return     The number of successful reads, or -1 if the file cannot
  * be opened
  *
  * @details
- * 
+ *
  * The routine reads in both the windsave file and the
  * associated atomic data files for a model. It also reads the
  * disk and qdisk structures.
@@ -167,21 +168,22 @@ in the plasma structure */
  *
  * ### Notes ###
  *
- * ### Programming Comment ### 
- * This routine calls wind_complete. This looks superfluous, since 
+ * ### Programming Comment ###
+ * This routine calls wind_complete. This looks superfluous, since
  * wind_complete and its subsidiary routines but it
- * also appears harmless.  ksl 
+ * also appears harmless.  ksl
  *
  **********************************************************/
 
 int
 wind_read (filename)
-     char filename[];
+  char filename[];
 {
   FILE *fptr, *fopen ();
   int n, m;
   char line[LINELENGTH];
   char version[LINELENGTH];
+  struct stat file_stat;        // Used to check the atomic data exists
 
   if ((fptr = fopen (filename, "r")) == NULL)
   {
@@ -197,13 +199,21 @@ wind_read (filename)
   n += fread (&geo, sizeof (geo), 1, fptr);
 
 
-  /* Read the atomic data file.  This is necessary to do here in order to establish the 
-   * values for the dimensionality of some of the variable length structures, associated 
+  /* Read the atomic data file.  This is necessary to do here in order to establish the
+   * values for the dimensionality of some of the variable length structures, associated
    * with macro atoms, especially but likely to be a good idea ovrall
    */
 
-  get_atomic_data (geo.atomic_filename);
+  if (stat (geo.atomic_filename, &file_stat))
+  {
+    if (system ("Setup_Py_Dir"))
+    {
+      Error ("Unable to open %s or create link for atomic data\n", geo.atomic_filename);
+      Exit (1);
+    }
+  }
 
+  get_atomic_data (geo.atomic_filename);
 
 /* Now allocate space for the wind array */
 
@@ -331,7 +341,7 @@ wind_read (filename)
 
 int
 wind_complete (w)
-     WindPtr w;
+  WindPtr w;
 {
   int ndom;
 
@@ -382,7 +392,7 @@ wind_complete (w)
 
 int
 spec_save (filename)
-     char filename[];
+  char filename[];
 {
 
   FILE *fptr, *fopen ();
@@ -428,7 +438,7 @@ spec_save (filename)
 
 int
 spec_read (filename)
-     char filename[];
+  char filename[];
 {
   FILE *fptr, *fopen ();
   int n;
