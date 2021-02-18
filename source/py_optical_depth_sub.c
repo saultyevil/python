@@ -21,6 +21,7 @@
 const PIEdges_t PI_EDGES_TO_MEASURE[] = {
   {"HLymanEdge", 3.387485e+15},
   {"HBalmerEdge", 8.293014e+14},
+  {"HeI24eVEdge", 5.9483e+15},
   {"HeII54eVEdge", 1.394384e+16}
 };
 
