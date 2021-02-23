@@ -55,6 +55,7 @@ print_help (void)
 void
 get_arguments (int argc, char *argv[])
 {
+  int i;
   int n_read;
   char input[LINELENGTH];
 
@@ -81,7 +82,7 @@ get_arguments (int argc, char *argv[])
    */
 
   n_read = 0;
-  for (int i = 1; i < argc; ++i)
+  for (i = 1; i < argc; ++i)
   {
     if (!strcmp (argv[i], "-h"))
     {
