@@ -22,7 +22,6 @@
 #include <stdlib.h>
 
 #include "log.h"
-#include "macros.h"
 
 #define	LINELEN 256
 char *old_names[] = { "mstar", "rstar", "Disk.illumination.treatment", "disk.type",

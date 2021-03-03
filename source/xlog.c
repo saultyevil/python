@@ -91,7 +91,6 @@
 #include <math.h>
 
 #include "log.h"
-#include "macros.h"
 
 #define LINELENGTH 256
 #define NERROR_MAX 500          // Number of different errors that are recorded
@@ -873,7 +872,7 @@ Debug (char *format, ...)
  **********************************************************/
 
 void
-Exit_python (int error_code)
+Exit (int error_code)
 {
   if (error_code == 0)
   {
