@@ -386,9 +386,9 @@ gather_spectra_para (nspec_helper, nspecs)
     for (mpi_j = 0; mpi_j < nspecs; mpi_j++)
     {
       redhelper[mpi_i * nspecs + mpi_j] = xxspec[mpi_j].f[mpi_i] / np_mpi_global;
-
-      if (geo.ioniz_or_extract == CYCLE_IONIZ)
-        redhelper[mpi_i * nspecs + mpi_j + (NWAVE * nspecs)] = xxspec[mpi_j].lf[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspecs + mpi_j + (NWAVE * nspecs)] = xxspec[mpi_j].lf[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspecs + mpi_j + (2 * NWAVE * nspecs)] = xxspec[mpi_j].f_wind[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspecs + mpi_j + (3 * NWAVE * nspecs)] = xxspec[mpi_j].lf_wind[mpi_i] / np_mpi_global;
     }
   }
 
@@ -400,9 +400,10 @@ gather_spectra_para (nspec_helper, nspecs)
     for (mpi_j = 0; mpi_j < nspecs; mpi_j++)
     {
       xxspec[mpi_j].f[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j];
+      xxspec[mpi_j].lf[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j + (NWAVE * nspecs)];
+      xxspec[mpi_j].f_wind[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j + (2 * NWAVE * nspecs)];
+      xxspec[mpi_j].lf_wind[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j + (3 * NWAVE * nspecs)];
 
-      if (geo.ioniz_or_extract == CYCLE_IONIZ)
-        xxspec[mpi_j].lf[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j + (NWAVE * nspecs)];
     }
   }
   MPI_Barrier (MPI_COMM_WORLD);

@@ -90,7 +90,7 @@ calculate_ionization (restart_stat)
 #ifdef MPI_ON
   /* the length of the big arrays to help with the MPI reductions of the spectra
      the variables for the estimator arrays are set up in the subroutines themselves */
-  ioniz_spec_helpers = 2 * MSPEC * NWAVE;       //we need space for log and lin spectra for MSPEC XNWAVE
+  ioniz_spec_helpers = 4 * MSPEC * NWAVE;       //we need space for log and lin spectra for MSPEC XNWAVE
 #endif
 
 /* THE CALCULATION OF THE IONIZATION OF THE WIND */
@@ -437,7 +437,7 @@ make_spectra (restart_stat)
 #ifdef MPI_ON
   /* the length of the big arrays to help with the MPI reductions of the spectra
      the variables for the estimator arrays are set up in the subroutines themselves */
-  spec_spec_helpers = (NWAVE * (MSPEC + geo.nangles));  //We need space for NWAVE wavelengths for nspectra, which will eventually equal nangles + MSPEC
+  spec_spec_helpers = 4 * (NWAVE * (MSPEC + geo.nangles));  //We need space for NWAVE wavelengths for nspectra, which will eventually equal nangles + MSPEC
 #endif
 
   /* Perform the initilizations required to handle macro-atoms during the detailed
