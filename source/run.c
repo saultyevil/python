@@ -62,9 +62,9 @@ calculate_ionization (restart_stat)
   int iwind;
 
 
-#ifdef MPI_ON
-  int ioniz_spec_helpers;
-#endif
+//OLD #ifdef MPI_ON
+//OLD   int ioniz_spec_helpers;
+//OLD #endif
 
   /* Save the the windfile before the first ionization cycle in order to
    * allow investigation of issues that may have arisen at the very beginning
@@ -87,20 +87,17 @@ calculate_ionization (restart_stat)
   freqmin = xband.f1[0];
   freqmax = xband.f2[xband.nbands - 1];
 
-#ifdef MPI_ON
-  /* the length of the big arrays to help with the MPI reductions of the spectra
-     the variables for the estimator arrays are set up in the subroutines themselves */
-  ioniz_spec_helpers = 2 * MSPEC * NWAVE;       //we need space for log and lin spectra for MSPEC XNWAVE
-#endif
+//OLD #ifdef MPI_ON
+//OLD   /* the length of the big arrays to help with the MPI reductions of the spectra
+//OLD      the variables for the estimator arrays are set up in the subroutines themselves */
+//OLD   ioniz_spec_helpers = 2 * MSPEC * NWAVE;       //we need space for log and lin spectra for MSPEC XNWAVE
+//OLD #endif
 
 /* THE CALCULATION OF THE IONIZATION OF THE WIND */
 
-  geo.ioniz_or_extract = 1;     //SS July 04 - want to compute MC estimators during ionization cycles
-  //1 simply implies we are in the ionization section of the code
-  //and allows routines to act accordinaly.
+  geo.ioniz_or_extract = CYCLE_IONIZ;
 
 
-/* BEGINNING OF CYCLE TO CALCULATE THE IONIZATION OF THE WIND */
 
   if (geo.wcycle == geo.wcycles)
     xsignal (files.root, "%-20s No ionization needed: wcycles(%d)==wcyeles(%d)\n", "COMMENT", geo.wcycle, geo.wcycles);
@@ -120,13 +117,15 @@ calculate_ionization (restart_stat)
   }
 
 
+/* BEGINNING OF CYCLE TO CALCULATE THE IONIZATION OF THE WIND */
+
   while (geo.wcycle < geo.wcycles)
   {                             /* This allows you to build up photons in bunches */
 
     xsignal (files.root, "%-20s Starting %3d of %3d ionization cycles \n", "NOK", geo.wcycle + 1, geo.wcycles);
 
     Log ("!!Python: Beginning cycle %d of %d for defining wind\n", geo.wcycle + 1, geo.wcycles);
-    Log_flush ();               /* Flush the log file (so that we know where are if there are problems */
+    Log_flush ();
 
     /* Initialize all of the arrays, etc, that need initialization for each cycle
      */
@@ -305,7 +304,7 @@ calculate_ionization (restart_stat)
 
 #ifdef MPI_ON
 
-    gather_spectra_para (ioniz_spec_helpers, MSPEC);
+    gather_spectra_para ();
 
 #endif
 
@@ -446,7 +445,7 @@ make_spectra (restart_stat)
      Next lines turns off macro atom estimators and other portions of the code that are
      unnecessary during spectrum cycles.  */
 
-  geo.ioniz_or_extract = 0;
+  geo.ioniz_or_extract = CYCLE_EXTRACT;
 
 /* Next steps to speed up extraction stage */
   if (!modes.keep_photoabs)
@@ -578,7 +577,8 @@ make_spectra (restart_stat)
 
     /* Do an MPI reduce to get the spectra all gathered to the master thread */
 #ifdef MPI_ON
-    gather_spectra_para (spec_spec_helpers, nspectra);
+//OLD    gather_spectra_para (spec_spec_helpers, nspectra);
+    gather_spectra_para ();
 #endif
 
 

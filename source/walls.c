@@ -181,13 +181,13 @@ walls (p, pold, normal)
       Error ("walls: %d The previous position %11.4e %11.4e %11.4e is inside the disk by %e\n", pold->np, pold->x[0], pold->x[1],
              pold->x[2], z - fabs (pold->x[2]));
 
-      if (modes.save_photons)
-      {
-        save_photons (pold, "walls:old");
-        save_photons (p, "walls:new");
-        Diag ("walls: %d At rho %11.4e, zdisk is %e and zpos %e is inside the disk by %e\n", pold->np, rho, z, fabs (pold->x[2]),
-              z - fabs (pold->x[2]));
-      }
+//OLD      if (modes.save_photons)
+//OLD      {
+//OLD        save_photons (pold, "walls:old");
+//OLD        save_photons (p, "walls:new");
+//OLD        Diag ("walls: %d At rho %11.4e, zdisk is %e and zpos %e is inside the disk by %e\n", pold->np, rho, z, fabs (pold->x[2]),
+//OLD              z - fabs (pold->x[2]));
+//OLD      }
 
     }
 
@@ -212,7 +212,7 @@ walls (p, pold, normal)
 
     s_disk = ds_to_disk (pold, 0, &hit_disk);   /* The 0 imples that s cannot be negative */
 
-    if (s_disk > 0 && p->ds > s_disk)
+    if (s_disk > 0 && s_disk < VERY_BIG && p->ds > s_disk)
     {
       /* This is the case where the photon hits the disk along 
          the line of sight between pold and p
@@ -255,12 +255,12 @@ walls (p, pold, normal)
         }
       }
 
-      if (modes.save_photons)
-      {
-        Diag ("NORMAL   %d   %e %e %e (%e %e %e %e %e)\n", p->np, normal[0], normal[1], normal[2], theta,
-              (zdisk (rho * (1. + EPSILON)) - z), (EPSILON * rho), rho, EPSILON);
-
-      }
+//OLD      if (modes.save_photons)
+//OLD      {
+//OLD        Diag ("NORMAL   %d   %e %e %e (%e %e %e %e %e)\n", p->np, normal[0], normal[1], normal[2], theta,
+//OLD              (zdisk (rho * (1. + EPSILON)) - z), (EPSILON * rho), rho, EPSILON);
+//OLD
+//OLD      }
 
 
       return (p->istat = P_HIT_DISK);

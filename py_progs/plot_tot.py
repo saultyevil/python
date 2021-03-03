@@ -114,14 +114,14 @@ def doit(rootname='sphere',smooth=21,fig_no=2):
 
     zz=pylab.axis()
 
-    # Find the maxium values of all of these arrays
+    # Find the maximum values of all of these arrays
 
     q=numpy.fmax(created,emitted)
     qq=numpy.fmax(q,wind)
     ymax=3*numpy.max(qq)
     pylab.ylim(ymax/1e8, ymax)
 
-    # make a mask of rom the values of qq
+    # make a mask of from the values of qq
 
     test=data['Freq.'][qq>ymax/1e8]
     pylab.xlim(test[0],test[len(test)-1])

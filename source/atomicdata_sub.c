@@ -544,10 +544,10 @@ double q21_a, q21_t_old;
 
 /**********************************************************/
 /**
- * @brief      calculates and returns the collisional de-excitation coefficient q21
+ * @brief      Calculates the collisional de-excitation coefficient q21
  *
  * @param [in] struct lines *  line_ptr   A single line
- * @param [in] double  t   The temperature at wich to calculate the coefficient
+ * @param [in] double  t   The temperature at which to calculate the coefficient
  * @return    The collisional de-excitiation coefficient
  *
  * @details
@@ -555,8 +555,9 @@ double q21_a, q21_t_old;
  * approximation if we do not.
  *
  * ### Notes ###
- * the relevant paper to consult here is Van Regemorter 1962 (ApJ 136 906). We use an effective gaunt
- * factor to calculate collision strengths. There is one regime in which kt < hnu. 
+ * The relevant paper to consult here is 
+ * [Van Regemorter 1962 (ApJ 136 906)](https://ui.adsabs.harvard.edu/abs/1962ApJ...136..906V/abstract). 
+ * We use an effective gaunt factor to calculate collision strengths.  
  * 
 ************************************************************/
 
@@ -566,7 +567,6 @@ q21 (line_ptr, t)
      double t;
 {
   double gaunt;
-//OLD  double gbar;
   double omega;
   double u0;
   double upsilon ();
@@ -575,29 +575,35 @@ q21 (line_ptr, t)
   if (q21_line_ptr != line_ptr || t != q21_t_old)
   {
 
-
     u0 = (BOLTZMANN * t) / (PLANCK * line_ptr->freq);
-
-    if (line_ptr->istate == 1 && u0 < 2)        // neutrals at low energy. Used 2 to give continuous function.
-      gaunt = u0 / 10.0;
-    else                        // low energy electrons, positive ions
-      gaunt = 0.2;
-
 
 
     if (line_ptr->coll_index < 0)       //if we do not have a collision strength for this line use the g-bar formulation
     {
+
+      /* Use the gaunt factor approximatation suggested by Van Regemorter, which makes neutrals a special case. */
+      if (line_ptr->istate == 1 && u0 < 2)
+        gaunt = u0 / 10.0;
+      else
+        gaunt = 0.2;
+
       omega = ECS_CONSTANT * line_ptr->gl * gaunt * line_ptr->f / line_ptr->freq;
     }
     else                        //otherwise use the collision strength directly. NB what we call omega, most people including hazy call upsilon.
     {
       omega = upsilon (line_ptr->coll_index, u0);
-//OLD      gbar = omega / ECS_CONSTANT / line_ptr->gl / line_ptr->f * line_ptr->freq;
     }
 
 
     q21_a = 8.629e-6 / (sqrt (t) * line_ptr->gu) * omega;
     q21_t_old = t;
+  }
+
+
+  if (q21_a < 0.0)
+  {
+    Error ("q21: Calculated q21 (%e) < 0. Setting to 0", q21_a);
+    q21_a = 0.0;
   }
 
   return (q21_a);
@@ -634,13 +640,6 @@ q12 (line_ptr, t)
 }
 
 
-/*
-   a21 alculates and returns the Einstein A coefficient
-   History:
-   98aug        ksl     Coded and debugged
-   99jan        ksl Modified so would shortcircuit calculation if
-   called multiple times for same a
- */
 #define A21_CONSTANT 7.429297e-22       // 8 * PI * PI * E * E / (MELEC * C * C * C)
 
 struct lines *a21_line_ptr;

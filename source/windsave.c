@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <sys/stat.h>
 
 #include "atomic.h"
 #include "python.h"
@@ -182,6 +183,7 @@ wind_read (filename)
   int n, m;
   char line[LINELENGTH];
   char version[LINELENGTH];
+  struct stat file_stat;        // Used to check the atomic data exists
 
   if ((fptr = fopen (filename, "r")) == NULL)
   {
@@ -202,8 +204,16 @@ wind_read (filename)
    * with macro atoms, especially but likely to be a good idea ovrall
    */
 
-  get_atomic_data (geo.atomic_filename);
+  if (stat (geo.atomic_filename, &file_stat))
+  {
+    if (system ("Setup_Py_Dir"))
+    {
+      Error ("Unable to open %s or create link for atomic data\n", geo.atomic_filename);
+      Exit (1);
+    }
+  }
 
+  get_atomic_data (geo.atomic_filename);
 
 /* Now allocate space for the wind array */
 
@@ -305,7 +315,7 @@ wind_read (filename)
 /**********************************************************/
 /** 
  * @brief      A driver routine that calls coordinate-system specific routines
- * that complete the descirption of the wind
+ * that complete the description of the wind
  *
  * @param [in] WindPtr w  The entire wind
  * @return     Always returns 0
@@ -315,6 +325,9 @@ wind_read (filename)
  * For the most point, the various routines that are called
  * just recalculate some of the various arrays used for 
  * finding the boundaries of an individual cell.
+ *
+ * These basically are just 1-d versions of the coordinate
+ * grids at the edge and mid-points of each grid cell
  *
  * ### Notes ###
  *
@@ -331,8 +344,6 @@ wind_complete (w)
      WindPtr w;
 {
   int ndom;
-
-  /* JM Loop over number of domains */
 
 
   for (ndom = 0; ndom < geo.ndomain; ndom++)

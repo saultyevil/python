@@ -319,7 +319,7 @@ check_convergence (void)
 
 
 
-
+/* An externall pointer reference used by zero_emit.  */
 PlasmaPtr xxxplasma;
 
 
@@ -428,10 +428,8 @@ meaning in nebular concentrations.
 
 /**********************************************************/
 /**
- * @brief
- * calc_te determines and returns the electron temperature in the wind such that the energy emitted
- * by the wind is equal to energy emitted (asssuming it is in the interval bracketed by
- * tmin and tmax.)
+ * @brief  find the electron termperature for a cell where the heating and cooling 
+ * would match, assuming that is between tmin and tmax.
  *
  * @param [in] PlasmaPtr  xplasma   A plasma cell in the wind
  * @param [in] double  tmin   A bracketing minimum temperature
@@ -442,9 +440,7 @@ meaning in nebular concentrations.
  * The routine iterates to find the temperature in a cell, where heating and cooling are matched.
  *
  * calc_te does not modify any abundances.  It simply takes the current value of the heating in the
- * cell and attempts to find the value of the electron temperature which will result in cooling which
- * matches the heating.
- *
+ * cell and adjusts the electron temperature to a value that matches the pre-calculated heating.
  *
  * ### Notes ###
  * Ion densities are NOT updated in this process.
@@ -553,15 +549,10 @@ calc_te (PlasmaPtr xplasma, double tmin, double tmax)
  * in the cell of interest.  This routine is used in connection with a zero
  * finding routine
  *
- * 1806 - ksl - The equation now includes a term for non-radiave heating (heat_shock)
+ * T1he equation now includes a term for non-radiative heating (heat_shock)
+ * that was used for FU Ori
  *
  **********************************************************/
-
-double
-zero_emit2 (double t, void *params)
-{
-  return (zero_emit (t));
-}
 
 double
 zero_emit (double t)
@@ -599,4 +590,29 @@ zero_emit (double t)
 
 
   return (difference);
+}
+
+/**********************************************************/
+/**
+ * @brief     A wrapper function used by zero_find as part the 
+ * calculation of a new temperature for a plasma cell
+ *
+ * @param [in] double  t   A trial temperature
+ * @param [in] void *params
+ * @return     The difference between the recorded heating and the cooling calculated
+ * at a specifc temperature.  
+ *
+ * @details
+ *
+ * See zero_emit
+ *
+ * ### Notes ###
+ *
+ **********************************************************/
+
+
+double
+zero_emit2 (double t, void *params)
+{
+  return (zero_emit (t));
 }

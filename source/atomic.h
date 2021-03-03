@@ -75,6 +75,9 @@ int n_inner_tot;                /*The actual number of inner shell ionization cr
 
 #define MAXJUMPS          1000000       /* The maximum number of Macro Atom jumps before emission (if this is exceeded
                                            it gives up (SS) */
+// XXXX  - the maxium number of jumps has been reduced for testing
+// #define MAXJUMPS          10000      /* The maximum number of Macro Atom jumps before emission (if this is exceeded
+//                                           it gives up (SS) */
 #define NAUGER 2                /*Maximum number of "auger" processes */
 int nauger;                     /*Actual number of innershell edges for which autoionization is to be computed */
 
@@ -132,11 +135,11 @@ typedef struct ions
   int macro_info;               /* Identifies whether ion is to be treated using a Macro Atom approach.
                                    set to -1 initially (means not known) 
                                    set to 1 if macro atom method is used
-                                   set to 0 if macro atom method is not used  (SS) for this ion (ksl)
+                                   set to 0 if this ion is a simple ion.            
                                    Note: program will exit if -1 before leaving get_atomicdata
                                  */
   int ntop_first;               /* Internal index into topbase photionization structure */
-  int ntop_ground;              /* NSH 03/12 Index to the ground state topbase photoionization state */
+  int ntop_ground;              /* Index to the ground state topbase photoionization state */
   int ntop;                     /* Number of topbase photoionization cross sections for this ion */
   int nxphot;                   /* Internal index into VFKY photionionization structure.  There
                                    is only one of these per ion */
@@ -189,10 +192,10 @@ typedef struct configurations
   int z;                        /*The element associated with this configuration */
   int istate;                   /*The ion associated with the configuration */
   int nion;                     /*Internal index to ion structure */
-  int nden;                     /*Internal index to levden array in wind structure. -1 if no such level */
-  int isp;                      /*Topbase description of angular momentum (2s+1)*100+l*10+p */
+  int nden;                     /*Internal index to levden array in plasma structure. -1 if no such level */
+  int isp;                      /*Topbase (ISLP) description of angular momentum (2s+1)*100+l*10+p */
   int ilv;                      /* Unique Level number (within an ion. Topbase ilv when Topbase record */
-  int macro_info;               /* Unambigous way to determine this is part of a macro-level ksl 
+  int macro_info;               /* Unambigous way to determine this is part of a macro-level 
                                    set to -1 initially (means not known)
                                    set to 1 if macro atom method is used
                                    set to 0 if macro atom method is not used for this configuration 
@@ -204,22 +207,19 @@ typedef struct configurations
   double q_num;                 /* principal quantum number.  In Topbase this has non-integer values */
   double ex;                    /*excitation energy of level */
   double rad_rate;              /* Total spontaneous radiative de-excitation rate for level */
-  int bbu_jump[NBBJUMPS];       /* list of upwards bb jumps from this configuration (SS) */
-  int bbd_jump[NBBJUMPS];       /* list of downwards bb jumps from this configuration (SS) */
-  int bfu_jump[NBFJUMPS];       /* list of upwards bf jumps from this configuration (SS) */
+  int bbu_jump[NBBJUMPS];       /* list of upwards bb jumps from this configuration */
+  int bbd_jump[NBBJUMPS];       /* list of downwards bb jumps from this configuration */
+  int bfu_jump[NBFJUMPS];       /* list of upwards bf jumps from this configuration */
   int bfd_jump[NBFJUMPS];       /* list of downwards bf jumps from this configuration (SS) */
-  int bbu_indx_first;           /* index to first MC estimator for bb jumps from this configuration (SS) */
-  int bfu_indx_first;           /* index to first MC estimator for bf jumps from this configuration (SS) */
-  int bfd_indx_first;           /* index to first rate for downward bf jumps from this configuration (SS) */
+  int bbu_indx_first;           /* index to first MC estimator for bb jumps from this configuration */
+  int bfu_indx_first;           /* index to first MC estimator for bf jumps from this configuration */
+  int bfd_indx_first;           /* index to first rate for downward bf jumps from this configuration */
 
 }
 config_dummy, *ConfigPtr;
 
 ConfigPtr config;
 
-/* So what is the energy of the first level CIV 
-   ex[ion[6][0].index]
- */
 
 /* Structure to describe the lines */
 

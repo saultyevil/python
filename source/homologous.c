@@ -93,9 +93,9 @@ get_homologous_params (ndom)
   one_dom->wind_thetamax = 90. / RADIAN;
 
   /* define the the variables that determine the gridding */
-  one_dom->wind_rho_min = 0;
+  one_dom->wind_rhomin_at_disk = 0;
   /* JM 1710 -- fixed these to use domain value rather than geo value see #305 */
-  one_dom->wind_rho_max = one_dom->rmax;
+  one_dom->wind_rhomax_at_disk = one_dom->rmax;
   one_dom->zmax = one_dom->rmax;
 
   /* if modes.adjust_grid is 1 then we have already adjusted the grid manually */

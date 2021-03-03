@@ -268,6 +268,8 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
 
     global fig_num
 
+    # print(run1,run2,model)
+
     if outdir=='':
         outdir='Xcompare'
     if os.path.isdir(outdir)==False:
@@ -287,6 +289,7 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
 
         spec1=ascii.read(spec_name1)
         spec2=ascii.read(spec_name2)
+        # print('Found ',spec_name1,spec_name2)
 
 
 
@@ -504,7 +507,7 @@ def doit_two(run1='py82i_181127',run2='py82i_181126',model='cv_kur',outdir=''):
 
     pylab.draw()
     pylab.savefig('%s/%s.png' % (outdir,model))
-    # print('finished:',model)
+    print('finished:%s/%s.png'% (outdir,model))
 
     fig_num+=1
 
@@ -581,7 +584,7 @@ def do_all(run1='py82i_181127',run2='py82i_181126',outdir=''):
         model=word[1].replace('.out.pf','')
         doit_two(run1,run2,model,outdir)
 
-    print(fig_num)
+    # print(fig_num)
 
 
 

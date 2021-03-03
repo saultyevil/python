@@ -152,7 +152,25 @@ parse_command_line (argc, argv)
       else if (strcmp (argv[i], "-gamma") == 0)
       {
         rel_mode = REL_MODE_FULL;
-        Log ("Using only full special relativity for Doppler shifts, etc.\n");
+        Log ("Using special relativity for Doppler shifts, etc., and including co-moving frame effects.\n");
+        j = i;
+      }
+      else if (strcmp (argv[i], "-srclassic") == 0)
+      {
+        rel_mode = REL_MODE_SR_FREQ;
+        Log ("Using full special relativity only for Doppler shifts, etc., and not considering co-moving frame effects.");
+        j = i;
+      }
+      else if (strcmp (argv[i], "-classic") == 0)
+      {
+        rel_mode = REL_MODE_LINEAR;
+        Log ("Using only old approach with linear Doppler shifts, etc. and not considering co-moving frame effects.\n");
+        j = i;
+      }
+      else if (strcmp (argv[i], "-xtest") == 0)
+      {
+        run_xtest = TRUE;
+        Log ("Run xstest, usually instead of normal Python.\n");
         j = i;
       }
       else if (strcmp (argv[i], "-f") == 0)
@@ -275,9 +293,9 @@ help ()
 
   some_help = "\
 \n\
-This program simulates radiative transfer in a (biconical) CV, YSO, quasar or (spherical) stellar wind \n\
+This program simulates radiative transfer in a (biconical) CV, YSO, quasar, TDE or (spherical) stellar wind \n\
 \n\
-Usage:  py [-h] [-r] [-t time_max] [-v n] [--dry-run] [-i] [--version] [--rseed] [-p n_steps] xxx  or simply py \n\
+Usage:  py [-h] [-r] [-t time_max] [-v n] [--dry-run] [-i] [--version] [--rseed] [-p n_steps] [-classic] [-srclassic] xxx  or simply py \n\
 \n\
 where xxx is the rootname or full name of a parameter file, e. g. test.pf \n\
 \n\
@@ -310,6 +328,10 @@ These are largely diagnostic or for special cases. These include\n\
                 Range is in powers of 10, the difference beween the number of photons in the first cycle \n\
                 compared to the last. If range is missing, range is assumed to be 1, in which case the  \n\
                 number of photons will in the first cycle will be one order of magniude less than in the last cycle \n\
+ -classic       Use Python in it's classic configuration, with linear Doppler shifts, etc., and where co-moving frame\n\
+                effects are not taken into account.\n\
+ -srclassic     Use Python with full special relativity for Doppler shits, etc., but do not include any co-moving frame\n\
+                effects.\n\
 \n\
 If one simply types py or pyZZ where ZZ is the version number, one is queried for a name \n\
 of the parameter file and inputs will be requested from the command line. \n\

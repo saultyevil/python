@@ -98,10 +98,10 @@ get_hydro_wind_params (ndom)
 
 
   Log ("rmax=%e\n", zdom[ndom].rmax);
-  zdom[ndom].wind_rho_min = 0.0;        //Set wind_rmin 0.0, otherwise wind cones dont work properly 
-  Log ("rho_min=%e\n", zdom[ndom].wind_rho_min);
-  zdom[ndom].wind_rho_max = zdom[ndom].rmax;    //This is the outer edge of the
-  Log ("rho_max=%e\n", zdom[ndom].wind_rho_max);
+  zdom[ndom].wind_rhomin_at_disk = 0.0; //Set wind_rmin 0.0, otherwise wind cones dont work properly 
+  Log ("rho_min=%e\n", zdom[ndom].wind_rhomin_at_disk);
+  zdom[ndom].wind_rhomax_at_disk = zdom[ndom].rmax;     //This is the outer edge of the
+  Log ("rho_max=%e\n", zdom[ndom].wind_rhomax_at_disk);
   zdom[ndom].zmax = zdom[ndom].rmax;    //This is the outer edge of the
   Log ("zmax=%e\n", zdom[ndom].zmax);
 
@@ -110,8 +110,8 @@ get_hydro_wind_params (ndom)
   Log ("theta_max=%e\n", zdom[ndom].wind_thetamax);
   Log ("rmin=%e\n", zdom[ndom].rmin);
   Log ("rmax=%e\n", zdom[ndom].rmax);
-  Log ("wind_rhomin=%e\n", zdom[ndom].wind_rho_min);
-  Log ("wind_rhomax=%e\n", zdom[ndom].wind_rho_max);
+  Log ("wind_rhomin_at_disk=%e\n", zdom[ndom].wind_rhomin_at_disk);
+  Log ("wind_rhomax_at_disk=%e\n", zdom[ndom].wind_rhomax_at_disk);
 
 
 

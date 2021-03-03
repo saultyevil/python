@@ -103,8 +103,8 @@ get_sv_wind_params (ndom)
 /* Assign the generic parameters for the wind the generic parameters of the wind */
 
   zdom[ndom].rmin = geo.rstar;
-  zdom[ndom].wind_rho_min = zdom[ndom].sv_rmin;
-  zdom[ndom].wind_rho_max = zdom[ndom].sv_rmax;
+  zdom[ndom].wind_rhomin_at_disk = zdom[ndom].sv_rmin;
+  zdom[ndom].wind_rhomax_at_disk = zdom[ndom].sv_rmax;
   zdom[ndom].wind_thetamin = zdom[ndom].sv_thetamin;
   zdom[ndom].wind_thetamax = zdom[ndom].sv_thetamax;
 
@@ -178,9 +178,7 @@ sv_velocity (x, v, ndom)
   /* Calculate the poloidal distance for a vertically extended disk ksl 111124 */
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED && rzero < zdom[ndom].sv_rmax)
   {
-    xtest[0] = r;               // Define xtest in the +z plane
-    xtest[1] = 0;
-    xtest[2] = fabs (x[2]);
+    init_dummy_phot (&ptest);
     ptest.x[0] = rzero;         // Define ptest to be the footpoint extended to xy plane
     ptest.x[1] = 0.0;
     ptest.x[2] = EPSILON;
@@ -188,10 +186,16 @@ sv_velocity (x, v, ndom)
     ptest.lmn[1] = 0.0;
     ptest.lmn[2] = cos (theta);
     s = ds_to_disk (&ptest, 1, &hit_disk);
-    move_phot (&ptest, s);      // Now move the test photon to  disk surface
-    vsub (ptest.x, xtest, xtest);       // Poloidal distance is just the distance between these two points.
-    ldist = length (xtest);
-    rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
+    if (hit_disk)
+    {
+      move_phot (&ptest, s);    // Now move the test photon to  disk surface
+      xtest[0] = r;             // Define xtest in the +z plane
+      xtest[1] = 0;
+      xtest[2] = fabs (x[2]);
+      vsub (ptest.x, xtest, xtest);     // Poloidal distance is just the distance between these two points.
+      ldist = length (xtest);
+      rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
+    }
   }
 
   /* Depending on the mode, we can set the initial velocity as fixed or by the sound speed. See #482. */
@@ -240,13 +244,9 @@ sv_velocity (x, v, ndom)
   speed = (sqrt (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]));
   if (sane_check (speed))
   {
-    Error ("sv_velocity: x %f %f %f v %f %f %f\n", x[0], x[1], x[2], v[0], v[1], v[2]);
-    Error ("sv_velocity: rzero %f theta %f ldist %f zzz %f v_escape %f vl %f\n", rzero, theta, ldist, zzz, v_escape, vl);
+    Error ("sv_velocity: x %g %g %g v %f %f %f\n", x[0], x[1], x[2], v[0], v[1], v[2]);
+    Error ("sv_velocity: rzero %g theta %f ldist %f zzz %f v_escape %f vl %f\n", rzero, theta, ldist, zzz, v_escape, vl);
   }
-
-//OLD  Log ("SV Vel %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e %10.3e \n", x[0], x[1], x[2], rzero_orig, rzero, ldist_orig, ldist, vl,
-//OLD       speed);
-
 
 
   return (speed);
@@ -297,11 +297,11 @@ sv_rho (ndom, x)
   ldist = sqrt ((r - rzero) * (r - rzero) + x[2] * x[2]);
 
 
+
+  /* Calculate the poloidal distance for a vertically extended disk */
   if (geo.disk_type == DISK_VERTICALLY_EXTENDED && rzero < zdom[ndom].sv_rmax)
   {
-    xtest[0] = r;               // Define xtest in the +z plane
-    xtest[1] = 0;
-    xtest[2] = fabs (x[2]);
+    init_dummy_phot (&ptest);
     ptest.x[0] = rzero;         // Define ptest to be the footpoint extended to xy plane
     ptest.x[1] = 0.0;
     ptest.x[2] = EPSILON;
@@ -309,11 +309,18 @@ sv_rho (ndom, x)
     ptest.lmn[1] = 0.0;
     ptest.lmn[2] = cos (theta);
     s = ds_to_disk (&ptest, 1, &hit_disk);
-    move_phot (&ptest, s);      // Now move the test photon to  disk surface
-    vsub (ptest.x, xtest, xtest);       // Poloidal distance is just the distance between these two points.
-    ldist = length (xtest);
-    rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
+    if (hit_disk)
+    {
+      move_phot (&ptest, s);    // Now move the test photon to  disk surface
+      xtest[0] = r;             // Define xtest in the +z plane
+      xtest[1] = 0;
+      xtest[2] = fabs (x[2]);
+      vsub (ptest.x, xtest, xtest);     // Poloidal distance is just the distance between these two points.
+      ldist = length (xtest);
+      rzero = sqrt (ptest.x[0] * ptest.x[0] + ptest.x[1] * ptest.x[1]);
+    }
   }
+
 
 /* Reduced by a factor of 2 to account for radiation on both sides of the disk */
   dmdot_da = zdom[ndom].wind_mdot * pow (rzero, zdom[ndom].sv_lambda) * cos (theta) / zdom[ndom].mdot_norm / 2.;

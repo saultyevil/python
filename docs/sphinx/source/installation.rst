@@ -2,8 +2,11 @@ Getting Started
 ###############
 
 What machines will python run on? We have run python various versions of linux and on Mac.
-It is compiled using mpicc, with an option to compile with gcc. It uses the Gnu Scientific Libraries (gsl)
+It is compiled using mpicc, with an option to compile with gcc. 
 
+It uses the Gnu Scientific Libraries (gsl)
+
+(Developers should also have cproto in their path in order to create new prototypes, and access to indent to insure that routines are formatted in a standard fashion. They will also want to make sure the py_progs routines are properly installed, as indicated below).
 
 Installation
 ============
@@ -40,14 +43,8 @@ note that export syntax is for bash- for csh use
 
     $ setenv PYTHON /path/to/python/
 
-Atomic data is stored in our `data repository <https://github.com/agnwinds/data/>`_ with it's own releases page-
-one should unzip these files and place them in a :code:`$PYTHON/data folder`.
 
-A development user may want to work on atomic data as part of their work, and pull in changes as they are made, in which case we recommend cloning the data repository:
-
-.. code:: bash
-
-    $ cd $PYTHON; git clone https://github.com/agnwinds/data data
+The atomic data needed to run Python is included in the distribution.  
 
 Running python
 ==============
@@ -69,6 +66,24 @@ and run the code by typing, e.g.
 .. code:: bash
 
     $ py root.pf
+
+
+Auxiliary programs
+------------------
+
+There are two programs that are useful for extracting information about models
+
+* windsave2table generates a series of astropy tables that can be used to inspect elements of the various models, including densities of specific ions
+* py_wind is a mainly interactive routine that prints similar infomation to the screen.
+
+The two files are run as follows
+
+.. code:: bash
+
+    $ windsave2table root
+    $ py_wind root
+
+Brief descriptions of command line options for running these routines can obtained using a -h switch
 
 
 Directory structure

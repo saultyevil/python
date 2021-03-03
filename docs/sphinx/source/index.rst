@@ -53,7 +53,7 @@ Nick Higginbottom
   Department of Physics and Astronomy, University of Southampton, Southampton, SO17 1BJ, UK
 
 James Matthews
-  University of Oxford, Astrophysics, Keble Road, Oxford, OX1 3RH, UK
+  Institute of Astronomy, University of Cambridge, Cambridge, CB3 0HA, UK
 
 Sam Mangham
   Department of Physics and Astronomy, University of Southampton, Southampton, SO17 1BJ, UK
@@ -72,9 +72,16 @@ Mandy Hewitt
    :hidden:
    :caption: Documentation
 
+   quick
    installation
    running_python
    input
    output
+   evaluation
+   wind_models
+   radiation_sources
    examples
+   disk
+   ionization_cycles
+   spectral_cycles
    *

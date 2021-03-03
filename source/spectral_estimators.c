@@ -4,9 +4,11 @@
  * @author ksl
  * @date   January, 2018
  *
- * @brief  The routines in this file are all associated with the process of modelling the spectrum in a cell.
+ * @brief  The routines in this file are all associated with 
+ * the process of modelling the spectrum in a cell based
+ * on information that was accrued during an ionization
+ * cycle.  
  *
- * ???
  ***********************************************************/
 
 #include <stdio.h>
@@ -28,12 +30,12 @@ double lspec_numin, lspec_numax;
 /**
  * @brief      Calculate the parameters of a model for J_nu in a cell
  *
- * @param [in] PlasmaPtr  xplasma   Pointer to the plasma structure
+ * @param [in] PlasmaPtr  xplasma   Pointer to the a specific element in the plasma structure
  * @return     0 if successful
  *
  * @details
- * This routine uses the mean frequency (calculated in the photon
- * transsport cycle) find a power law model and an exponential model.
+ * This routine uses the mean frequency (calculated during photon
+ * transport) find a power law model and an exponential model.
  * It then uses the standard deviation to decide which is best.
  * The routine is called from ionization.c
  * The results are stored in parameters in the PlasmaPtr structure
@@ -111,9 +113,6 @@ spectral_estimators (xplasma)
       else
       {
         Error ("spectral_estimators: too few photons (1 or 0) in cell %d band %d to produce a model\n", xplasma->nplasma, n);
-        /* NSH 130709 - changed this to be a warning, there are photons produced here,
-           so the fact that there are none getting into a cell tells us something - it
-           may be perfectly reasonable but nice to know  */
       }
 
       /* We also want to make sure that the weight will be zero, this way we make

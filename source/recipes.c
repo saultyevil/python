@@ -68,8 +68,8 @@ free_vector (a, i, j)
  * This routine carries out numerical integration of the function func from a to b. It currently
  * uses the gsl implementation of the ROMBERG integration scheme. Initial tests using QAG showed that
  * the type of integrals we do - often with exponential tails - is not well treated. There is an 
- * internal test to ensure that the user isnt asking for an integral where the function is zero everywhere.
- * The gsl routine doesnt handle this well, and takes ages to (sometimes) return zero.
+ * internal test to ensure that the user is not asking for an integral where the function is zero everywhere.
+ * The gsl routine does not handle this well, and takes ages to run and (sometimes) return zero.
  *
  * ### Notes ###
  *

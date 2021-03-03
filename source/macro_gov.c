@@ -60,30 +60,33 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
 
 {
   int escape;                   //this tells us when the r-packet is escaping
+  int n_jump = 0;
+  int n_jump_tot = 0;
+  int n_loop = 0;
 
-  escape = 0;                   //start with it not being ready to escape as an r-packet
+  escape = FALSE;               //start with it not being ready to escape as an r-packet
 
   /* Beginning of the main loop for processing a macro-atom */
-  while (escape == 0)
+  while (escape == FALSE)
   {
     if (matom_or_kpkt == 1)     //excite a macro atom (either complete or simple)
     {
 
       /* Make a bb transition of a full macro atom (macro_simple==FALSE). */
-      if (*nres > (-1) && *nres < NLINES && geo.macro_simple == 0 && lin_ptr[*nres]->macro_info == 1)
+      if (*nres > (-1) && *nres < NLINES && geo.macro_simple == FALSE && lin_ptr[*nres]->macro_info == TRUE)
       {
 
         if (geo.matom_radiation == 1)
         {
           /* During the spectrum cycles we want to throw these photons away. */
           p->w = 0.0;
-          escape = 1;           //This doesn't matter but it breaks us out of this loop
+          escape = TRUE;
         }
         else
         {
-          matom (p, nres, &escape);
+          n_jump = matom (p, nres, &escape);
 
-          if (escape == 1)
+          if (escape == TRUE)
           {
             /* It is going to escape as a r-packet that was created by de-activation of a macro atom.
                Therefore, if the frequency is suitable it should be recorded as a macro atom emission event for use in the
@@ -99,34 +102,34 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
       }
 
       /*  Make a bb transition  without the full macro atom treatment. */
-      else if (*nres > (-1) && *nres < NLINES && (geo.macro_simple == 1 || lin_ptr[*nres]->macro_info == 0))
+      else if (*nres > (-1) && *nres < NLINES && (geo.macro_simple == TRUE || lin_ptr[*nres]->macro_info == FALSE))
       {
         fake_matom_bb (p, nres, &escape);
       }
 
       /* Make a transition to the bf continuum of a macro atom and we want the full treatment. */
-      else if (*nres > NLINES && phot_top[*nres - NLINES - 1].macro_info == 1 && geo.macro_simple == 0)
+      else if (*nres > NLINES && phot_top[*nres - NLINES - 1].macro_info == TRUE && geo.macro_simple == FALSE)
       {
 
         if (geo.matom_radiation == 1)
         {
           /* During the spectrum cycles we want to throw these photons away. */
           p->w = 0.0;
-          escape = 1;           //This doesn't matter but it breaks us out of this loop
+          escape = TRUE;
         }
         else
         {
-          matom (p, nres, &escape);
+          n_jump = matom (p, nres, &escape);
 
-          if (escape == 1)
+          if (escape == TRUE)
           {
             /* It is going to escape as a r-packet that was created by de-activation of a macro atom.
                Therefore, if the frequency is suitable it should be recorded as a macro atom emission event for use in the
                computation of the k-packet emissivity needed for the final spectrum calculation. */
             *which_out = 1;
 
-            //SWM - If reverb is on, and this is the last ionisation cycle, then track the photon path
-            if (geo.reverb == REV_MATOM && geo.ioniz_or_extract && geo.fraction_converged > geo.reverb_fraction_converged)
+            //If reverb is on, and this is the last ionisation cycle, then track the photon path
+            if (geo.reverb == REV_MATOM && geo.ioniz_or_extract == CYCLE_IONIZ && geo.fraction_converged > geo.reverb_fraction_converged)
             {
               line_paths_add_phot (&(wmain[p->grid]), p, nres);
             }
@@ -145,7 +148,7 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
          as caused the excitation.  In the old approach, escape will be set to 1, and we will escape.
          In the new "simple emissivity" approach, we should never satisfy the do loop, and so an error 
          is thrown and we exit. */
-      else if (*nres > NLINES && (phot_top[*nres - NLINES - 1].macro_info == 0 || geo.macro_simple == 1))
+      else if (*nres > NLINES && (phot_top[*nres - NLINES - 1].macro_info == FALSE || geo.macro_simple == TRUE))
       {
 #if BF_SIMPLE_EMISSIVITY_APPROACH
         Error ("Macro_go: Error - trying to access fake_matom_bf in alternate bf treatment.\n");
@@ -169,7 +172,7 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
       {
         /* During the spectrum cycles we want to throw these photons away. */
         p->w = 0.0;
-        escape = 1;             /* This doesn't matter but it breaks us out of the loop */
+        escape = TRUE;          /* This doesn't matter but it breaks us out of the loop */
       }
       else
       {
@@ -186,6 +189,20 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
       Error ("macro_gov: Unknown choice for next action. Abort.\n");
       Exit (0);
     }
+    /*XXXX test */
+    if (n_jump > -1)
+    {
+      //XXXX This is a test that fails many times for the agn_macro model.  Just set to n_mump it is the same as in matom
+      n_jump_tot += n_jump;
+      if (n_jump > MAXJUMPS)
+      {
+        Error ("macro_gov: Exceed MAXJUMPS (last %d tot %d) in n_loops %d for phot %d in cell %d\n", n_jump, n_jump_tot, n_loop, p->np,
+               p->grid);
+        escape = TRUE;
+        p->istat = P_ERROR_MATOM;
+      }
+    }
+    n_loop++;
   }
 
   /* End of main matom processing loop 
@@ -287,7 +304,7 @@ macro_pops (xplasma, xne)
 
     /* The check is against the first ion of the element. */
 
-    if (ion[ele[index_element].firstion].macro_info == 1 && geo.macro_simple == 0)
+    if (ion[ele[index_element].firstion].macro_info == TRUE && geo.macro_simple == FALSE)
     {
 
       sane_populations = 0;

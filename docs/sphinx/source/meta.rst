@@ -280,3 +280,18 @@ Inline substitution_reference
       +---+---+
       | a||b  |
       +---+---+
+
+Documenting Python Scripts
+===========================
+
+The :doc:`py_progs` page is intended to document various python scripts contained within the py_progs folder. The aim is to do this using Sphinx's `autodoc extension <https://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html>`_, invoked by adding ``sphinx.ext.autodoc`` to extensions list in the conf.py file. py_progs is also added to the path using ``sys.path.insert(0, '../../py_progs/')``.
+
+The above link contains full documentation of the commands. A module in py_progs can be documented by adding the following text to the rst file, where module.py is the name of the module you wish to document. 
+
+.. code :: rst
+
+    .. automodule:: py_read_output.py
+        :members:
+
+For this to work properly, docstrings have to be in a reasonable rst format. We might consider using the `napoleon extension <https://www.sphinx-doc.org/en/master/usage/extensions/napoleon.html>`_ if this is not to our taste.
+

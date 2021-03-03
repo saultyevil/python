@@ -55,6 +55,9 @@
  * The positional parameters x and v are at the edge of the ring,
  * but many of the other parameters (like temperature) are at the mid point.
  *
+ * The calculation of the disk rings (which depends on the area) does not make
+ * any allowances for a vertical disk structure.
+ *
  *
  **********************************************************/
 
@@ -65,19 +68,19 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
 {
   double t, tref;
   double log_g, gref;
-  double dr, r;
+  double v, dr, r;
   double logdr, logrmin, logrmax, logr;
   double f, ltot;
   double q1;
   int nrings, i;
   int spectype;
   double emit;
+  double factor;
 
   /* Calculate the reference temperature and luminosity of the disk */
   tref = tdisk (m, mdot, rmin);
   gref = gdisk (m, mdot, rmin);
 
-  q_test_count = 0;
   /* Now compute the apparent luminosity of the disk.  This is not actually used
      to determine how annuli are set up.  It is just used to populate geo.ltot.
      It can change if photons hitting the disk are allowed to raise the temperature
@@ -87,7 +90,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
   logrmin = log (rmin);
   logdr = (logrmax - logrmin) / STEPS;
 
-  for (nrings = 0; nrings < NRINGS; nrings++)   //Initialise the structure
+  for (nrings = 0; nrings < NRINGS; nrings++)
   {
     disk.nphot[nrings] = 0;
     disk.nphot[nrings] = 0;
@@ -129,7 +132,6 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
    */
 
   q1 = 2. * PI;
-
   (*ftot) = 0;
 
   for (logr = logrmin; logr < logrmax; logr += logdr)
@@ -138,9 +140,19 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
     dr = exp (logr + logdr) - r;
     t = teff (tref, (r + 0.5 * dr) / rmin);
     log_g = log10 (geff (gref, (r + 0.5 * dr) / rmin));
+    v = sqrt (GRAV * geo.mstar / r);
+    v /= VLIGHT;
+    if (rel_mode == REL_MODE_FULL)
+    {
+      factor = sqrt (1. - v * v);
+    }
+    else
+    {
+      factor = 1.0;
+    }
 
     if (spectype > -1)
-    {                           // emittance from a continuum model
+    {
       emit = emittance_continuum (spectype, freqmin, freqmax, t, log_g);
     }
     else
@@ -148,7 +160,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
       emit = emittance_bb (freqmin, freqmax, t);
 
     }
-    (*ftot) += emit * (2. * r + dr) * dr;
+    (*ftot) += emit * (2. * r + dr) * dr * factor;
   }
 
 
@@ -178,9 +190,19 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
     dr = exp (logr + logdr) - r;
     t = teff (tref, (r + 0.5 * dr) / rmin);
     log_g = log10 (geff (gref, (r + 0.5 * dr) / rmin));
+    v = sqrt (GRAV * geo.mstar / r);
+    v /= VLIGHT;
+    if (rel_mode == REL_MODE_FULL)
+    {
+      factor = sqrt (1. - v * v);
+    }
+    else
+    {
+      factor = 1.0;
+    }
 
     if (spectype > -1)
-    {                           // continuum emittance
+    {
       emit = emittance_continuum (spectype, freqmin, freqmax, t, log_g);
     }
     else
@@ -188,7 +210,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
       emit = emittance_bb (freqmin, freqmax, t);
     }
 
-    f += q1 * emit * (2. * r + dr) * dr;
+    f += q1 * emit * (2. * r + dr) * dr * factor;
     i++;
     /* EPSILON to assure that roundoffs don't affect result of if statement */
     if (f / (*ftot) * (NRINGS - 1) >= nrings)
@@ -202,7 +224,6 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
       nrings++;
       if (nrings >= NRINGS)
       {
-        /* Not *really* an error, the error below deals with a *real* problem. */
         break;
       }
     }
@@ -282,9 +303,6 @@ qdisk_init (rmin, rmax, m, mdot)
   dlog_r = (log_rmax - log_rmin) / (NRINGS - 1);
 
 
-
-
-
   for (nrings = 0; nrings < NRINGS; nrings++)
   {
     log_r = log_rmin + dlog_r * nrings;
@@ -315,10 +333,6 @@ qdisk_init (rmin, rmax, m, mdot)
     qdisk.ave_freq[nrings] = 0;
     qdisk.t_hit[nrings] = 0;
   }
-
-
-
-  /* Now calculate the temperature and gravity of the annulae */
 
   return (0);
 }
@@ -390,16 +404,41 @@ qdisk_save (diskfile, ztot)
 /** 
  * @brief      Read the temperature profile from a file
  *
- * @param [in, out] char *filename   Name of the input file
- * @return     Always returns 0
+ * @param [in] char *  tprofile   Name of the input file
+ * @return     Returns the maximum radius
+ *
+ * @details
+ *
+ * Each line of the input file
+ * a radius and a temperature in the first two columns.
+ * Any extra columns are ignored.
+ *
+ * Comment lines (and other lines) that can not
+ * be parsed are ignored, but will be printed out
+ * to make sure that nothing is amiss.
+ *
+ * The radius values shoule be in cm
+ * The temperature in degrees Kelvin
+ *
+ * The maxium radius of the disk is set to the maximum
+ * radius contained in the input file.
  *
  * ###Notes###
  *
+ * 210226 - In the distant past, the units were different, that is
+ * the r values were in units of 10**11 cm and the temperature
+ * values were in 1000 of degrees.  At one time, the temperature
+ * profile did not have to be for the entire disk, and one used
+ * mdot and a standard model to describe the disk.  This has been
+ * changed so that if one reads in a non standard temperature
+ * profile, it must include the entire disk..
+ *
+ *
  **********************************************************/
 
-int
-read_non_standard_disk_profile (filename)
-     char *filename;
+double
+read_non_standard_disk_profile (tprofile)
+     char *tprofile;
 {
 
   FILE *fptr;
@@ -409,19 +448,13 @@ read_non_standard_disk_profile (filename)
   char *line;
   size_t buffsize = LINELENGTH;
 
-  if ((fptr = fopen (filename, "r")) == NULL)
+  if ((fptr = fopen (tprofile, "r")) == NULL)
   {
-    Error ("read_non_standard_disk_profile: unable to open temperature profile with filename %s\n", filename);
+    Error ("read_non_standard_disk_profile: Could not open filename %s\n", tprofile);
     Exit (1);
   }
 
   line = (char *) malloc (buffsize * sizeof (char));
-  if (line == NULL)
-  {
-    Error ("read_non_standard_disk_profile: unable to allocate memory to read in temperature profile\n");
-    Exit (1);
-  }
-
   blmod.n_blpts = 0;
 
   while (getline (&line, &buffsize, fptr) > 0)
@@ -440,29 +473,23 @@ read_non_standard_disk_profile (filename)
     }
     else
     {
-      Error ("read_non_standard_disk_file: could not convert a line in %s, OK if comment\n", filename);
+      Error ("read_non_standard_disk_file: could not convert a line in %s, OK if comment\n", tprofile);
     }
 
     if (blmod.n_blpts == NBLMODEL)
     {
-      Error ("read_non_standard_disk_file: More than %d points in %s; increase NBLMODEL\n", NBLMODEL, filename);
+      Error ("read_non_standard_disk_file: More than %d points in %s; increase NBLMODEL\n", NBLMODEL, tprofile);
       Exit (1);
     }
   }
 
-  free (line);
-  if (fclose (fptr))            // warn, but do not exit
-    Error ("read_non_standard_disk_profile: couldn't close the temperature profile file\n");
-
-  geo.diskrad = blmod.r[blmod.n_blpts - 1];
-  if (sane_check (geo.diskrad))
+  for (n = 0; n < blmod.n_blpts; n++)
   {
-    Error ("read_non_standard_disk_profile: insane value for the disk radius of %g\n", geo.diskrad);
-    Exit (1);
+    Log ("Disk: r %.3e t %.3e \n", blmod.r[n], blmod.t[n]);
   }
 
-  Log ("geo.diskrad  %e\n", geo.diskrad);
+  free (line);
+  fclose (fptr);
 
-
-  return (0);
+  return (blmod.r[blmod.n_blpts - 1]);
 }

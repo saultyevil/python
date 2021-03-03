@@ -6,21 +6,37 @@
 Synopsis:  
 
 These are routines for plotting various parameters in of the wind
-after these parameters have been saved to an astropy_ascii table
-with a routine like astropy
+after these parameters have been saved to an astropy-compatible
+ascii table
 
 
-Command line usage (if any):
+Command line usage 
 
-    usage: plot_wind filename var grid'
+    usage: plot_wind filename var   
+
+    to make a plot of a single variable from the command line
 
 Description:  
 
+
 Primary routines:
 
-    doit
+    doit : Create a plot of a single variable in a file made with 
+            windsave2table.  This is the routine called from
+            the command line. Additional options are available
+            when called from a python script.
+    compare_separate    : Compare a single variable in two
+            different runs of python and produce 3 separate plots
+            one for each run and one containing the difference
+    compare:     Similar to compare_separate but produces a 
+            single file
+
+
+
 
 Notes:
+
+
                                        
 History:
 
@@ -32,13 +48,14 @@ History:
 import sys
 from astropy.io import ascii
 import numpy
-import pylab
+import matplotlib.pyplot as pylab
 from scipy.signal import boxcar
 from scipy.signal import convolve
 import subprocess
 from matplotlib import tri
 from astropy.io import ascii
 from mpl_toolkits.axes_grid1 import make_axes_locatable
+import copy
 
 
 
@@ -87,7 +104,7 @@ def compare(f1='sv_master.txt',f2='sv_master.txt',var='t_r',grid='ij',inwind='',
     pylab.subplot(131)
 
     ax=pylab.gca()
-    cmap=pylab.cm.jet
+    cmap=copy.copy(pylab.cm.jet)
     cmap.set_bad(color='white')
     im=ax.pcolormesh(x1,y1,xvar1,cmap=cmap)
     pylab.title(title)
@@ -102,7 +119,7 @@ def compare(f1='sv_master.txt',f2='sv_master.txt',var='t_r',grid='ij',inwind='',
     pylab.subplot(132)
 
     ax=pylab.gca()
-    cmap=pylab.cm.jet
+    cmap=copy.copy(pylab.cm.jet)
     cmap.set_bad(color='white')
     im=ax.pcolormesh(x2,y2,xvar2,cmap=cmap)
     pylab.title(title)
@@ -116,7 +133,7 @@ def compare(f1='sv_master.txt',f2='sv_master.txt',var='t_r',grid='ij',inwind='',
     pylab.subplot(133)
 
     ax=pylab.gca()
-    cmap=pylab.cm.jet
+    cmap=copy.copy(pylab.cm.jet)
     cmap.set_bad(color='white')
     im=ax.pcolormesh(x2,y2,xdiff,cmap=cmap)
     pylab.title(title)
@@ -268,10 +285,11 @@ def just_plot(x,y,xvar,root,title,xlabel,ylabel,fig_no=1):
     pylab.figure(fig_no,(6,6))
     pylab.clf()
     ax=pylab.gca()
-    cmap=pylab.cm.jet
+    cmap=copy.copy(pylab.cm.jet)
     cmap.set_bad(color='white')
+
     ax.tick_params(labelsize=14)
-    im=ax.pcolormesh(x,y,xvar,cmap=cmap)
+    im=ax.pcolormesh(x,y,xvar,cmap=cmap,shading='auto')
     pylab.title(title,size=16)
     pylab.xlabel(xlabel,size=16)
     pylab.ylabel(ylabel,size=16)
@@ -330,7 +348,6 @@ def doit(filename='fiducial_agn.master.txt', var='t_r',grid='ij',inwind='',scale
 if __name__ == "__main__":
     import sys
     if len(sys.argv)>2:
-        # doit(int(sys.argv[1]))
         doit(sys.argv[1],sys.argv[2])
     else:
-        print('usage: plot_wind filename var grid')
+        print('usage: plot_wind filename variable')

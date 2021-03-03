@@ -34,7 +34,14 @@ to modify it's operation.  These include the following:
 
 -r
   Restarts a run that has been interrupted or halted, by reading a the ``xxx.windsave``
-  and ``xxx.specsave`` file (if it exists).
+  and ``xxx.specsave`` file (if it exists).  Note that very few values in the .pf
+  file are read when this options is used, as most of the information there has
+  already been utilized in setting up and executing the run. The main ones that
+  can be changed are the numbers of cycles for either ionizaion or detailed spectral
+  cycles.  Parameters that will be ignored include those assoicated with the wavelength
+  range and extraction angles of the detailed spectra.  The way to make changes to
+  the detailed spectra is usually to use the option of setting the System\_type to previous,
+  which will allow one to set all of the detailed spectral parameters anew.
 
 -v n
   Changes the amount of information printed to the screen by Python during a run.
@@ -55,9 +62,6 @@ to modify it's operation.  These include the following:
   number increases logarithmically to the maximum value.  The number ``n_steps`` is optional,
   and specifies the number of decades over which the increase takes place.
 
-  .. todo ::
-
-    NEED TO VERIFY THIS
 
 
 Special switches
@@ -87,3 +91,8 @@ which may be useful in certain special cases.  These include:
   to the diagnostic file the first ``n`` times the error occurs. After that statistics
   are maintained as to the number of times the error occurred, but it is not printed
   to the diagnostic file. The default is 100 (per thread)
+
+-classic 
+  Reverts to using v/c corrections for special relativity and eliminates work done to treat
+  co-moving frames properly.  This is for testing, and is likely to be removed in the not
+  too distant future.

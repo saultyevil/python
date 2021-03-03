@@ -48,4 +48,4 @@ The wind models incorporated into Python currently are:
 
 .. todo::
 
-   Update paths as they move
+   Update paths as they move. Combine with :doc:`wind_models`?

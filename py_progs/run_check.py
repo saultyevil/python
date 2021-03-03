@@ -436,7 +436,7 @@ def doit(root='ixvel',outputfile='out.txt'):
     try:
         spec_plot,nspectra=plot_spec.do_mosaic(root,wmin=0,wmax=0)
     except:
-        print('Could not consturct detailed spectrum plot')
+        print('Could not construct detailed spectrum plot')
         spec_plot='none'
         nspectra=0
 

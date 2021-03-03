@@ -22,6 +22,10 @@
 
 #define LINELENGTH 400
 #define MAXWORDS    20
+#define TRUE         1
+#define FALSE        0
+#define UNKNOWN     -1
+
 
 
 /**********************************************************/
@@ -373,6 +377,11 @@ structure does not have this property! */
           ion[nions].ip = p * EV2ERGS;
           ion[nions].nmax = nmax;
 /* Use the keyword IonM to classify the ion as a macro-ion (IonM) or not (simply Ion) */
+          if (ion[nions].g != 1 && ion[nions].istate == (ion[nions].z + 1))     // RG addressing bug #749
+          {
+            Error ("g is >1 for bare ion! setting to 1\n");
+            ion[nions].g = 1;
+          }
           if (strncmp (word, "IonM", 4) == 0)
           {
             ion[nions].macro_info = 1;
@@ -540,7 +549,7 @@ the program working in both cases, and certainly mixed cases  04apr ksl  */
             istate = iistate;
             z = zz;
             gg = ggg;
-            exx *= EV2ERGS;     // Convert energy to ergs
+            exx *= EV2ERGS;
           }
           else
           {
@@ -549,7 +558,10 @@ the program working in both cases, and certainly mixed cases  04apr ksl  */
             exit (0);
             return (0);
           }
-// Now check that the ion for this level is already known.  If not break out
+
+/* Now check that the ion for this level is known, and that the number of levels does not exceed the maximum
+   specified..  If not break out */
+
           n = 0;
           while ((ion[n].z != z || ion[n].istate != istate) && n < nions)
             n++;
@@ -560,21 +572,16 @@ the program working in both cases, and certainly mixed cases  04apr ksl  */
             break;
           }
 
-          /* Check that for a non-lte (macro atom) that the configuration level is not greater than was allowed for in the
-           * ion line
-           */
 
           if (lev_type == 1 && ilv > ion[n].n_lte_max)
           {
             Error ("get_atomic_data: macro level %3d ge %3d for z %3d  istate %3d\n", ilv, ion[n].n_lte_max, ion[n].z, ion[n].istate);
-            //exit(0);
             break;
           }
 
-/*  So now we know that this level can be associated with an ion
-
-Now either set the type of level that will be used for this ion or set it if
-a level type has not been established
+/*  So now we know that this level can be associated with an ion.  Now either
+    verify that the level type is the same that has been established previouly
+    or set the level type for this ion.
 		   */
 
           if (ion[n].lev_type == (-1))
@@ -607,7 +614,6 @@ a level type has not been established
           }
 
 
-          // case where data will be used (SS)
           if (mflag == 1)
           {
             config[nlevels].macro_info = 1;
@@ -640,25 +646,17 @@ a level type has not been established
           config[nlevels].istate = istate;
           config[nlevels].isp = islp;
           config[nlevels].ilv = ilv;
-          config[nlevels].nion = n;     //Internal index to ion structure
+          config[nlevels].nion = n;
           config[nlevels].q_num = qqnum;
           config[nlevels].g = gg;
           config[nlevels].ex = exx;
           config[nlevels].rad_rate = rl;
-          /* SS Aug 2005
-             Previously, the line above set the rad_rate to 0 and is was never used.
-             Now I'm setting it to the radiative lifetime of the level.
-             It will now be used in the macro atom calculation - if the lifetime is
-             set to be long (infinite) in the input data, the level is assumed to be
-             collisional supported by the ground state (i.e. has the LTE excitation
-             fraction relative to ground).
-           */
 
 
           if (ion[n].n_lte_max > 0)
-          {                     // Then this ion wants nlte levels
+          {
             if (ion[n].first_nlte_level < 0)
-            {                   // Then this is the first one that has been found
+            {
               ion[n].first_nlte_level = nlevels;
               ion[n].nlte = 1;
               config[nlevels].nden = ion[n].first_levden;
@@ -679,10 +677,7 @@ a level type has not been established
           }
 
 
-/* Now associate this config with the levden array where appropriate.  The -1 is because ion[].nlte
-is already incremented
-
-*/
+/* Now associate this config with the levden array where appropriate.  */
 
           if (ion[n].firstlevel < 0)
           {
@@ -691,8 +686,6 @@ is already incremented
           }
           else
             ion[n].nlevels++;
-
-
 
           nlevels++;
 

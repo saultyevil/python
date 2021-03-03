@@ -1,24 +1,25 @@
 #!/usr/bin/env python 
 '''
-	University of Southampton -- JM -- October 2014
+University of Southampton -- JM -- October 2014
 
-				py_read_output.py
+py_read_output.py
 
 Synopsis:
-	this enables one to read outputs from the Python radiative transfer code.
-    Where possible, we use the astropy.io module to read outputs.
+This program enables one to read outputs from the Python radiative transfer code.
+Where possible, we use the astropy.io module to read outputs.
 
-    There are also a number of routines for processing and reshaping various 
-    data formats
+There are also a number of routines for processing and reshaping various 
+data formats
 
-    see 
-    https://github.com/agnwinds/python/wiki/Useful-python-commands-for-reading-and-processing-outputs 
-    for usage
+see 
+https://github.com/agnwinds/python/wiki/Useful-python-commands-for-reading-and-processing-outputs 
+for usage
 
 Usage:
 	
 Arguments:
 '''
+
 
 # we need the classes and numpy modules 
 import py_classes as cls
@@ -35,23 +36,23 @@ except ImportError:
 
 
 def read_spectrum(filename):
-
     '''
     Load data from a spectrum output file from the radiative
     transfer code Python 
 
     Parameters
-    ----------
+              
     filename : file or str
-        File, filename, or generator to read.  If the filename extension is
-        ``.gz`` or ``.bz2``, the file is first decompressed. Note that
-        generators should return byte strings for Python 3k.
+    
+    File, filename, or generator to read.  If the filename extension is
+    ``.gz`` or ``.bz2``, the file is first decompressed. Note that
+    generators should return byte strings for Python 3k.
     
     Returns
-    ----------
+              
     Success: 
     spectrum
-        returns a Table of class astropy.table.table.Table
+    returns a Table of class astropy.table.table.Table
 
     Failure returns 1
     '''
@@ -74,12 +75,11 @@ def read_spectrum(filename):
 
 def read_spectrum_to_class (filename, new=True):
     
-    '''
-    reads a Python .spec file and places in specclass array,
+    '''reads a Python .spec file and places in specclass array,
     which is returned
 
     Parameters
-    ----------
+              
     filename : file or str
         File, filename to read.  
 
@@ -87,10 +87,10 @@ def read_spectrum_to_class (filename, new=True):
         True means the Created column exists in the file 
     
     Returns
-    ----------
+              
     Success: 
     spectrum
-        returns a spectrum class cls.specclass
+    returns a spectrum class cls.specclass
 
     Failure returns 1
     '''
@@ -159,7 +159,7 @@ def read_pywind_summary(filename, return_inwind=False, mode="2d"):
     read a py_wind output file using np array reshaping and manipulation
 
     Parameters
-    ----------
+              
     filename : file or str
         File, filename to read, e.g. root.ne.dat  
 
@@ -171,7 +171,7 @@ def read_pywind_summary(filename, return_inwind=False, mode="2d"):
         can be used to control different coord systems 
     
     Returns
-    ----------
+              
     d: astropy.Table.table.table object
         value is the quantity you are concerned with, e.g. ne
     '''
@@ -198,7 +198,7 @@ def read_pywind(filename, return_inwind=False, mode="2d", complete=True):
     read a py_wind output file using np array reshaping and manipulation
 
     Parameters
-    ----------
+              
     filename : file or str
         File, filename to read, e.g. root.ne.dat  
 
@@ -210,7 +210,7 @@ def read_pywind(filename, return_inwind=False, mode="2d", complete=True):
         can be used to control different coord systems 
     
     Returns
-    ----------
+              
     x, z, value: masked arrays
         value is the quantity you are concerned with, e.g. ne
     '''
@@ -236,7 +236,7 @@ def read_pf(root):
     reads a Python .pf file and returns a dictionary
 
     Parameters
-    ----------
+
     root : file or str
         File, filename to read.  
 
@@ -244,7 +244,7 @@ def read_pf(root):
         True means the Created column exists in the file 
     
     Returns
-    ----------
+
     pf_dict
         Dictionary object containing parameters in pf file
     '''
@@ -302,7 +302,7 @@ def write_pf(root, pf_dict):
     writes a Python .pf file from a dictionary
 
     Parameters
-    ----------
+              
     root : file or str
         File, filename to write.  
 
@@ -310,7 +310,7 @@ def write_pf(root, pf_dict):
         dictionary to write
     
     Returns
-    ----------
+              
     pf_dict
         Dictionary object containing parameters in pf file
     '''

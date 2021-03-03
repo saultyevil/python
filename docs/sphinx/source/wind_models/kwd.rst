@@ -1,13 +1,14 @@
 The Knigge, Wood, and Drew prescription of a bi-conical wind
 ############################################################
 
-In the KWD paramterization for a bi-conical flow the wind is envisioned to have 
+`Knigge, Woods & Drew (1995) <https://ui.adsabs.harvard.edu/abs/1995MNRAS.273..225K/abstract>`_ developed a parameterization for a bi-conical flow, which in slightly modified form is built into Python.  
+in this parameterization, the wind is envisioned to have 
 poloidal streamlines that all point to a position a distance d below the disk, as is
 shown below:
 
 .. todo:: This figure needs modification to account for the fact that we allow rmin and rmax to be specified.
 
-.. figure:: images/kwd.png
+.. figure:: ../images/kwd.png
     :width: 300px
     :align: center
 
@@ -42,5 +43,19 @@ For the model, the sound speed of the disk is defined to be
 
 .. math::
     c_s(R) = 10 \sqrt{\frac{T_{eff}(R)}{10^4 K}} km s^{-1}
+
+
+
+The variables that must be defined are as follows::
+
+    Wind.mdot(msol/yr)        1e-9
+    KWD.d(in_units_of_rstar)        16.0
+    KWD.mdot_r_exponent        1.0
+    KWD.v_infinity(in_units_of_vescape)        3.0
+    KWD.acceleration_length(cm)        10000000000.0
+    KWD.acceleration_exponent                       1.5
+    KWD.v_zero(multiple_of_sound_speed_at_base)                    1
+    KWD.rmin(in_units_of_rstar)                       1
+    KWD.rmax(in_units_of_rstar)                 55.6329
 
 

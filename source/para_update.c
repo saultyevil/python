@@ -46,6 +46,7 @@ communicate_estimators_para ()
   double *redhelper, *redhelper2, *qdisk_helper, *qdisk_helper2;
   double *ion_helper, *ion_helper2;
   double *inner_ion_helper, *inner_ion_helper2;
+  int nspec, size_of_commbuffer;
 
   int *iredhelper, *iredhelper2, *iqdisk_helper, *iqdisk_helper2;
   // int size_of_helpers;
@@ -346,6 +347,56 @@ communicate_estimators_para ()
   free (iqdisk_helper);
   free (iqdisk_helper2);
 
+
+/* Now during ionization cycles, process the cell spectra */
+
+  /* The size of the commbuffers need to be the number of spectra x the length of each */
+
+  if (geo.ioniz_or_extract == CYCLE_IONIZ)
+  {
+    MPI_Barrier (MPI_COMM_WORLD);
+    size_of_commbuffer = NPLASMA * NBINS_IN_CELL_SPEC;
+    nspec = NPLASMA;
+
+    redhelper = calloc (sizeof (double), size_of_commbuffer);
+    redhelper2 = calloc (sizeof (double), size_of_commbuffer);
+
+    for (mpi_i = 0; mpi_i < NBINS_IN_CELL_SPEC; mpi_i++)
+    {
+      for (mpi_j = 0; mpi_j < NPLASMA; mpi_j++)
+      {
+        redhelper[mpi_i * NPLASMA + mpi_j] = plasmamain[mpi_j].cell_spec_flux[mpi_i] / np_mpi_global;
+
+      }
+    }
+
+
+
+    MPI_Barrier (MPI_COMM_WORLD);
+    MPI_Reduce (redhelper, redhelper2, size_of_commbuffer, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    MPI_Bcast (redhelper2, size_of_commbuffer, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+
+
+    for (mpi_i = 0; mpi_i < NBINS_IN_CELL_SPEC; mpi_i++)
+    {
+      for (mpi_j = 0; mpi_j < NPLASMA; mpi_j++)
+      {
+        plasmamain[mpi_j].cell_spec_flux[mpi_i] = redhelper2[mpi_i * NPLASMA + mpi_j];
+
+      }
+    }
+    MPI_Barrier (MPI_COMM_WORLD);
+
+
+
+    free (redhelper);
+    free (redhelper2);
+
+
+  }
+
+
 #endif
   return (0);
 }
@@ -353,12 +404,7 @@ communicate_estimators_para ()
 
 /**********************************************************/
 /**
- * @brief sum up the synthetic spectra between threads.
- *
- * @param [in] int  nspecs number of spectra to compute
- * @param [in] int nspec_helper the length of the big arrays
- *                  to help with the MPI reductions of the spectra
- *                  equal to 2 * number of spectra (NSPEC) * number of wavelengths.
+ * @brief sum up the synthetic and cell spectra between threads.
  *
  * @details
  * sum up the synthetic spectra between threads. Does an
@@ -367,42 +413,52 @@ communicate_estimators_para ()
  *
  **********************************************************/
 
-int
-gather_spectra_para (nspec_helper, nspecs)
-     int nspec_helper;
-     int nspecs;
-{
-#ifdef MPI_ON                   // these routines should only be called anyway in parallel but we need these to compile
 
+int
+gather_spectra_para ()
+{
+#ifdef MPI_ON
   double *redhelper, *redhelper2;
   int mpi_i, mpi_j;
+  int size_of_commbuffer, nspec;
 
-  redhelper = calloc (sizeof (double), nspec_helper);
-  redhelper2 = calloc (sizeof (double), nspec_helper);
+  if (geo.ioniz_or_extract == CYCLE_EXTRACT)
+  {
+    nspec = MSPEC + geo.nangles;
+  }
+  else
+  {
+    nspec = MSPEC;
+  }
 
+  size_of_commbuffer = 4 * nspec * NWAVE;       //we need space for all 4 separate spectra we are normalizing
+
+  redhelper = calloc (sizeof (double), size_of_commbuffer);
+  redhelper2 = calloc (sizeof (double), size_of_commbuffer);
 
   for (mpi_i = 0; mpi_i < NWAVE; mpi_i++)
   {
-    for (mpi_j = 0; mpi_j < nspecs; mpi_j++)
+    for (mpi_j = 0; mpi_j < nspec; mpi_j++)
     {
-      redhelper[mpi_i * nspecs + mpi_j] = xxspec[mpi_j].f[mpi_i] / np_mpi_global;
-
-      if (geo.ioniz_or_extract) // this is True in ionization cycles only, when we also have a log_spec_tot file
-        redhelper[mpi_i * nspecs + mpi_j + (NWAVE * nspecs)] = xxspec[mpi_j].lf[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspec + mpi_j] = xxspec[mpi_j].f[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspec + mpi_j + (NWAVE * nspec)] = xxspec[mpi_j].lf[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspec + mpi_j + (2 * NWAVE * nspec)] = xxspec[mpi_j].f_wind[mpi_i] / np_mpi_global;
+      redhelper[mpi_i * nspec + mpi_j + (3 * NWAVE * nspec)] = xxspec[mpi_j].lf_wind[mpi_i] / np_mpi_global;
     }
   }
 
-  MPI_Reduce (redhelper, redhelper2, nspec_helper, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  MPI_Bcast (redhelper2, nspec_helper, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  MPI_Barrier (MPI_COMM_WORLD);
+  MPI_Reduce (redhelper, redhelper2, size_of_commbuffer, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  MPI_Bcast (redhelper2, size_of_commbuffer, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   for (mpi_i = 0; mpi_i < NWAVE; mpi_i++)
   {
-    for (mpi_j = 0; mpi_j < nspecs; mpi_j++)
+    for (mpi_j = 0; mpi_j < nspec; mpi_j++)
     {
-      xxspec[mpi_j].f[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j];
-
-      if (geo.ioniz_or_extract) // this is True in ionization cycles only, when we also have a log_spec_tot file
-        xxspec[mpi_j].lf[mpi_i] = redhelper2[mpi_i * nspecs + mpi_j + (NWAVE * nspecs)];
+      xxspec[mpi_j].f[mpi_i] = redhelper2[mpi_i * nspec + mpi_j];
+      xxspec[mpi_j].lf[mpi_i] = redhelper2[mpi_i * nspec + mpi_j + (NWAVE * nspec)];
+      xxspec[mpi_j].f_wind[mpi_i] = redhelper2[mpi_i * nspec + mpi_j + (2 * NWAVE * nspec)];
+      xxspec[mpi_j].lf_wind[mpi_i] = redhelper2[mpi_i * nspec + mpi_j + (3 * NWAVE * nspec)];
     }
   }
   MPI_Barrier (MPI_COMM_WORLD);

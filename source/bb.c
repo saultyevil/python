@@ -73,8 +73,8 @@ int error_bb_lo = 0;
 
 /**********************************************************/
 /**
- * @brief      returns the frequency for a photon which follows a Placnk distribution
- * within defined frequncy limits
+ * @brief      returns the frequency for a photon which follows a Planck distribution
+ * within defined frequency limits
  *
  * @param [in] double  t   The temperature of the bb
  * @param [in] double  freqmin   The minimum frequency for the photon
@@ -114,6 +114,11 @@ planck (t, freqmin, freqmax)
   int echeck;
 
 
+  if (t <= 0)
+  {
+    Error ("planck: A value of %e for t is unphysical\n", t);
+    return (freqmin);
+  }
   /*First time through create the array containing the proper boundaries for the integral
    * of the BB function, Note calling cdf_gen_from func also defines ylo and yhi */
 
@@ -129,10 +134,6 @@ planck (t, freqmin, freqmax)
      * cdf_bb_hi is position in the full cdf of the hi frequcny boundary
      * */
 
-
-//    cdf_bb_tot = qromb (planck_d, 0, ALPHABIG, 1e-8);
-//    cdf_bb_lo = qromb (planck_d, 0, ALPHAMIN, 1e-8) / cdf_bb_tot;
-//    cdf_bb_hi = 1. - qromb (planck_d, ALPHAMAX, ALPHABIG, 1e-8) / cdf_bb_tot;
 
     cdf_bb_tot = num_int (planck_d, 0, ALPHABIG, 1e-8);
     cdf_bb_lo = num_int (planck_d, 0, ALPHAMIN, 1e-8) / cdf_bb_tot;
@@ -162,7 +163,6 @@ planck (t, freqmin, freqmax)
 
     if (alphamin < ALPHABIG)    //check to make sure we get a sensible number - planck_d(ALPHAMAX is too small to sensibly integrate)
     {
-//      cdf_bb_ylo = qromb (planck_d, 0, alphamin, 1e-8) / cdf_bb_tot;    //position in the full cdf of current low frequency boundary
       cdf_bb_ylo = num_int (planck_d, 0, alphamin, 1e-8) / cdf_bb_tot;  //position in the full cdf of current low frequency boundary
 
       if (cdf_bb_ylo > 1.0)
@@ -170,7 +170,6 @@ planck (t, freqmin, freqmax)
     }
     if (alphamax < ALPHABIG)    //again, check to see that the integral will be sensible
     {
-//      cdf_bb_yhi = qromb (planck_d, 0, alphamax, 1e-8) / cdf_bb_tot;    //position in the full cdf of currnet hi frequency boundary
       cdf_bb_yhi = num_int (planck_d, 0, alphamax, 1e-8) / cdf_bb_tot;  //position in the full cdf of currnet hi frequency boundary
 
       if (cdf_bb_yhi > 1.0)
@@ -335,7 +334,7 @@ get_rand_exp (alpha_min, alpha_max)
   double a, aa;
   double delta_alpha;
 
-  r = random_number (0.0, 1.0); //A random number between 0 and 1 excl
+  r = random_number (0.0, 1.0);
 
   x = exp (alpha_min - alpha_max);
 
@@ -347,15 +346,16 @@ get_rand_exp (alpha_min, alpha_max)
 
   if (sane_check (a))
   {
-    Error ("get_rand_exp:sane_check %e %e %e %e %e\n", a, aa, delta_alpha, x, r);
+    Error ("get_rand_exp:sane_check: alpha_min %e alpha_max %e --> %e %e %e %e %e\n", alpha_min, alpha_max, a, aa, delta_alpha, x, r);
+    return (alpha_min);
   }
   return (a);
 }
 
-/// The dimensionless planck function integrated from ALPHAMIN to a range of values of alpha
+// The dimensionless planck function integrated from ALPHAMIN to a range of values of alpha
 double integ_planck[NMAX + 1];
 
-/// A flag to say whether we have initialised integ_planck.
+// A flag to say whether we have initialised integ_planck.
 int i_integ_planck_d = 0;
 
 /**********************************************************/
@@ -470,7 +470,7 @@ integ_planck_d (alphamin, alphamax)
 
 /**********************************************************/
 /**
- * @brief      calulates integrals of the dimensionless bb function from
+ * @brief      calculates integrals of the dimensionless bb function from
  * 0 to alpha and the stores the reusults in an array used by integ_plank_d
  *
  * @return     Always returns 0
@@ -489,7 +489,6 @@ integ_planck_d (alphamin, alphamax)
  * ALPHAMIN and ALPHAMAX are  hardcoded
  * which are hardcorded.
  *
- * The actual integration is done with the numerical recipes routine "qromb"
  *
  **********************************************************/
 
@@ -559,8 +558,8 @@ planck_d_2 (double alpha, void *params)
  *
  * @param [in] double  freqmin   The minimum frequency
  * @param [in] double  freqmax   The maximum frequency
- * @param [in] double  t   ???
- * @return     ??? RETURNS ???
+ * @param [in] double  t   The temperature at which the calculation is made
+ * @return     the emmittance between freqmin and freqmax
  *
  * @details
  *
@@ -582,60 +581,52 @@ emittance_bb (freqmin, freqmax, t)
   alphamax = PLANCK * freqmax / (BOLTZMANN * t);
 
 
-  if (alphamin > ALPHAMIN && alphamax < ALPHAMAX)       //We are within the tabulated range
+  if (alphamin > ALPHAMIN && alphamax < ALPHAMAX)
   {
     return (q1 * t * t * t * t * integ_planck_d (alphamin, alphamax));
   }
   else if (alphamax > ALPHABIG)
   {
-    if (alphamin > ALPHABIG)    //The whole band is above the point where we can sensibly integrate the BB function
+    if (alphamin > ALPHABIG)
       return (0);
-    else                        //only the upper part of the band is above ALPHABIG
-//      return (q1 * t * t * t * t * qromb (planck_d, alphamin, ALPHABIG, 1e-7));
+    else
       return (q1 * t * t * t * t * num_int (planck_d, alphamin, ALPHABIG, 1e-7));
-
   }
-  else                          //We are outside the tabulated range and must integrate
+  else
   {
-//    return (q1 * t * t * t * t * qromb (planck_d, alphamin, alphamax, 1e-7));
     return (q1 * t * t * t * t * num_int (planck_d, alphamin, alphamax, 1e-7));
 
   }
 }
 
 
-
-
-
 /**********************************************************/
 /**
  * @brief      decides whether a maximum frequency requested for an integral is sensible.
- * If it is too far off the end of the planck function, qromb will malfunction. We
+ * If it is too far off the end of the planck function, the numerical integration routine  will malfunction. We
  * just have to set it to a frequency where the BB function is tiny, say where hnu/kT =100.
  *
- * @param [in] double  fmin   The minimum frequency (NOT USED)
- * @param [in] double  fmax   The maximum frequency (NOT USED)
+ * @param [in] double  fmax   The maximum frequency 
  * @param [in] double  temp   The temperature
  * @return   A frequency which is the maximum value for which one should try to evaluate the
  * BB function
  *
  * @details
- * We use alphabig to define the place in the BB spectrum where we want to give up
+ * We use ALPHABIG to define the place in the BB spectrum where we want to give up
  *
  * ### Notes ###
  *
- * This is a little helper routine written by NSH in August 2012. We
+ * This helper routine was written by NSH in August 2012. We
  * were having lots of problems with trying to integrate cross sections
- * x a plack function at temperatures where there is no flux at fmax. This
- * little routine just checks if fmax is going to be more than 100xt/(h/k)
- * which will return tiny numbers for planck, and make qromb return
- * nonsense.
+ * of a planck function at temperatures where there is no flux at fmax. 
  *
+ * The routine just checks if fmax is going to be more than 100xt/(h/k)
+ * which will return tiny numbers for planck, and may cause the numerical
+ * integration routine to return return
+ * nonsense.
+ * 
  * The routine is called from function calc_pi_rate
  *
- * EP: Previously the function had arguments fmin, fmax and temp. However, it was
- * suggested that arguments which are not used should be removed in an attempt
- * to clean up the code.
  *
  **********************************************************/
 
@@ -645,8 +636,6 @@ check_fmax (fmax, temp)
 {
   double bblim;
 
-  /*Calculate the frequency at which the exponent in the
-     planck law will be -100. This will give a *very* small b(nu). */
 
   bblim = ALPHABIG * (temp / H_OVER_K);
 
@@ -658,8 +647,6 @@ check_fmax (fmax, temp)
   return (fmax);
 
 }
-
-
 
 
 #undef NMAX

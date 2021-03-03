@@ -7,16 +7,10 @@ Type
 
 Values
   standard
-    A Shakura - Sunyaev  disk, with a hard inner boundar
+    A Shakura - Sunyaev  disk, with a hard inner boundary
 
   readin
     Read the profile in from a file; the user will be queried for the name of the file
-
-  yso
-    YSO???
-
-  analytic
-    DEPRECATED??? A profile designed for the situation where the disk is being illuminated by star
 
 
 File

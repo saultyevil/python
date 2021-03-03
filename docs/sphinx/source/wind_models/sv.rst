@@ -1,7 +1,7 @@
 The Shlosman & Vitello prescription of a bi-conical wind
 ########################################################
 
-In the SV93 prescription, the wind emerges between :math:`r_{min}` and 
+In the `SV93 <https://ui.adsabs.harvard.edu/abs/1993ApJ...409..372S/abstract>`_ prescription, the wind emerges between :math:`r_{min}` and 
 :math:`r_{rmax}` along streamlines whose orientation with respect to the system 
 are described an angle
 
@@ -15,7 +15,7 @@ where
 
 and :math:`r_o` refers to the footpoint of a streamline.
 
-.. figure:: images/sv.png
+.. figure:: ../images/sv.png
     :width: 300px
     :align: center
 
@@ -54,5 +54,17 @@ the wind :math:`\dot{m}_{wind}`, :math:`r_{min}`, :math:`r_{max}`, :math:`\theta
 :math:`\theta_{max}`, :math:`\gamma`, :math:`R_{\nu}`, :math:`\alpha`, :math:`\lambda`, and the
 multiple of the escape velocity to be used for :math:`v_{\infty}`.
 
+The following variables are used::
 
+    Wind.mdot(msol/yr)                         1e-9
+    SV.diskmin(units_of_rstar)                 4
+    SV.diskmax(units_of_rstar)                 12
+    SV.thetamin(deg)                           20
+    SV.thetamax(deg)                           65
+    SV.mdot_r_exponent                         0
+    SV.v_infinity(in_units_of_vescape          3
+    SV.acceleration_length(cm)                 7e10
+    SV.acceleration_exponent                   1.5
+    SV.v_zero_mode(fixed,sound_speed)                  fixed 
+    SV.v_zero(cm/s)                                                6e5
 

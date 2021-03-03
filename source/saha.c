@@ -22,8 +22,8 @@
 
 /**********************************************************/
 /** 
- * @brief      
- * modifies the densities of ions, levels, and
+ * @brief   steering routine for    
+ * modifying the densities of ions, levels, and
  * partition functions of ions within a cell of the wind based upon the mode, 
  * and other data contained within the WindPtr itself, such as t_r, t_e, w, 
  * based on the "mode".  
@@ -34,11 +34,7 @@
  * @return   A status message (returned from the individual routines that calculate the ionization. 
  * 0 generally signifies success.
  *
- *
  * @details
- * nebular concentrations serves as the steering routine
- * for all ionization calculations. 
- * 
  *
  * ###Notes####
  **********************************************************/
@@ -109,12 +105,11 @@ nebular_concentrations (xplasma, mode)
 
 /**********************************************************/
 /** 
- * @brief      A routine to calculate concentrations in a plasma cell using the Saha 
+ * @brief      Calculate concentrations in a plasma cell using the Saha 
  * equation with various assumptions about what to use for the temperature
- * 	Saha equantion.  
  *
  * @param [in,out] PlasmaPtr  xplasma   A singll plasma cell
- * @param [in] int  mode   A swich whith defines what to use for the temperature
+ * @param [in] int  mode   A swich which defines what to use for the temperature
  * @return     concentrations returns 0 if it converged; -1 if it did not converge.  If it does
  * 	not converge, both density and *ne are likely to be garbage.
  *
@@ -139,19 +134,19 @@ nebular_concentrations (xplasma, mode)
  * 	where N_r+1 is the number density of the r+1 ionization state
  * 	and   Z_r+1 is the partition function of that state.  
  * 
- *he program works by perfoming a crude iteration on ne.  It could undoubtedly 
+ *The program works by perfoming a crude iteration on ne.  It could undoubtedly 
  *be improved, if one wanted better accuracy or higher speed.
  *
  * ### Notes ###
  * So that one doesn't get zero-divides in other programs, e.g. nebular_concentrations, 
- *a floor is set on the density of any ion or the electron density.
+ * a floor is set on the density of any ion or the electron density.
  *
  **********************************************************/
 
 int
 concentrations (xplasma, mode)
      PlasmaPtr xplasma;
-     int mode;                  //   0=saha using tr, 1=saha using te
+     int mode;
 {
   int nion, niterate;
   double xne, xxne, xnew, xsaha;
@@ -183,7 +178,7 @@ concentrations (xplasma, mode)
     return (0);
   }
 
-  nh = xplasma->rho * rho2nh;   //LTE
+  nh = xplasma->rho * rho2nh;
 
   /* make an initial estimate of ne based on H alone,  Our guess
      assumes ion[0] is H1.  Note that x below is the fractional
@@ -199,7 +194,7 @@ concentrations (xplasma, mode)
    */
 
   if (t < MIN_TEMP)
-    t = MIN_TEMP;               /* fudge to prevent divide by zeros */
+    t = MIN_TEMP;
 
   xsaha = SAHA * pow (t, 1.5);
 
@@ -214,8 +209,7 @@ concentrations (xplasma, mode)
     xne = xxne = nh;
 
   if (xne < 1.e-6)
-    xne = 1.e-6;                /* fudge to assure we can actually calculate
-                                   xne the first time through the loop */
+    xne = 1.e-6;
 
   /* At this point we have an initial estimate of ne. */
 
@@ -239,7 +233,7 @@ concentrations (xplasma, mode)
        densities which is wrong. Fortunately, macro_pops is called again in lucy() and converges on the 
        correct value, but this should be fixed. I am not sure if it even needs to be called at all. */
 
-    if (geo.macro_ioniz_mode == 1)
+    if (geo.macro_ioniz_mode == MACRO_IONIZ_MODE_ESTIMATORS)
     {
       macro_pops (xplasma, xne);
     }
@@ -252,10 +246,10 @@ concentrations (xplasma, mode)
     }
 
     /* Now determine the new value of ne from the ion abundances */
-    xnew = get_ne (xplasma->density);   /* determine the electron density for this density distribution */
+    xnew = get_ne (xplasma->density);
 
     if (xnew < DENSITY_MIN)
-      xnew = DENSITY_MIN;       /* fudge to keep a floor on ne */
+      xnew = DENSITY_MIN;
 
     if (fabs ((xne - xnew) / (xnew)) < FRACTIONAL_ERROR || xnew < 1.e-6)
       break;
@@ -355,7 +349,7 @@ saha (xplasma, ne, t)
          probabilities that are calculated in macro_pops. The exception to this is prior
          to the first ionization cycle when we need to populate saha densities as a first guess */
 
-      if ((ion[nion].macro_info == 0) || (geo.macro_ioniz_mode == 0))
+      if ((ion[nion].macro_info == FALSE) || (geo.macro_ioniz_mode == MACRO_IONIZ_MODE_NO_ESTIMATORS))
       {
         b = xsaha * partition[nion] * exp (-ion[nion - 1].ip / (BOLTZMANN * t)) / (ne * partition[nion - 1]);
         if (b > big)
@@ -384,7 +378,7 @@ saha (xplasma, ne, t)
          probabilities that are calculated in macro_pops. The exception to this is prior
          to the first ionization cycle when we need to populate saha densities as a first guess */
 
-      if ((ion[nion].macro_info == 0) || (geo.macro_ioniz_mode == 0))
+      if ((ion[nion].macro_info == FALSE) || (geo.macro_ioniz_mode == MACRO_IONIZ_MODE_NO_ESTIMATORS))
       {
 
         density[nion] *= a;
@@ -475,7 +469,7 @@ lucy (xplasma)
        structure for those ions which are being treated as macro ions. This means that the
        the newden array will contain wrong values for these particular macro ions, but due
        to the if loop at the end of this subroutine they are never passed to xplasma */
-    if (geo.macro_ioniz_mode == 1)
+    if (geo.macro_ioniz_mode == MACRO_IONIZ_MODE_ESTIMATORS)
     {
       macro_pops (xplasma, xne);
     }
@@ -485,7 +479,7 @@ lucy (xplasma)
     {
 
       /* if the ion is being treated by macro_pops then use the populations just computed */
-      if ((ion[nion].macro_info == 1) && (geo.macro_simple == 0) && (geo.macro_ioniz_mode == 1))
+      if ((ion[nion].macro_info == TRUE) && (geo.macro_simple == FALSE) && (geo.macro_ioniz_mode == MACRO_IONIZ_MODE_ESTIMATORS))
       {
         newden[nion] = xplasma->density[nion];
       }
@@ -520,7 +514,7 @@ lucy (xplasma)
   for (nion = 0; nion < nions; nion++)
   {
     /* If statement added here to suppress interference with macro populations (SS Apr 04) */
-    if (ion[nion].macro_info == 0 || geo.macro_ioniz_mode == 0 || geo.macro_simple == 1)
+    if (ion[nion].macro_info == FALSE || geo.macro_ioniz_mode == MACRO_IONIZ_MODE_NO_ESTIMATORS || geo.macro_simple == TRUE)
     {
       xplasma->density[nion] = newden[nion];
     }

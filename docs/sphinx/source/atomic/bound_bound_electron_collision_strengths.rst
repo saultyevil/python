@@ -15,6 +15,8 @@ In the g-bar formulation
 
 These values of :math:`\Upsilon` simply replace :math:`\Omega`.
 
+In the asbsence of data in this format, the Van Regemorter approximation is utilized.
+
 Translation to Python format
 ============================
 
@@ -24,6 +26,18 @@ Each matched line get a line in the data file which is basically all of the line
 
 Data format
 ===========
+
+The collision strength data has the following format::
+
+  CSTREN Line  1  1 1215.673584  0.139000   2   2     0.000000    10.200121    0    1       1      3   7.500e-01   2.772e-01   1.478e+00    5    1   1.700e+00
+  SCT   0.000e+00   2.500e-01   5.000e-01   7.500e-01   1.000e+00
+  SCUPS    1.132e-01   2.708e-01   5.017e-01   8.519e-01   1.478e+00
+  CSTREN Line  1  1 1215.668213  0.277000   2   4     0.000000    10.200166    0    2       1      4   7.500e-01   5.552e-01   2.961e+00    5    1   1.700e+00
+  SCT   0.000e+00   2.500e-01   5.000e-01   7.500e-01   1.000e+00
+  SCUPS    2.265e-01   5.424e-01   1.005e+00   1.706e+00   2.961e+00
+  CSTREN Line  1  1 1025.722900  0.026300   2   2     0.000000    12.089051    0    3       1      6   8.890e-01   5.268e-02   2.370e-01    5    1   1.600e+00
+
+
 
 Each record has three lines. The first line has a keyword CSTREN and this contains all the line data for the line to which this collision strength refers as the first 10 fields. These fields are identical to the 10 fields that appear in a standard line file. The next 8 fields are
 

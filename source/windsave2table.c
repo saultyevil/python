@@ -79,9 +79,12 @@
  *
  *  --version    Print out information about the version number
  *
- *  -d   Write out ion densisties, rather than ion fractions in the cell
- *  -s   Write out the number of scatters per unit volume  by an ion in a cell, instead of the 
- *       ion fraction
+ *  -d     Write out ion densisties, rather than ion fractions in the cell
+ *  -s     Write out the number of scatters per unit volume  by an ion in a cell, instead of the 
+ *         ion fraction
+ *  -x     windcell Writes out the detailed spectra in a specific windcell 
+ *  -xall  Writes out the detiled windcell spectra for all of the cells that are acutally in 
+ *         the wind
  *
  * The switches only affect the ion tables not the master table
  * This was originally implemented to enable somebody to query which version of
@@ -92,22 +95,26 @@
  *
  **********************************************************/
 
-char windsave2table_help[] = "Usage: windsave2table [-r or -s] [-h] [--version] rootname \n\
--d return densities instead of ion fraction in ion tables \n\
--s return number of scatters per unit volume of an ion instead if ion fractions \n\
--all creates a number of tables describing recombination, ionization rates etc. \n\
---version return version info and quit \n\
--h get this help message and quit\n\
+char windsave2table_help[] = "Usage: windsave2table [-r or -s] [-a] [-x wincell_no] [-xall] [-h] [--version] rootname \n\
+-d             Return densities instead of ion fraction in ion tables \n\
+-s             Return number of scatters per unit volume of an ion instead if ion fractions \n\
+-a             Print additional tables with more information about ions  \n\
+--version      Return version info and quit \n\
+-x windcell    In addition to the normal tables, print out the detailed spectra in a specific windcell\n\
+-xall          In addition to the normal tables, print out a large file containing all of the detailed cell spectra\n\
+               for those cells that are in the wind\n\
+-h             get this help message and quit\n\
 ";
 
 void
-parse_arguments (int argc, char *argv[], char root[], int *ion_switch)
+parse_arguments (int argc, char *argv[], char root[], int *ion_switch, int *spec_switch)
 {
   int i;
   char *fget_rc;
   char input[LINELENGTH];
 
   *ion_switch = 0;
+  *spec_switch = -1;
 
 
   if (argc == 1)
@@ -134,6 +141,22 @@ parse_arguments (int argc, char *argv[], char root[], int *ion_switch)
         if (GIT_DIFF_STATUS)
           printf ("This version was compiled with %i files with uncommitted changes.\n", GIT_DIFF_STATUS);
         exit (0);
+      }
+      else if (!strncmp (argv[i], "-xall", 5))
+      {
+        *spec_switch = -2;
+
+      }
+      else if (!strncmp (argv[i], "-x", 2))
+      {
+        if (sscanf (argv[i + 1], "%d", spec_switch) != 1)
+        {
+          Error ("python: wind cell number  after -x switch\n");
+          exit (1);
+        }
+
+        printf ("Cell spectrum in wind cell %d will be printed\n", *spec_switch);
+        i++;
       }
       else if (!strncmp (argv[i], "-d", 2))
       {
@@ -205,11 +228,13 @@ main (argc, argv)
      int argc;
      char *argv[];
 {
-  char root[LINELENGTH];
+  char root[LINELENGTH], xroot[LINELENGTH];
   char outputfile[LINELENGTH];
   char windsavefile[LINELENGTH];
   char parameter_file[LINELENGTH];
   int ion_switch;
+  int spec_switch;
+  int ndom;
 
 
   strcpy (parameter_file, "NONE");
@@ -223,7 +248,7 @@ main (argc, argv)
    * last compiled and on what commit this was
    */
 
-  parse_arguments (argc, argv, root, &ion_switch);
+  parse_arguments (argc, argv, root, &ion_switch, &spec_switch);
 
   printf ("Reading data from file %s\n", root);
 
@@ -254,6 +279,30 @@ main (argc, argv)
 
 
   do_windsave2table (root, ion_switch);
+
+  if (spec_switch == -2)
+  {
+    for (ndom = 0; ndom < geo.ndomain; ndom++)
+    {
+      if (geo.ndomain > 1)
+      {
+        sprintf (xroot, "%s.%d", root, ndom);
+      }
+      else
+      {
+        sprintf (xroot, "%s", root);
+      }
+
+      create_big_detailed_spec_table (ndom, xroot);
+    }
+  }
+
+  else if (spec_switch >= 0)
+  {
+    printf ("Cell spectrum in wind cell %d will be printed\n", spec_switch);
+    create_detailed_cell_spec_table (spec_switch, root);
+  }
+
 
   return (0);
 }

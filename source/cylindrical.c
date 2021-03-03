@@ -68,10 +68,10 @@ cylind_ds_in_cell (ndom, p)
 
   if ((p->grid = n = where_in_grid (ndom, p->x)) < 0)
   {
-    if (modes.save_photons)
-    {
-      save_photons (p, "NotInGrid_cylind_ds_in_cell");
-    }
+//OLD    if (modes.save_photons)
+//OLD    {
+//OLD      save_photons (p, "NotInGrid_cylind_ds_in_cell");
+//OLD    }
 
     return (n);                 /* Photon was not in wind */
   }

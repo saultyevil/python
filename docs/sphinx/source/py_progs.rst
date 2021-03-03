@@ -9,3 +9,10 @@ Currently, to generate the documentation, you must navigate to :code:`docs/pydoc
 and run :code:`write_docs.py`.
 
 The resulting output file can be found `here <../../pydocs/doc_index.html>`_.
+
+.. todo:: Finish adding modules below.
+
+py_read_output
+=================================
+.. automodule:: py_read_output
+    :members:

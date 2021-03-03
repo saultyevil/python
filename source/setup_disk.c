@@ -18,30 +18,6 @@
 #include "python.h"
 
 
-/***********************************************************
-             University of Southampton
-
-Synopsis:
-  get_disk_params sets up the disk parameters according to user inputs,
-  e.g. the temperature profile, accretion rate etc.
-
-Arguments:
-
-Returns:
-
-Description:
-
-Notes:
-
-History:
-	1502  JM 	Moved here from main()
-	1510	ksl	Modified to restore illumination
-			options, which were brokedn
-    1712    ksl Collected input parameters for disk into
-                a single routine and modified some of the
-                input fil names to be more uniform
-
-**************************************************************/
 
 /**********************************************************/
 /**
@@ -135,25 +111,26 @@ get_disk_params (void)
 
     rddoub ("Disk.radmax(cm)", &geo.diskrad);
     Log ("geo.diskrad  %e\n", geo.diskrad);
-
     geo.diskrad_sq = geo.diskrad * geo.diskrad;
-
-    /* If diskrad <= geo.rstar set geo.disk_type = DISK_NONE to make any disk transparent anyway. */
-
-    if (geo.diskrad < geo.rstar)
-    {
-      Log ("Disk radius is less than star radius, so assuming no disk)\n");
-      geo.disk_type = DISK_NONE;
-    }
   }
   else if (geo.disk_tprofile == DISK_TPROFILE_READIN)
   {
     rdstr ("Disk.T_profile_file", files.tprofile);
+    geo.diskrad = read_non_standard_disk_profile (files.tprofile);
     geo.disk_mdot = 0;
   }
   else
   {
-    geo.disk_mdot = 0;
+    Error ("Setup_disk: This should never occur\n");
+    Exit (1);
+  }
+
+  /* If diskrad <= geo.rstar set geo.disk_type = DISK_NONE to make any disk transparent anyway. */
+
+  if (geo.diskrad < geo.rstar)
+  {
+    Log ("Disk radius is less than star radius, so assuming no disk)\n");
+    geo.disk_type = DISK_NONE;
   }
 
   /* Get the additional variables need to describe a vertically extended disk */

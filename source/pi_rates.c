@@ -29,7 +29,7 @@ double xexp_temp, xexp_w;
 
 /**********************************************************/
 /**
- * @brief      int calculates the photoionization rate coefficient for an ion in a given cell
+ * @brief      calculate the photoionization rate coefficient for an ion in a given cell
  *
  * @param [in] int  nion   The ion being ionized (or the index to an inner shell cross section)
  * @param [in] PlasmaPtr  xplasma   The cell for which rates are calulated
@@ -53,7 +53,7 @@ double xexp_temp, xexp_w;
  * ### Notes ###
  * This was created in Summer 2014 in preparation for matrix ionization solver. Previously, this code
  * was contained in two subroutines bb_correct_2 and pl_correct_2.The functionality of these two
- * have ben combined into one - hence the requirement for the mode parameter. It was further extended
+ * have been combined into one - hence the requirement for the mode parameter. It was further extended
  * to deal with inner shell rates - hence the type parameter
  *
  **********************************************************/
@@ -102,7 +102,6 @@ calc_pi_rate (nion, xplasma, mode, type)
     else
     {
       Error ("calc_pi_rate: No photoionization xsection for ion %d (element %d, ion state %d)\n", nion, ion[nion].z, ion[nion].istate);
-      /* We have a really serious problem - we have no business including an ion for which we have no photoionization data.... */
       Exit (0);
     }
   }
@@ -117,7 +116,6 @@ calc_pi_rate (nion, xplasma, mode, type)
       Error
         ("calc_pi_rate: No inner shell xsection for record %d (element %d, ion state %d)\n",
          nion, inner_cross[nion].z, inner_cross[nion].istate);
-      /* We have a really serious problem - we have no business including an ion for which we have no photoionization data.... */
       Exit (0);
     }
   }

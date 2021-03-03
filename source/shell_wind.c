@@ -130,8 +130,8 @@ get_shell_wind_params (ndom)
   zdom[ndom].wind_thetamax = 90. / RADIAN;
 
   /* define the the variables that determine the gridding */
-  zdom[ndom].wind_rho_min = 0;
-  zdom[ndom].wind_rho_max = zdom[ndom].rmax;
+  zdom[ndom].wind_rhomin_at_disk = 0;
+  zdom[ndom].wind_rhomax_at_disk = zdom[ndom].rmax;
   zdom[ndom].zmax = zdom[ndom].rmax;
 
   /* if modes.adjust_grid is 1 then we have already adjusted the grid manually */
@@ -208,10 +208,10 @@ shell_make_grid (w, ndom)
   nstart = zdom[ndom].nstart;
 
 
-  w[nstart + 0].r = 0.95 * zdom[ndom].rmin;
+  w[nstart + 0].r = zdom[ndom].rmin - 1.0;
   w[nstart + 1].r = zdom[ndom].rmin;
   w[nstart + 2].r = zdom[ndom].rmax;
-  w[nstart + 3].r = 1.05 * zdom[ndom].rmax;
+  w[nstart + 3].r = zdom[ndom].rmax + 1.0;
 
 
 

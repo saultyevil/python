@@ -34,20 +34,25 @@ and then the ions.
 
 
 +------+-------+--+------+--+-----------+--------+---------+-------------+
-|Label |Symbol |z |state |g |$\xi$      |max lev |max nlte |. config     |
+|Label |Symbol |z |state |g |:math:`\xi`|max lev |max nlte |. config     |
 +------+-------+--+------+--+-----------+--------+---------+-------------+
-|IonV  |  H    |1 | 1    | 2|  13.59900 |  1000  | 10      | 1s(2S_{1/2})|
+|IonV  |    H  |1 | 1    | 2|  13.59900 |  1000  | 10      | 1s(2S_{1/2})|
 +------+-------+--+------+--+-----------+--------+---------+-------------+
-|IonV  |   H   | 1| 2    |1 | 1.0000e+20|  0     |  0      |    Bare.    | 
+|IonV  |    H  | 1| 2    |1 | 1.0000e+20|  0     |  0      |    Bare.    | 
 +------+-------+--+------+--+-----------+--------+---------+-------------+
-|IonV  | He    | 2| 1    | 1| 24.58800  |1000    | 10      | 1s^2(1S_0)$ | 
+|IonV  |   He  | 2| 1    | 1| 24.58800  |1000    | 10      | 1s^2(1S_0)$ | 
 +------+-------+--+------+--+-----------+--------+---------+-------------+
-|IonV  | He    | 2| 2    | 2| 54.41800  |1000    |  10     | 1s(2S_{1/2})|
+|IonV  |   He  | 2| 2    | 2| 54.41800  |1000    |  10     | 1s(2S_{1/2})|
 +------+-------+--+------+--+-----------+--------+---------+-------------+
-|IonV  |  He   | 2| 3    | 1|1.0000e+20 |  0     |  0      |    Bare     |  
+|IonV  |   He  | 2| 3    | 1|1.0000e+20 |  0     |  0      |    Bare     |  
 +------+-------+--+------+--+-----------+--------+---------+-------------+
 
 
+Here :math:`\xi` is clearly the ionizaton potential in eV, and max lev is the number 
+of levels that are allowed, if the ion is part of a simple atom, while
+max nlte is the number that are allowed if the ion is part of a macro-atom.
+Whether an ion is treated as part of a simple atom or as part of a macro-atom
+is determined by what is read in as part of the level information.
 
 Python structure:
 =================
@@ -65,3 +70,5 @@ just added by hand to match expected Type Ia abundances and specifically
 the abundances used by Tardis.
 
 ksl - The abundances used by Verner are not necessarily the best values today.  This is one of the the items we should consider updating.
+
+Although the element data file described above includes the Atomic weight, this is not actually used as described in `issue 802 <https://github.com/agnwinds/python/issues/802>`_.  The documentation needs to be updated when this is closed. 

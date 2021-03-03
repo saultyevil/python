@@ -9,4 +9,8 @@ The files relating to these examples can be found in the `examples/` section of 
 .. toctree::
    :glob:
 
-   examples/reverb
+   examples/reverb/reverb
+   examples/demo-models/quasar/quasar
+   examples/demo-models/tde/tde
+   examples/benchmarking/cmfgen
+   examples/benchmarking/tardis

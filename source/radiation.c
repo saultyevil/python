@@ -1,4 +1,3 @@
-
 /***********************************************************/
 /** @file  radiation.c
  * @author ksl
@@ -16,24 +15,30 @@
 #include "atomic.h"
 #include "python.h"
 
-#define COLMIN	0.01
+#define COLMIN  0.01
 
 int iicount = 0;
 
 
 /**********************************************************/
-/** 
- * @brief      updates the  field parameters in the wind and reduces 
- * the weight of the photon as a result of the effects of  free free, bound-free and 
- * Compton scattering. The routine  
+/**
+ * @brief      updates the  field parameters in the wind and reduces
+ * the weight of the photon as a result of the effects of  free free, bound-free and
+ * Compton scattering. The routine
  * also keeps track of the number of photoionizations for H and He in the
  * cell.
  *
  * @param [in,out] PhotPtr  p   the photon
  * @param [in] double  ds   the distance the photon has travelled in the cell
- * @return     Always returns 0.  The pieces of the wind structure which are updated are
- * 	j,ave_freq,ntot, heat_photo, heat_ff, heat_h, heat_he1, heat_he2, heat_z,
- * 	nioniz, and ioniz[].
+ * @param [out] double *kappa_tot_return  The total opacity in the CMF(?) frame
+ * @return     Always returns 0
+ *
+ * @details
+ *
+ * The pieces of the wind structure which are updated in each call to radiation
+ * are:
+ *   j,ave_freq,ntot, heat_photo, heat_ff, heat_h, heat_he1, heat_he2, heat_z,
+ *   nioniz, and ioniz[].
  *
  * @details
  *
@@ -44,22 +49,27 @@ int iicount = 0;
  * n_i sigma and h nu can be brought outside the integral.  Hence the integral is just over w(s),
  * but that is just given by (w(0)-w(smax))/kappa_tot.)  The routine calculates the number of ionizations per
  * unit volume.
- * 	
+ *
+ * Inputs to radiation are assumed to be in the observer frame.  kappas are calculated
+ * in the CMF frame, as elsewhere.  Where tau is calculted from kappa ds, one needs to
+ * account for the difference in length in the two frames
  *
  **********************************************************/
 
-int
-radiation (p, ds)
-     PhotPtr p;
-     double ds;
+double
+radiation (PhotPtr p, double ds)
 {
   TopPhotPtr x_top_ptr;
 
   WindPtr one;
   PlasmaPtr xplasma;
 
-  double freq, freq_store;
-  double kappa_tot, frac_tot, frac_ff;
+
+  double freq;
+  double kappa_tot, kappa_tot_obs, frac_tot, frac_ff;
+  /* Variables named frak are very pooorly named; they are actually opaciites due to individual
+     processes, not fractions of anything
+   */
   double frac_z, frac_comp;     /* frac_comp - the heating in the cell due to Compton heating */
   double frac_ind_comp;         /* frac_ind_comp - the heating due to induced Compton heating */
   double frac_auger;
@@ -69,18 +79,18 @@ radiation (p, ds)
   double kappa_inner_ion[n_inner_tot];
   double frac_inner_ion[n_inner_tot];
   double density, ft, tau, tau2;
-  double energy_abs;
+  double energy_abs_obs, energy_abs_cmf;
   int n, nion;
-  double q, x, z;
-  double w_ave, w_in, w_out;
-  double den_config ();
+  double q, x, z, z_obs;
+  double w_ave_obs, w_in, w_out;
   int nconf;
-  double p_in[3], p_out[3], dp_cyl[3];  //The initial and final momentum.
+  double p_in[3];               //The initial and final momentum.
   double freq_inner, freq_outer;
   double freq_min, freq_max;
   double frac_path, freq_xs;
-  struct photon phot, phot_mid, phot_dummy;
-  int ndom, i;
+  struct photon phot, phot_cmf, phot_mid, phot_mid_cmf, p_cmf;
+  int ndom;
+  double ds_cmf, w_ave_cmf;
 
 
   one = &wmain[p->grid];        /* So one is the grid cell of interest */
@@ -101,43 +111,57 @@ radiation (p, ds)
   stuff_v (p->lmn, p_in);       //Get the direction
   renorm (p_in, p->w / VLIGHT); //Renormalise to momentum
 
-  /* Create phot, a photon at the position we are moving to 
-   *  note that the actual movement of the photon gets done after 
-   *  the call to radiation 
+  /* Create phot, a photon at the position we are moving to
+   *  note that the actual movement of the photon gets done after
+   *  the call to radiation
    */
 
   stuff_phot (p, &phot);        // copy photon ptr
   move_phot (&phot, ds);        // move it by ds
+  stuff_phot (p, &phot_mid);
+  move_phot (&phot_mid, ds / 2.);
+
+
 
   /* calculate photon frequencies in rest frame of cell */
 
 
-  if (observer_to_local_frame (&phot, &phot_dummy))
+  if (observer_to_local_frame (&phot, &phot_cmf))
   {
     Error ("radiation: observer to local frame error\n");
   }
-  freq_inner = phot_dummy.freq;
 
-  if (observer_to_local_frame (p, &phot_dummy))
+  if (observer_to_local_frame (p, &p_cmf))
   {
     Error ("radiation: observer to local frame error\n");
   }
-  freq_outer = phot_dummy.freq;
+
+  if (observer_to_local_frame (&phot_mid, &phot_mid_cmf))
+  {
+    Error ("radiation: observer to local frame error\n");
+  }
+
+
+
+  freq_inner = p_cmf.freq;
+  freq_outer = phot_cmf.freq;
+
 
   /* take the average of the frequencies at original position and original+ds */
-  freq = 0.5 * (freq_inner + freq_outer);
+  phot_mid_cmf.freq = freq = 0.5 * (freq_inner + freq_outer);
+  phot_mid.freq = 0.5 * (p->freq + phot.freq);
 
-  /* calculate free-free, Compton and induced-Compton opacities 
+  /* calculate free-free, Compton and induced-Compton opacities
      note that we also call these with the average frequency along ds */
 
   kappa_tot = frac_ff = kappa_ff (xplasma, freq);       /* Add ff opacity */
-  kappa_tot += frac_comp = kappa_comp (xplasma, freq);  /* Calculate Compton opacity, 
-                                                           store it in kappa_comp and also add it to kappa_tot, 
+  kappa_tot += frac_comp = kappa_comp (xplasma, freq);  /* Calculate Compton opacity,
+                                                           store it in kappa_comp and also add it to kappa_tot,
                                                            the total opacity for the photon path */
 
   kappa_tot += frac_ind_comp = kappa_ind_comp (xplasma, freq);
 
-  frac_tot = frac_z = 0;        /* 59a - ksl - Moved this line out of loop to avoid warning, but notes 
+  frac_tot = frac_z = 0;        /* 59a - ksl - Moved this line out of loop to avoid warning, but notes
                                    indicate this is all diagnostic and might be removed */
   frac_auger = 0;
   frac_tot_abs = frac_auger_abs = 0.0;
@@ -158,8 +182,8 @@ radiation (p, ds)
   if (freq > phot_freq_min)
 
   {
-    if (geo.ioniz_or_extract)
-    {                           // Initialize during ionization cycles only
+    if (geo.ioniz_or_extract == CYCLE_IONIZ)
+    {
       for (nion = 0; nion < nions; nion++)
       {
         kappa_ion[nion] = 0;
@@ -177,7 +201,7 @@ radiation (p, ds)
        of the energy that goes into heating electrons carefully.  */
 
     /* JM 1405 -- I've added a check here that checks if a photoionization edge has been crossed.
-       If it has, then we multiply sigma*density by a factor frac_path, which is equal to the how far along 
+       If it has, then we multiply sigma*density by a factor frac_path, which is equal to the how far along
        ds the edge occurs in frequency space  [(ft - freq_min) / (freq_max - freq_min)] */
 
 
@@ -192,7 +216,7 @@ radiation (p, ds)
         ft = x_top_ptr->freq[0];
         if (ft > freq_min && ft < freq_max)
         {
-          /* then the shifting of the photon causes it to cross an edge. 
+          /* then the shifting of the photon causes it to cross an edge.
              Find out where between fmin and fmax the edge would be in freq space.
              frac_path is the fraction of the total path length above the absorption edge
              freq_xs is freq halfway between the edge and the max freq if an edge gets crossed */
@@ -211,8 +235,8 @@ radiation (p, ds)
 
         if (freq_xs < x_top_ptr->freq[x_top_ptr->np - 1])
         {
-          /* Need the appropriate density at this point. 
-             how we get this depends if we have a topbase (level by level) 
+          /* Need the appropriate density at this point.
+             how we get this depends if we have a topbase (level by level)
              or vfky cross-section (ion by ion) */
 
           nion = x_top_ptr->nion;
@@ -238,8 +262,8 @@ radiation (p, ds)
             kappa_tot += x = sigma_phot (x_top_ptr, freq_xs) * density * frac_path * zdom[ndom].fill;
 
 
-            if (geo.ioniz_or_extract)
-            {                   // Calculate during ionization cycles only
+            if (geo.ioniz_or_extract == CYCLE_IONIZ)
+            {
 
               //This is the heating effect - i.e. the absorbed photon energy less the binding energy of the lost electron
               frac_tot += z = x * (freq_xs - ft) / freq_xs;
@@ -324,12 +348,13 @@ radiation (p, ds)
 
 
 
-  /* finished looping over cross-sections to calculate bf opacity 
+  /* finished looping over cross-sections to calculate bf opacity
      we can now reduce weights and record certain estimators */
 
 
+  kappa_tot_obs = kappa_tot / observer_to_local_frame_ds (p, 1);
+  tau = kappa_tot_obs * ds;
 
-  tau = kappa_tot * ds;
   w_in = p->w;
 
   if (sane_check (tau))
@@ -341,21 +366,25 @@ radiation (p, ds)
   if (tau > 0.0001)
   {                             /* Need differentiate between thick and thin cases */
     x = exp (-tau);
-    energy_abs = w_in * (1. - x);
+    energy_abs_obs = w_in * (1. - x);
 
   }
   else
   {
     tau2 = tau * tau;
-    energy_abs = w_in * (tau - 0.5 * tau2);
+    energy_abs_obs = w_in * (tau - 0.5 * tau2);
 
   }
+
+
+  energy_abs_cmf = energy_abs_obs * phot_mid_cmf.freq / phot_mid.freq;
 
   /* Calculate the reduction in weight - Compton scattering is not included, it is now included at scattering
      however induced Compton heating is not implemented at scattering, so it should remain here for the time being
      to maimtain consistency. */
 
-  tau = (kappa_tot - frac_comp) * ds;
+//  tau = (kappa_tot - frac_comp) * ds;
+  tau = kappa_tot_obs * (1. - frac_comp / kappa_tot) * ds;
 
   if (sane_check (tau))
   {
@@ -368,14 +397,17 @@ radiation (p, ds)
   {                             /* Need differentiate between thick and thin cases */
     x = exp (-tau);
     p->w = w_out = w_in * x;
-    w_ave = (w_in - w_out) / tau;
+    w_ave_obs = (w_in - w_out) / tau;
   }
   else
   {
     tau2 = tau * tau;
     p->w = w_out = w_in * (1. - tau + 0.5 * tau2);      /*Calculate to second order */
-    w_ave = w_in * (1. - 0.5 * tau + 0.1666667 * tau2);
+    w_ave_obs = w_in * (1. - 0.5 * tau + 0.1666667 * tau2);
   }
+
+  phot_mid.w = w_ave_obs;
+  phot_mid_cmf.w = w_ave_cmf = w_ave_obs * phot_mid_cmf.freq / phot_mid.freq;
 
 
   if (sane_check (p->w))
@@ -383,10 +415,10 @@ radiation (p, ds)
     Error ("Radiation:sane_check photon weight is %e for tau %e\n", p->w, tau);
   }
 
-  if (geo.ioniz_or_extract == 0)
-    return (0);                 // 57h -- ksl -- 060715
+  if (geo.ioniz_or_extract == CYCLE_EXTRACT)
+    return kappa_tot;           // 57h -- ksl -- 060715
 
-/* Everything after this is only needed for ionization calculations */
+/* Everything after this point is only needed for ionization calculations */
 /* Update the radiation parameters used ultimately in calculating t_r */
 
   if (freq > xplasma->max_freq) // check if photon frequency exceeds maximum frequency - use doppler shifted frequency
@@ -394,7 +426,7 @@ radiation (p, ds)
 
   if (modes.save_cell_stats && ncstat > 0)
   {
-    save_photon_stats (one, p, ds, w_ave);      // save photon statistics (extra diagnostics)
+    save_photon_stats (one, p, ds, w_ave_obs);  // save photon statistics (extra diagnostics)
   }
 
 
@@ -402,11 +434,13 @@ radiation (p, ds)
      which also updates the ionization parameters and scattered and direct contributions */
 
 
-  //Following bug #391, we now wish to use the mean, doppler shifted freqiency in the cell.
-  freq_store = p->freq;         //Store the packets 'intrinsic' frequency
-  p->freq = freq;               //Temporarily set the photon frequency to the mean doppler shifter frequency
-  update_banded_estimators (xplasma, p, ds, w_ave, ndom);       //Update estimators
-  p->freq = freq_store;         //Set the photon frequency back
+  /*Following bug #391, we now wish to use the mean, doppler shifted freqiency in the cell.
+   * Update_banded_estimators requires photon freq and ds and w_ave in cmf frame */
+
+
+  ds_cmf = observer_to_local_frame_ds (&phot_mid, ds);
+  update_banded_estimators (xplasma, &phot_mid_cmf, ds_cmf, w_ave_cmf, ndom);
+  update_flux_estimators (xplasma, &phot_mid, ds, w_ave_obs, ndom);
 
 
   if (sane_check (xplasma->j) || sane_check (xplasma->ave_freq))
@@ -417,9 +451,9 @@ radiation (p, ds)
   if (kappa_tot > 0)
   {
 
-    //If statement added 01mar18 ksl to correct problem of zero divide
-    //  in odd situations where no continuum opacity
-    z = (energy_abs) / kappa_tot;
+    // We use the cmf value of the energy aborbed since everything is supposed to be in CMF frame
+
+    z = (energy_abs_cmf) / kappa_tot;
     xplasma->heat_ff += z * frac_ff;
     xplasma->heat_tot += z * frac_ff;
     xplasma->abs_tot += z * frac_ff;    /* The energy absorbed from the photon field in this cell */
@@ -445,7 +479,7 @@ radiation (p, ds)
       xplasma->heat_tot += z * frac_auger;      //All the inner shell opacities
 
       q = (z) / (PLANCK * freq * xplasma->vol);
-      /* So xplasma->ioniz for each species is just 
+      /* So xplasma->ioniz for each species is just
          (energy_abs)*kappa_h/kappa_tot / PLANCK*freq / volume
          or the number of photons absorbed in this bundle per unit volume by this ion
        */
@@ -458,96 +492,27 @@ radiation (p, ds)
       for (n = 0; n < n_inner_tot; n++)
       {
         xplasma->heat_inner_ion[inner_cross_ptr[n]->nion] += frac_inner_ion[n] * z;     //This quantity is per ion - the ion number comes from the freq ordered cross section
-        xplasma->inner_ioniz[n] += kappa_inner_ion[n] * q;      //This is the number of ionizations from this innershell cross section - at this point, inner_ioniz is ordered by frequency                
+        xplasma->inner_ioniz[n] += kappa_inner_ion[n] * q;      //This is the number of ionizations from this innershell cross section - at this point, inner_ioniz is ordered by frequency
       }
     }
   }
 
-  stuff_phot (p, &phot_mid);    // copy photon ptr
-  move_phot (&phot_mid, ds / 2.);       // get the location of the photon mid-path
+  z_obs = z * p_cmf.freq / p->freq;
+  update_force_estimators (xplasma, p, &phot_mid, ds, w_ave_obs, ndom, z_obs, frac_ff, frac_auger, frac_tot);
 
-  /*Deal with the special case of a spherical geometry */
-
-  if (zdom[ndom].coord_type == SPHERICAL)
-  {
-    renorm (phot_mid.x, 1);     //Create a unit vector in the direction of the photon from the origin
-  }
-
-
-
-  stuff_v (p->lmn, p_out);
-  renorm (p_out, z * frac_ff / VLIGHT);
-  if (zdom[ndom].coord_type == SPHERICAL)
-  {
-    dp_cyl[0] = dot (p_out, phot_mid.x);        //In the spherical geometry, the first comonent is the radial component
-    dp_cyl[1] = dp_cyl[2] = 0.0;
-  }
-  else
-  {
-    project_from_xyz_cyl (phot_mid.x, p_out, dp_cyl);
-    if (p->x[2] < 0)
-      dp_cyl[2] *= (-1);
-  }
-  for (i = 0; i < 3; i++)
-  {
-    xplasma->rad_force_ff[i] += dp_cyl[i];
-  }
-  xplasma->rad_force_ff[3] += length (dp_cyl);
-
-
-  stuff_v (p->lmn, p_out);
-  renorm (p_out, (z * (frac_tot + frac_auger)) / VLIGHT);
-  if (zdom[ndom].coord_type == SPHERICAL)
-  {
-    dp_cyl[0] = dot (p_out, phot_mid.x);        //In the spherical geometry, the first comonent is the radial component
-    dp_cyl[1] = dp_cyl[2] = 0.0;
-  }
-  else
-  {
-    project_from_xyz_cyl (phot_mid.x, p_out, dp_cyl);
-    if (p->x[2] < 0)
-      dp_cyl[2] *= (-1);
-  }
-  for (i = 0; i < 3; i++)
-  {
-    xplasma->rad_force_bf[i] += dp_cyl[i];
-  }
-
-  xplasma->rad_force_bf[3] += length (dp_cyl);
-
-
-  stuff_v (p->lmn, p_out);
-  renorm (p_out, w_ave * ds * klein_nishina (p->freq));
-  if (zdom[ndom].coord_type == SPHERICAL)
-  {
-    dp_cyl[0] = dot (p_out, phot_mid.x);        //In the spherical geometry, the first comonent is the radial component
-    dp_cyl[1] = dp_cyl[2] = 0.0;
-  }
-  else
-  {
-    project_from_xyz_cyl (phot_mid.x, p_out, dp_cyl);
-    if (p->x[2] < 0)
-      dp_cyl[2] *= (-1);
-  }
-  for (i = 0; i < 3; i++)
-  {
-    xplasma->rad_force_es[i] += dp_cyl[i];
-  }
-  xplasma->rad_force_es[3] += length (dp_cyl);
-
-  return (0);
+  return kappa_tot;
 }
 
 
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      calculates the free-free opacity allowing for stimulated emission
  *
  * @param [in] PlasmaPtr  xplasma   The plasma cell where the free-free optacity is to be calculated
  * @param [in] double  freq   The frequency at which kappa_ff is to be calculated
- * @return     kappa           
+ * @return     kappa
  *
  * @details
  * Uses the formula from Allen
@@ -557,10 +522,10 @@ radiation (p, ds)
  * The routine originally only includes the effect of singly ionized H and doubly ionized He
  * and did not include a gaunt factor
  *
- * More recent versions include all ions and a gaunt factor, as calculated in 
+ * More recent versions include all ions and a gaunt factor, as calculated in
  * pop_kappa_ff_array and stored in kappa_ff_factor. The gaunt factor as currewntly
- * implemented is a frequency averaged one, and so is approximate (but better than 
- * just using 1). A future upgrade would use a more complex implementation where we 
+ * implemented is a frequency averaged one, and so is approximate (but better than
+ * just using 1). A future upgrade would use a more complex implementation where we
  * use the frequency dependant gaunt factor.
  *
  **********************************************************/
@@ -604,20 +569,20 @@ kappa_ff (xplasma, freq)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      calculates the
- * 	photionization crossection due to a Topbase level associated with
- * 	x_ptr at frequency freq
+ *  photionization crossection due to a Topbase level associated with
+ *  x_ptr at frequency freq
  *
  * @param [in,out] struct topbase_phot *  x_ptr   The structure that contains
  * TopBase information about the photoionization x-section
  * @param [in] double  freq   The frequency where the x-section is to be calculated
  *
- * @return     The x-section   
+ * @return     The x-section
  *
  * @details
  * sigma_phot uses the Topbase x-sections to calculate the bound free
- * (or photoionization) xsection.	The data must have been into the
+ * (or photoionization) xsection.   The data must have been into the
  * photoionization structures xphot with get_atomic_data and the
  * densities of individual ions must have been calculated previously.
  *
@@ -675,12 +640,12 @@ sigma_phot (x_ptr, freq)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      returns the precalculated density
- * 	of a particular "nlte" level.	
+ *  of a particular "nlte" level.
  *
  * @param [in] PlasmaPtr  xplasma   The Plasma structure containing information about
- * the cell of interest. 
+ * the cell of interest.
  * @param [in] int  nconf   The running index that describes which level we are interested in
  * @return     The density for a particular level of an ion in the cell
  *
@@ -714,7 +679,7 @@ den_config (xplasma, nconf)
   }
   else if (nconf == ion[nion].firstlevel)
   {
-/* Then we are using a Topbase photoionization x-section for this ion, 
+/* Then we are using a Topbase photoionization x-section for this ion,
 but we are not storing any densities, and so we assume it is completely in the
 in the ground state */
     density = xplasma->density[nion];
@@ -732,8 +697,8 @@ in the ground state */
 
 
 /**********************************************************/
-/** 
- * @brief      populates the multiplicative 	
+/**
+ * @brief      populates the multiplicative
  * constant, including a gaunt factor, to be  used in the 
  * calculating free free  emission (and absorption). 
  *
@@ -787,254 +752,6 @@ pop_kappa_ff_array ()
     }
     plasmamain[i].kappa_ff_factor = plasmamain[i].ne * sum * 3.692e8;
   }
-
-  return (0);
-}
-
-
-
-/**********************************************************/
-/** 
- * @brief      updates the estimators required for determining crude
- * spectra in each Plasma cell
- *
- * @param [in,out] PlasmaPtr  xplasma   PlasmaPtr for the cell of interest
- * @param [in] PhotPtr  p   Photon pointer
- * @param [in] double  ds   ds travelled
- * @param [in] double  w_ave   the weight of the photon in the cell. 
- *
- * @return  Always returns 0
- *
- *
- *
- * @details
- * 
- * Increments the estimators that allow one to construct a crude
- * spectrum in each cell of the wind.  The frequency intervals
- * in which the spectra are constructed are in geo.xfreq. This information
- * is used in different ways (or not at all) depending on the ionization mode.
- *
- * It also records the various parameters intended to describe the radiation field, 
- * including the IP.
- *
- * ### Notes ###
- *
- * The term direct refers to photons that have not been scattered by the wind.
- * 
- * In non macro atom mode, w_ave
- * this is an average weight (passed as w_ave), but 
- * in macro atom mode weights are never reduced (so p->w 
- * is used).
- *
- * This routine is called from bf_estimators in macro_atom modes
- * and from radiation (above).  Although the historical documentation
- * suggests it is only called for certain ionization modes, it appears
- * to be called in all cases, though clearly it is only provides diagnostic
- * information in some of them.
- *
- * 
- **********************************************************/
-
-
-/* A couple of external variables to improve the counting of ionizing
-   photons coming into a cell
-*/
-int nioniz_nplasma = -1;
-int nioniz_np = -1;
-
-/* A couple of external variables to improve the counting of photons
-   in a cell
-*/
-
-int plog_nplasma = -1;
-int plog_np = -1;
-
-int
-update_banded_estimators (xplasma, p, ds, w_ave, ndom)
-     PlasmaPtr xplasma;
-     PhotPtr p;
-     double ds;
-     double w_ave;
-     int ndom;
-{
-  int i;
-  double flux[3];
-  double p_dir_cos[3];
-  struct photon phot_mid;
-
-  /*photon weight times distance in the shell is proportional to the mean intensity */
-
-  xplasma->j += w_ave * ds;
-
-  if (p->nscat == 0)
-  {
-    xplasma->j_direct += w_ave * ds;
-  }
-  else
-  {
-    xplasma->j_scatt += w_ave * ds;
-  }
-
-
-
-/* frequency weighted by the weights and distance in the shell .  See eqn 2 ML93 */
-  xplasma->mean_ds += ds;
-  xplasma->n_ds++;
-  xplasma->ave_freq += p->freq * w_ave * ds;
-
-
-/* The lines below compute the flux element of this photon */
-
-  stuff_phot (p, &phot_mid);    // copy photon ptr
-  move_phot (&phot_mid, ds / 2.);       // get the location of the photon mid-path 
-  stuff_v (p->lmn, p_dir_cos);  //Get the direction of the photon packet
-
-  renorm (p_dir_cos, w_ave * ds);       //Renormnalise the direction into a flux element
-  project_from_xyz_cyl (phot_mid.x, p_dir_cos, flux);   //Go from a direction cosine into a cartesian vector
-
-  if (p->x[2] < 0)              //If the photon is in the lower hemisphere - we need to reverse the sense of the z flux
-    flux[2] *= (-1);
-
-
-  /*Deal with the special case of a spherical geometry */
-
-  if (zdom[ndom].coord_type == SPHERICAL)
-  {
-    renorm (phot_mid.x, 1);     //Create a unit vector in the direction of the photon from the origin
-    flux[0] = dot (p_dir_cos, phot_mid.x);      //In the spherical geometry, the first comonent is the radial flux
-    flux[1] = flux[2] = 0.0;    //In the spherical geomerry, the theta and phi compnents are zero    
-  }
-
-/* We now update the fluxes in the three bands */
-
-
-  if (p->freq < UV_low)
-  {
-    vadd (xplasma->F_vis, flux, xplasma->F_vis);
-    xplasma->F_vis[3] += length (flux);
-  }
-  else if (p->freq > UV_hi)
-  {
-    vadd (xplasma->F_Xray, flux, xplasma->F_Xray);
-    xplasma->F_Xray[3] += length (flux);
-  }
-  else
-  {
-    vadd (xplasma->F_UV, flux, xplasma->F_UV);
-    xplasma->F_UV[3] += length (flux);
-  }
-
-
-  /* 1310 JM -- The next loop updates the banded versions of j and ave_freq, analogously to routine inradiation
-     nxfreq refers to how many frequencies we have defining the bands. So, if we have 5 bands, we have 6 frequencies, 
-     going from xfreq[0] to xfreq[5] Since we are breaking out of the loop when i>=nxfreq, this means the last loop 
-     will be i=nxfreq-1 */
-
-  /* note that here we can use the photon weight and don't need to calculate anm attenuated average weight
-     as energy packets are indisivible in macro atom mode */
-
-
-  for (i = 0; i < geo.nxfreq; i++)
-  {
-    if (geo.xfreq[i] < p->freq && p->freq <= geo.xfreq[i + 1])
-    {
-      xplasma->xave_freq[i] += p->freq * w_ave * ds;    /* frequency weighted by weight and distance */
-      xplasma->xsd_freq[i] += p->freq * p->freq * w_ave * ds;   /* input to allow standard deviation to be calculated */
-      xplasma->xj[i] += w_ave * ds;     /* photon weight times distance travelled */
-      xplasma->nxtot[i]++;      /* increment the frequency banded photon counter */
-      /* work out the range of frequencies within a band where photons have been seen */
-      if (p->freq < xplasma->fmin[i])
-      {
-        xplasma->fmin[i] = p->freq;
-      }
-      if (p->freq > xplasma->fmax[i])
-      {
-        xplasma->fmax[i] = p->freq;
-      }
-
-    }
-  }
-
-  /* NSH 131213 slight change to the line computing IP, we now split out direct and scattered - this was 
-     mainly for the progha_13 work, but is of general interest */
-  /* 70h -- nsh -- 111004 added to try to calculate the IP for the cell. Note that 
-   * this may well end up not being correct, since the same photon could be counted 
-   * several times if it is rattling around.... */
-
-  /* 1401 JM -- Similarly to the above routines, this is another bit of code added to radiation
-     which originally did not get called in macro atom mode. */
-
-  /* NSH had implemented a scattered and direct contribution to the IP. This doesn't really work 
-     in the same way in macro atoms, so should instead be thought of as 
-     'direct from source' and 'reprocessed' radiation */
-
-  if (xplasma->nplasma != plog_nplasma || p->np != plog_np)
-  {
-    xplasma->ntot++;
-
-    /* NSH 15/4/11 Lines added to try to keep track of where the photons are coming from, 
-     * and hence get an idea of how 'agny' or 'disky' the cell is. */
-    /* ksl - 1112 - Fixed this so it records the number of photon bundles and not the total
-     * number of photons.  Also used the PTYPE designations as one should as a matter of 
-     * course
-     */
-
-    if (p->origin == PTYPE_STAR)
-      xplasma->ntot_star++;
-    else if (p->origin == PTYPE_BL)
-      xplasma->ntot_bl++;
-    else if (p->origin == PTYPE_DISK)
-      xplasma->ntot_disk++;
-    else if (p->origin == PTYPE_WIND)
-      xplasma->ntot_wind++;
-    else if (p->origin == PTYPE_AGN)
-      xplasma->ntot_agn++;
-    plog_nplasma = xplasma->nplasma;
-    plog_np = p->np;
-  }
-
-
-
-
-
-
-
-  if (HEV * p->freq > 13.6)     // only record if above H ionization edge
-  {
-
-    /*
-     * Calculate the number of H ionizing photons, see #255
-     * EP 11-19: moving the number of ionizing photons counter into this
-     * function so it will be incremented for both macro and non-macro modes
-     */
-    if (xplasma->nplasma != nioniz_nplasma || p->np != nioniz_np)
-    {
-      xplasma->nioniz++;
-      nioniz_nplasma = xplasma->nplasma;
-      nioniz_np = p->np;
-    }
-
-    /* IP needs to be radiation density in the cell. We sum contributions from
-       each photon, then it is normalised in wind_update. */
-    xplasma->ip += ((w_ave * ds) / (PLANCK * p->freq));
-
-    if (HEV * p->freq < 13600)  //Tartar et al integrate up to 1000Ryd to define the ionization parameter
-    {
-      xplasma->xi += (w_ave * ds);
-    }
-
-    if (p->nscat == 0)
-    {
-      xplasma->ip_direct += ((w_ave * ds) / (PLANCK * p->freq));
-    }
-    else
-    {
-      xplasma->ip_scatt += ((w_ave * ds) / (PLANCK * p->freq));
-    }
-  }
-
-
-
 
   return (0);
 }

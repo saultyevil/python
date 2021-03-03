@@ -1,5 +1,5 @@
 *Quick Guide to Python*
-#######################
+########################################
 
 This quide is intended to allow users to install Python, to run Python as a 
 computer program and then to check whether the run has completed as expected.  
