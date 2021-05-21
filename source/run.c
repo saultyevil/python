@@ -259,24 +259,14 @@ calculate_ionization (restart_stat)
     photon_checks (p, freqmin, freqmax, "Check after transport");
     spectrum_create (p, geo.nangles, geo.select_extract);
 
-
-
-    /* At this point we should communicate all the useful infomation 
-       that has been accummulated on differenet MPI tasks */
+    /* At this point we should communicate all the useful information
+       that has been accumulated on different MPI tasks */
 
 #ifdef MPI_ON
-
+    Log_parallel ("Beginning MPI communication stage for process %i\n", rank_global);  // todo; remove in future
     communicate_estimators_para ();
-
     communicate_matom_estimators_para ();       // this will return 0 if nlevels_macro == 0
-#endif
 
-
-
-    /* Calculate and store the amount of heating of the disk due to radiation impinging on the disk */
-    /* We only want one process to write to the file, and we only do this if there is a disk */
-
-#ifdef MPI_ON
     if (rank_global == 0)
     {
 #endif
@@ -307,14 +297,8 @@ calculate_ionization (restart_stat)
     /* Do an MPI reduce to get the spectra all gathered to the master thread */
 
 #ifdef MPI_ON
-
     gather_spectra_para ();
 
-#endif
-
-
-
-#ifdef MPI_ON
     if (rank_global == 0)
     {
 #endif

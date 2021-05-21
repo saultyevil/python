@@ -1547,4 +1547,4 @@ struct rdpar_choices zz_spec;
 
 #define Exit(error_code) {exit_python(error_code); exit(error_code);}
 
-int n_errors_resonance;
+unsigned long n_errors_resonance;
