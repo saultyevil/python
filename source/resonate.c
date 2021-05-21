@@ -1121,7 +1121,7 @@ scatter (p, nres, nnscat)
         if (prob_kpkt < 0)
         {
           /* only report an error for a negative prob_kpkt if it's large-ish in magnitude. see #436 discussion */
-          if (prob_kpkt < -1e-3)
+          if (prob_kpkt < -1e-2)
           {
             Error ("scatter: kpkt probability %8.4e < 0 in plasma cell %d photon edge freq %8.4e, co-moving freq %8.4e\n",
                    prob_kpkt, xplasma->nplasma, phot_top[*nres - NLINES - 1].freq[0], freq_comoving);
