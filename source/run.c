@@ -263,7 +263,6 @@ calculate_ionization (restart_stat)
        that has been accumulated on different MPI tasks */
 
 #ifdef MPI_ON
-    Log_parallel ("Beginning MPI communication stage for process %i\n", rank_global);  // todo; remove in future
     communicate_estimators_para ();
     communicate_matom_estimators_para ();       // this will return 0 if nlevels_macro == 0
 
