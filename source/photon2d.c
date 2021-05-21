@@ -500,7 +500,10 @@ translate_in_wind (w, p, tau_scat, tau, nres)
         ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
          *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
 
-      save_photons (p, "HitSameResonance");
+      if (modes.save_photons)
+      {
+        save_photons (p, "HitSameResonance");
+      }
 
       istat = P_INWIND;
       *tau = 0;
