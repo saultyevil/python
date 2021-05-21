@@ -492,13 +492,20 @@ translate_in_wind (w, p, tau_scat, tau, nres)
 
   move_phot (p, ds_current);
 
+  const int n_error_max_report = 50;
+
   if (*nres > -1 && *nres <= NLINES && *nres == p->nres && istat == P_SCAT)
   {
     if (ds_current < 1e5)
     {
-      Log_silent
-        ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
-         *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
+      if (n_errors_resonance < n_error_max_report)
+      {
+        Error
+          ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
+            *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
+      }
+
+      n_errors_resonance++;
 
       if (modes.save_photons)
       {

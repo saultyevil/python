@@ -95,6 +95,9 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
 
   /* Beginning of loop over photons */
 
+  n_lost_to_dfudge = 0;
+  n_errors_resonance = 0;
+
   for (nphot = 0; nphot < NPHOT; nphot++)
   {
 
@@ -146,7 +149,8 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
       ("trans_phot: %ld photons were lost due to DFUDGE (%8.4e) pushing them outside of the wind after scatter\n",
        n_lost_to_dfudge, DFUDGE);
 
-  n_lost_to_dfudge = 0;         // reset the counter
+  if(n_errors_resonance > 0)
+    Log("trans_phot: %ld repeated resonance interactions happened this cycle\n", n_errors_resonance);
 
   return (0);
 }

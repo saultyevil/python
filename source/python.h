@@ -1546,3 +1546,5 @@ struct rdpar_choices zz_spec;
 #include "templates.h"
 
 #define Exit(error_code) {exit_python(error_code); exit(error_code);}
+
+int n_errors_resonance;
