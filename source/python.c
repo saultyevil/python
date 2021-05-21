@@ -69,7 +69,7 @@ main (argc, argv)
   WindPtr w;
 
   double freqmin, freqmax;
-  unsigned int n;
+  int n;
   char values[LINELENGTH], answer[LINELENGTH];
   int get_models ();            // Note: Needed because get_models cannot be included in templates.h
   int dummy_spectype;
@@ -586,7 +586,7 @@ main (argc, argv)
    */
   if (modes.rand_seed_usetime)
   {
-    n = (unsigned int) clock () * (rank_global + 1);
+    n = (int) clock () * (rank_global + 1);
     init_rand (n);
 
   }
