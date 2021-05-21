@@ -512,8 +512,8 @@ translate_in_wind (w, p, tau_scat, tau, nres)
         save_photons (p, "HitSameResonance");
       }
 
-      istat = P_INWIND;
-      *tau = 0;
+      // istat = P_INWIND;
+      // *tau = 0;
     }
   }
 
