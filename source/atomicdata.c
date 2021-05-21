@@ -2657,7 +2657,7 @@ or zero so that simple checks of true and false can be used for them */
   if (ierr)
   {
     Error ("atomicdata: Exiting because of inconsistencies in atomic data\n");
-    Exit (0);
+    exit_python (0);
   }
 
 

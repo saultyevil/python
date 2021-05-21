@@ -143,6 +143,12 @@ parse_command_line (argc, argv)
         Log ("Setting the maximum number of errors of a type to print out to  %d\n", max_errors);
 
       }
+      else if (strcmp (argv[i], "-ec") == 0)
+      {
+        modes.error_summary_cycle = TRUE;
+        Log ("Outputting error summary at end of each photon cycle\n");
+        j = i;
+      }
       else if (strcmp (argv[i], "-d") == 0)
       {
         modes.iadvanced = 1;

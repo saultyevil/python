@@ -150,7 +150,7 @@ Log_init (filename)
   if ((diagptr = fopen (filename, "w")) == NULL)
   {
     printf ("Yikes: could not even open log file %s\n", filename);
-    Exit (0);
+    exit_python (0);
   }
   init_log = 1;
 
@@ -160,7 +160,7 @@ Log_init (filename)
   if (errorlog == NULL)
   {
     printf ("There is a problem in allocating memory for the errorlog structure\n");
-    Exit (0);
+    exit_python (0);
   }
 
   return (0);
@@ -193,7 +193,7 @@ Log_append (filename)
   if ((diagptr = fopen (filename, "a")) == NULL)
   {
     printf ("Yikes: could not even open log file %s\n", filename);
-    Exit (0);
+    exit_python (0);
   }
   init_log = 1;
 
@@ -203,7 +203,7 @@ Log_append (filename)
   if (errorlog == NULL)
   {
     printf ("There is a problem in allocating memory for the errorlog structure\n");
-    Exit (0);
+    exit_python (0);
   }
 
   return (0);
@@ -610,7 +610,7 @@ error_count (char *format)
     {
       printf ("Exceeded number of different errors that can be stored\n");
       error_summary ("Quitting because there are too many differnt types of errors\n");
-      Exit (0);
+      exit_python (0);
     }
   }
   else
@@ -621,7 +621,7 @@ error_count (char *format)
     if (n == max_errors)
     {
       error_summary ("Something is drastically wrong for any error to occur so much!\n");
-      Exit (0);
+      exit_python (0);
     }
   }
   return (n + 1);
@@ -878,7 +878,7 @@ Debug (char *format, ...)
  **********************************************************/
 
 void
-Exit (int error_code)
+exit_python (int error_code)
 {
   if (error_code == 0)
     error_code = EXIT_FAILURE;

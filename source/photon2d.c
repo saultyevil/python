@@ -155,13 +155,10 @@ translate_in_space (pp)
                                            From here on we should be in the grid  */
     ds += DFUDGE;               //Fix for Bug #592 - we need to keep track of the little DFUDGE we moved the test photon
 
-
-
-    /* Note there is a possiblity that we reach the other side 
+    /* Note there is a possiblity that we reach the other side
      * of the grid without actually encoutering a
      * wind cell
      */
-
 
     if (where_in_wind (ptest.x, &ndom_next) < 0)
     {
@@ -427,40 +424,30 @@ translate_in_wind (w, p, tau_scat, tau, nres)
      PhotPtr p;
      double tau_scat, *tau;
      int *nres;
-
-
 {
-
   int n;
   double smax, ds_current, ds_cmf;
   int istat;
   int nplasma;
-  int ndom;
-  int inwind;
 
   WindPtr one;
   PlasmaPtr xplasma;
   struct photon phot_mid, phot_mid_cmf; // Photon at the midpt of its path in the cell
 
-
-/* First verify that the photon is in the grid, and if not
-return and record an error */
+  /* First verify that the photon is in the grid, and if not
+     return and record an error */
 
   if ((p->grid = n = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
   {
     return (n);                 /* Photon was not in grid */
   }
-/* Assign the pointers for the cell containing the photon */
+  /* Assign the pointers for the cell containing the photon */
 
   one = &wmain[n];              /* one is the grid cell where the photon is */
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
-  ndom = one->ndom;
-  inwind = one->inwind;
 
-
-
-/* Calculate the maximum distance the photon can travel in the cell */
+  /* Calculate the maximum distance the photon can travel in the cell */
 
   smax = smax_in_cell (p);
 
@@ -477,19 +464,16 @@ return and record an error */
   if (p->nres > 0)
     xplasma->nscat_res++;
 
-
-
-/* We now increment the radiation field in the cell, translate the photon and wrap
-   things up.  For simple atoms, the routine radiation also reduces
-   the weight of the photon due to continuum absorption, e.g. free free.
+  /* We now increment the radiation field in the cell, translate the photon and wrap
+   * things up.  For simple atoms, the routine radiation also reduces
+   * the weight of the photon due to continuum absorption, e.g. free free.
    */
-
 
   if (geo.rt_mode == RT_MODE_MACRO)
   {
     /* In the macro-method, b-f and other continuum processes do not reduce the photon
        weight, but are treated as as scattering processes.  Therefore most of what was in
-       subroutine radiation for the simple atom case can be avoided.  
+       subroutine radiation for the simple atom case can be avoided.
      */
     if (geo.ioniz_or_extract == CYCLE_IONIZ)
     {
@@ -507,24 +491,25 @@ return and record an error */
   }
 
   move_phot (p, ds_current);
-  translate_in_wind_res_count++;
 
-  if (*nres > -1 && *nres <= NLINES && *nres == p->nres && istat == P_SCAT && translate_in_wind_res_count < 5000)
+  if (*nres > -1 && *nres <= NLINES && *nres == p->nres && istat == P_SCAT)
   {
     if (ds_current < 1e5)
     {
-      Error ("translate_in_wind: nres %5d repeat after motion of %10.3e of phot %6d in ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
-             *nres, ds_current, p->np, geo.wcycle, geo.pcycle, p->istat, istat);
+      Log_silent
+        ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
+         *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
+
+      save_photons (p, "HitSameResonance");
+
       istat = P_INWIND;
       *tau = 0;
     }
   }
 
-  p->nres = (*nres);
+  p->nres = *nres;
 
   return (p->istat = istat);
-
-
 }
 
 

@@ -69,6 +69,9 @@ int resonate_number_freq_diff_low = 0;
  * shell should be calculated outside of this routine.
  *
  **********************************************************/
+
+#define  MAXDIFF  (VCHECK/VLIGHT)       /* The same as our old velocity requirement */
+
 double
 calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
      WindPtr w;
@@ -142,7 +145,6 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
 
   diff = 1;
-#define  MAXDIFF  VCHECK/VLIGHT /* The same as our old velocity requirement */
 
   while (smax > DFUDGE)
   {
@@ -729,6 +731,7 @@ kbf_need (freq_min, freq_max)
 }
 
 int sobolev_error_counter = 0;
+
 /**********************************************************/
 /**
  * @brief      calculates tau in the sobolev approximation for a resonance, given the
@@ -796,10 +799,11 @@ sobolev (one, x, den_ion, lptr, dvds)
 
   else
   {
-/* Next few steps to allow used of better calculation of density of this particular
-ion which was done above in calculate ds.  It was made necessary by a change in the
-calls to two_level atom
-*/
+
+    /* Next few steps to allow used of better calculation of density of this particular
+       ion which was done above in calculate ds.  It was made necessary by a change in the
+       calls to two_level atom
+     */
 
     d_hold = xplasma->density[nion];    // Store the density of this ion in the cell
 
@@ -811,19 +815,20 @@ calls to two_level atom
     {
       xplasma->density[nion] = den_ion; // Put den_ion into the density array
     }
+
     two_level_atom (lptr, xplasma, &d1, &d2);   // Calculate d1 & d2
     xplasma->density[nion] = d_hold;    // Restore w
     levden_upper = d2 / xplasma->density[nion];
   }
 
-/* At this point d1 and d2 are known for all of the various ways sobolev can be called, and whether
- * macro atoms are involved or not
- */
+  /* At this point d1 and d2 are known for all of the various ways sobolev can be called, and whether
+   * macro atoms are involved or not
+   */
 
-  /* Check whether both d1 and d2 are below a minium value where we expect tau to be zero and where 
+  /* Check whether both d1 and d2 are below a minium value where we expect tau to be zero and where
    * we can be subject to the effects of roundoff errors in terms of the determination of densities.
    * If densities are this low we expect the sobolev optical depth to be extremely small in any event
-   * JM -- I've added something that checks if the fractional population for the upper level is below 
+   * JM -- I've added something that checks if the fractional population for the upper level is below
    * or equal to the minimum too.
    */
 
@@ -832,8 +837,7 @@ calls to two_level atom
     return (0);
   }
 
-
-  xden_ion = (d1 - lptr->gl / lptr->gu * d2);
+  xden_ion = d1 - lptr->gl / lptr->gu * d2;     // If this is negative, there is a population inversion
 
   if (xden_ion < 0)
   {
@@ -857,6 +861,7 @@ calls to two_level atom
     /* SS July 08: With macro atoms, the population solver can default to d2 = gu/gl * d1 which should
        give exactly zero here but can be negative, numerically.
        So I'm modyfying this to set tau to zero in such cases, when the populations are vanishingly small anyway. */
+
     tau_x_dvds = PI_E2_OVER_M * d1 * lptr->f / (lptr->freq);
     tau = tau_x_dvds / dvds;
 
@@ -866,21 +871,18 @@ calls to two_level atom
     {
       /* JM -- I'm not sure why this particular value of tau is chosen, but I've added 
          an error message to give more information and make sure no ambiguity for code exit */
+
       Error ("sobolev: tau is >1e-3 and nu < gu/gl * nl. Exiting.\n");
       Exit (0);
     }
-
     else
     {
       return (0.0);
     }
   }
 
-
   tau_x_dvds = PI_E2_OVER_M * xden_ion * lptr->f / (lptr->freq);
   tau = tau_x_dvds / dvds;
-
-  /* JM 1411 -- multiply the optical depth by the filling factor */
   tau *= zdom[ndom].fill;
 
   return (tau);
@@ -1121,17 +1123,15 @@ scatter (p, nres, nnscat)
           /* only report an error for a negative prob_kpkt if it's large-ish in magnitude. see #436 discussion */
           if (prob_kpkt < -1e-3)
           {
-            Error ("scatter: kpkt probability (%8.4e) < 0, zeroing\n", prob_kpkt);
-            Log ("scatter: photon edge frequency: %8.4e, comoving frequency %8.4e\n", phot_top[*nres - NLINES - 1].freq[0], freq_comoving);
+            Error ("scatter: kpkt probability %8.4e < 0 in plasma cell %d photon edge freq %8.4e, co-moving freq %8.4e\n",
+                   prob_kpkt, xplasma->nplasma, phot_top[*nres - NLINES - 1].freq[0], freq_comoving);
           }
           prob_kpkt = 0.0;
         }
 
         /* Now choose whether or not to make a k-packet. */
 
-        kpkt_choice = random_number (0.0, 1.0); //random number for kpkt choice
-
-        /* what happens next depends on whether we want to use the 
+        /* what happens next depends on whether we want to use the
            altered mode for bound-free in "simple-macro mode". If we do,
            then the photon weight gets multiplied down by a factor (nu-nu_0)/nu
            and we force a kpkt to be created */
@@ -1153,6 +1153,8 @@ scatter (p, nres, nnscat)
            of creating a kpkt, namely prob_kpkt
          */
 
+        kpkt_choice = random_number (0.0, 1.0); //random number for kpkt choice
+
         if (prob_kpkt > kpkt_choice)
         {
           macro_gov (p, nres, 2, &which_out);   //routine to deal with kpkt
@@ -1166,8 +1168,6 @@ scatter (p, nres, nnscat)
       }
       else
       {
-        /* Our best-laid schemes have gang agley. It should never get here unless the input has been
-           messed up in some way. (SS) */
         Error ("scatter (resonate.c): continuum scatter - seems to be neither macro nor simple. Abort.\n");
         Exit (0);
       }
@@ -1176,11 +1176,7 @@ scatter (p, nres, nnscat)
     {                           /* This is a ff event (SS). */
       macro_gov (p, nres, 2, &which_out);       //ff always make a k-packet
     }
-
-
-
   }
-
 
   /* END OF SECTION FOR HANDLING ASPECTS OF SCATTERING PROCESSES THAT ARE SPECIFIC TO MACRO-ATOMS. */
 
@@ -1193,9 +1189,8 @@ scatter (p, nres, nnscat)
     p->freq = lin_ptr[*nres]->freq;
   }
 
-
   /* Now determine the direction of the scattered photon, for electrons scatering (-1), ff emision (-2), or
-     bound free emission (>NLINES), allowing depending on the scattering mode for thermal trapping. 
+     bound free emission (>NLINES), allowing depending on the scattering mode for thermal trapping.
      Note that this portion of the code is identical for both simple and macro atoms, except for the fact
      that ff and bf are only treated as scattering processin in macro-atom mode.
    */
@@ -1216,12 +1211,9 @@ scatter (p, nres, nnscat)
     randwind_thermal_trapping (p, nnscat);      // the thermal trapping case
   }
 
-
-
   /* Finally put everything back in the observer frame */
 
   local_to_observer_frame (p, p);
-
 
   /* If we are in macro-atom mode, add the photon to the created wind spectrum.  For simple
      atoms the wind spectrum is constructed in sectra.c */
@@ -1232,13 +1224,11 @@ scatter (p, nres, nnscat)
     spec_add_one (p, SPEC_CWIND);
   }
 
-/*Now calculate the momentum transfer.  What follows appears to be
-correct only if there was no energy absorbed at the scattering site.
-The rest of this is only needed during ionization cycles, before the wind itself
-if fixed.  
-*/
-
-
+  /*Now calculate the momentum transfer.  What follows appears to be
+     correct only if there was no energy absorbed at the scattering site.
+     The rest of this is only needed during ionization cycles, before the wind itself
+     if fixed.
+   */
 
   if (geo.ioniz_or_extract == CYCLE_IONIZ)
   {
@@ -1250,17 +1240,14 @@ if fixed.
 
     project_from_xyz_cyl (p_orig.x, dp, dp_cyl);
 
-
-
     if (p_orig.x[2] < 0)
       dp_cyl[2] *= (-1);
+
     for (i = 0; i < 3; i++)
     {
       xplasma->dmo_dt[i] += dp_cyl[i];
     }
-
   }
-
 
   return (0);
 }

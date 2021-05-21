@@ -845,28 +845,27 @@ wind_div_v ()
   double x_zero[3];
   double div;
   int ndom;
-  double scaling;
-
-  scaling = 1e-3;               //The scaling factor applied to 'delta' the distance away from the central point that the div_v calcs are done
-
 
   for (icell = 0; icell < NDIM2; icell++)
   {
     /* Find the center of the cell */
 
-    stuff_v (wmain[icell].xcen, x_zero);        /*Gget the centre of the current cell in the loop */
+    stuff_v (wmain[icell].xcen, x_zero);        /*Get the centre of the current cell in the loop */
     ndom = wmain[icell].ndom;
 
     wmain[icell].div_v = div = get_div_v_in_cmf_frame (ndom, x_zero);
 
     if (div < 0 && (wind_div_err < 0 || wmain[icell].inwind == W_ALL_INWIND))
     {
-      Error
-        ("wind_div_v: div v %e negative in cell %d Domain %d. Major problem if inwind (%d) == 0\n",
-         div, icell, wmain[icell].ndom, wmain[icell].inwind);
+//      Error
+//        ("wind_div_v: div v %e negative in cell %d Domain %d. Major problem if inwind (%d) == 0\n",
+//         div, icell, wmain[icell].ndom, wmain[icell].inwind);
       wind_div_err++;
     }
   }
+
+  if (wind_div_err > 0)
+    Error ("wind_div_v: The velocity divergence is negative in %d W_ALL_INWIND cells\n", wind_div_err);
 
   return (0);
 }

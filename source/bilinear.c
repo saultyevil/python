@@ -115,7 +115,7 @@ bilin (x, x00, x01, x10, x11, f, g)
   double q[3], r[3], s[3], t[3];
   double zz[3];
   int i, xquadratic ();
-  void Exit (int error_code);
+
 
 
   z = 0;                        /* Initialize z to prevent warning on compilation */
@@ -192,7 +192,7 @@ bilin (x, x00, x01, x10, x11, f, g)
     else
     {
       Error ("bilin: Denominator zero\n");
-      Exit (0);
+      exit_python (0);
     }
   }
 

@@ -429,8 +429,8 @@ create_heat_table (ndom, rootname)
   c[6] = get_one (ndom, "ave_freq");
   strcpy (column_name[6], "ave_freq");
 
-  c[7] = get_one (ndom, "j");
-  strcpy (column_name[7], "j");
+  c[7] = get_one (ndom, "mean_intens");
+  strcpy (column_name[7], "mean_intens");
 
   c[8] = get_one (ndom, "lum_tot");
   strcpy (column_name[8], "lum_tot");
@@ -1348,7 +1348,7 @@ get_one (ndom, variable_name)
       {
         x[n] = plasmamain[nplasma].dt_e_old;
       }
-      else if (strcmp (variable_name, "j") == 0)
+      else if (strcmp (variable_name, "mean_intens") == 0)
       {
         x[n] = plasmamain[nplasma].j;
       }

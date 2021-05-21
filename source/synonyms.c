@@ -205,7 +205,7 @@ are_synonym_lists_valid ()
     {
       Log ("%3d %40s %40s\n", i, old_names[i], new_names[i]);
     }
-    Exit (0);
+    exit_python (0);
   }
   return (1);
 }

@@ -43,7 +43,7 @@ char basename[132];             // The root of the parameter file name being use
  * speed of the program.  One day if may be desirable to change some
  * of these parameters with time in the program.  At present they are
  * simply collected here
- * 
+ *
  * */
 
 double DFUDGE;
@@ -63,12 +63,12 @@ double SMAX_FRAC;               /* In translate_in_wind, a limit is placed on th
                                    we use linear interpolation along the line of sight to establish velocities
                                    and most of our grid cells in 2.5d are actually hoop shaped, which means
                                    one can travel a long distance within a hoop if the direction of the photon
-                                   is not more or less radial, but if moving along the hoop. 
+                                   is not more or less radial, but if moving along the hoop.
                                  */
 double DENSITY_PHOT_MIN;        /* This constant is a minimum density for the purpose of calculating
                                    photoionization heating and recombination cooling.  It is important that heating and cooling
-                                   be calculated self-consistently.  Program speed is somewhat sensitive 
-                                   to this parameter, at the 10% level if raised from 1e-3 to 1.  There is a 
+                                   be calculated self-consistently.  Program speed is somewhat sensitive
+                                   to this parameter, at the 10% level if raised from 1e-3 to 1.  There is a
                                    trade-off since lower minima may give better results, especially for macro atoms. */
 
 #define LDEN_MIN        1e-3    /* The minimum density required for a line to be conidered for scattering
@@ -110,7 +110,7 @@ int NWAVE_MAX;
 int NWAVE_EXTRACT;              //The number of wavelength bins for spectra during the spectrum cycles
 #define NWAVE_IONIZ 10000       //The number of wavelength bins for spectra during the ionization cycles
 #define NWAVE_MIN 10
-#define MAXSCAT 			2000
+#define MAXSCAT 			100000
 
 /* Define the structures */
 
@@ -874,6 +874,9 @@ typedef struct plasma
   double *lum_rr_ion;           /* The recombination luminosity
                                    by this ion via recombination. */
 
+#define MEAN_INTENSITY_BB_MODEL  1
+#define MEAN_INTENSITY_ESTIMATOR_MODEL 2
+
   double *cool_dr_ion;
   double j, ave_freq;           /* Mean (angle-averaged) total intensity, intensity-averaged frequency */
 
@@ -1426,6 +1429,7 @@ struct advanced_modes
   int photon_speedup;
   int save_rng;                 // save the GSL RNG stage
   int load_rng;                 // load the GSL RNG state
+  int error_summary_cycle;      // print an error summary at the end of each cycle
 }
 modes;
 
@@ -1479,7 +1483,7 @@ files;
 
 /* this variable controls whether to use the 
    Altered mode for bound-free in "simple-macro mode" */
-#define BF_SIMPLE_EMISSIVITY_APPROACH 1
+#define BF_SIMPLE_EMISSIVITY_APPROACH 0
 
 /* whether or not to use the implicit/accelerated macro-atom scheme, in which 
    a matrix inversion is used in the emissivity calcualtion rather than 
@@ -1540,3 +1544,5 @@ struct rdpar_choices zz_spec;
 #include "strict.h"
 #include "version.h"
 #include "templates.h"
+
+#define Exit(error_code) {exit_python(error_code); exit(error_code);}

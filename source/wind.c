@@ -79,7 +79,7 @@ where_in_wind (x, ndomain)
      double x[];
      int *ndomain;
 {
-  double rho, rad, rho_min, rho_max, z;
+  double rho, rad, z;
   int ireturn;
   int ndom, n;
   DomainPtr one_dom;
@@ -143,7 +143,7 @@ where_in_wind (x, ndomain)
     }
 
     /* Check if one is inside the inner windcone */
-    if (rho < (rho_min = one_dom->wind_rhomin_at_disk + z * tan (one_dom->wind_thetamin)))
+    if (rho < (one_dom->wind_rhomin_at_disk + z * tan (one_dom->wind_thetamin)))
     {
       continue;
     }
@@ -154,7 +154,7 @@ where_in_wind (x, ndomain)
 
     if (fabs (one_dom->wind_thetamax - PI / 2.0) > 1e-6)        /* Only perform the next check if thetamax is not equal to pi/2 */
     {
-      if (rho > (rho_max = one_dom->wind_rhomax_at_disk + z * tan (one_dom->wind_thetamax)))
+      if (rho > (one_dom->wind_rhomax_at_disk + z * tan (one_dom->wind_thetamax)))
       {
         continue;
       }
@@ -170,13 +170,11 @@ where_in_wind (x, ndomain)
 
     if (one_dom->wind_type == IMPORT)
     {
-      one_dom = &zdom[ndom];
-
       n = where_in_grid (ndom, x);
       if (n >= 0)
       {
         *ndomain = ndom;
-        ireturn = W_ALL_INWIND;
+        ireturn = wmain[n].inwind;
         break;
       }
     }

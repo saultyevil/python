@@ -62,7 +62,7 @@
  * * inwind defines whether or not a particular cell is actually
  * in the wind
  *
- * Guard cells are required at the outer boundaries. 
+ * Guard cells are required at the outer boundaries.
  *
  * This routine assumes the same conventions as used elsewhere
  * in Python, that is that the positions and velocities are given
@@ -81,6 +81,7 @@ import_rtheta (ndom, filename)
   int jz, jx;
   double delta;
   double r, theta, v_x, v_y, v_z, rho, t_r, t_e;
+  double mid_z;
 
 
   Log ("Reading a model %s in polar (r,theta) coordinates \n", filename);
@@ -144,7 +145,6 @@ import_rtheta (ndom, filename)
   }
 
   /* Set and check the dimensions of the grids to be set up.
-   * 
    * Note that some assumptions are built into the way the grid
    * is read in, most notably that the last cell to be read in
    * defines the dimensions of the entire grid.
@@ -182,9 +182,11 @@ import_rtheta (ndom, filename)
 
   for (n = 0; n < jz - 1; n++)
   {
-    imported_model[ndom].wind_midz[n] = 0.5 * (imported_model[ndom].wind_z[n] + imported_model[ndom].wind_z[n + 1]);
+    mid_z = 0.5 * (imported_model[ndom].wind_z[n] + imported_model[ndom].wind_z[n + 1]);
+    if (mid_z > 90)
+      mid_z = 90;
+    imported_model[ndom].wind_midz[n] = mid_z;
   }
-
 
   delta = (imported_model[ndom].wind_z[n - 1] - imported_model[ndom].wind_z[n - 2]);
   imported_model[ndom].wind_midz[n] = imported_model[ndom].wind_z[n - 1] + 0.5 * delta;
@@ -384,10 +386,9 @@ rtheta_make_grid_import (w, ndom)
     w[nn].v[2] = imported_model[ndom].v_z[n];
     w[nn].inwind = imported_model[ndom].inwind[n];
 
-    if (w[nn].inwind == W_NOT_INWIND || w[nn].inwind == W_PART_INWIND)
-      w[nn].inwind = W_IGNORE;
-
     w[nn].thetacen = imported_model[ndom].wind_midz[imported_model[ndom].j[n]];
+    if (w[nn].thetacen > 90)
+      w[nn].thetacen = 90;
     theta = w[nn].thetacen / RADIAN;
 
     w[nn].rcen = imported_model[ndom].wind_midx[imported_model[ndom].i[n]];
@@ -454,9 +455,9 @@ rtheta_make_grid_import (w, ndom)
  *
  * ### Notes ###
  *  In practice this routine is only used to initialize v in
- *  wind structure, and interpolation is only a convenient 
- *  way to do this.  
- *  
+ *  wind structure, and interpolation is only a convenient
+ *  way to do this.
+ *
  *  This is consistent with the way velocities
  *  are treated throughout Python.
  *
@@ -513,7 +514,7 @@ velocity_rtheta (ndom, x, v)
  * initialized, we always interpolate within the plasma structure
  * and do not access the original data
  *
- * This routine is dependent on the assumption that x is in 
+ * This routine is dependent on the assumption that x is in
  * the center of a cell.
  *
  **********************************************************/

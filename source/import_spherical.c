@@ -245,10 +245,18 @@ spherical_make_grid_import (w, ndom)
     {
       w[n].rcen = w[n].r * 1.005;
     }
+    w[n].inwind = W_ALL_INWIND;
     w[n].x[1] = w[n].xcen[1] = 0.0;
     w[n].x[0] = w[n].x[2] = w[n].r * sin (PI / 4.);
     w[n].xcen[0] = w[n].xcen[2] = w[n].rcen * sin (PI / 4.);
   }
+
+  /*
+   * The first and last two cells are "guard" cells, as such they are not
+   * considered to be in the wind.
+   */
+
+  w[0].inwind = w[imported_model[ndom].ncell - 1].inwind = w[imported_model[ndom].ncell - 2].inwind = W_NOT_INWIND;
 
   /* Since we assume all of the cells are in the wind in a spherical wind
    * we can use the standard routine to finish everything off

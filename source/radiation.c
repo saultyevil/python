@@ -759,143 +759,182 @@ pop_kappa_ff_array ()
   return (0);
 }
 
-
-
-
 /**********************************************************/
 /** 
- * @brief      returns a value for the mean intensity
+ * @brief      returns a value for the mean intensity for a specific cell
+ *             at a specific frequency
  *
- * @param [in] PlasmaPtr  xplasma   PlasmaPtr for the cell - supplies spectral model
- * @param [in] double  freq   the frequency at which we want to get a value of J
- * @param [in] int  mode   mode 1=use BB if we have not yet completed a cycle
- * @return     The mean intensity at a specific frequency
+ * @param[in] PlasmaPtr xplasma  The plasma cell
+ * @param[in] double freq        The frequency at which we want j_bar
+ * @param[in] int mode           If mode == MEAN_INTENSITY_BB_MODEL (1) then we
+ *                               are happy to use a BB model as a fallback. Otherwise,
+ *                               j_bar = 0 can be returned when there is not
+ *                               a decent model.
+ *
+ * @return     The mean intensity j_bar at a specific frequency for the cell
  *
  * @details
  * This subroutine returns a value for the mean intensity J at a 
  * given frequency, using either a dilute blackbody model
- * or a spectral model depending on the value of geo.ioniz_mode. 
- * to avoid code duplication.
+ * or a spectral model depending on the value of geo.spec_mod, which counts the
+ * number of spectral models available.
  *
  * For ionization models that make use of the crude spectra accumulated
  * in crude spectral bands, the routine uses these bands to
  * get the mean intensity.  If however, one is using one of the other
- * (older) ionization modes, then the input variable mode drives how
- * the mean intensity is calculated.mode appears to be used 
+ * (older) ionization modes, then a dilute blackbody estimate is used instead.
  *
  * ### Notes ###
- * This subroutine was produced
- * when we started to use a spectral model to populate the upper state of a
- * two level atom, as well as to calculate induced Compton heating. 
- *
- * @bug   The routine refers to a mode 5, which does not appear to 
- * exist, or at least it is not one that is included in python.h
- * Note also that the logic of this appears overcomplicated, reflecting
- * the evolution of banding, and various ionization modes being added
- * without looking at trying to make this simpler.
+ * This subroutine was produced when we started to use a spectral model to
+ * populate the upper state of a two level atom, as well as to calculate induced
+ * Compton heating.
  *
  **********************************************************/
 
 double
 mean_intensity (xplasma, freq, mode)
-     PlasmaPtr xplasma;         // Pointer to current plasma cell
-     double freq;               // Frequency of the current photon being tracked
-     int mode;                  // mode 1=use BB if no model, mode 2=never use BB
+     PlasmaPtr xplasma;
+     double freq;
+     int mode;
+{
+  double j_bar;
 
+  if (geo.ioniz_mode == IONMODE_MATRIX_SPECTRALMODEL || geo.ioniz_mode == IONMODE_MATRIX_ESTIMATORS)
+  {
+    j_bar = mean_intensity_from_models (xplasma, freq, mode);
+  }
+  else
+  {
+    j_bar = mean_intensity_bb_estimate (freq, xplasma->t_r, xplasma->w);
+  }
+
+  return j_bar;
+}
+
+/**********************************************************/
+/**
+ * @brief  Get the mean intensity using the power law descriptions of the
+ *         radiation field
+ *
+ * @param[in] PlasmaPtr xplasma  The specific plasma cell in question
+ * @param[in] double freq        The frequency to calculate j_bar at
+ * @param[in] int mode           Indicates whether to use BB estimator as a
+ *                               fallback or not, use mode == 1 ==
+ *                               MEAN_INTENSITY_BB_MODEL for this.
+ *
+ * @return  double j_bar  The mean intensity at a specific frequency
+ *
+ * @details
+ *
+ **********************************************************/
+
+double
+mean_intensity_from_models (PlasmaPtr xplasma, double freq, int mode)
 {
   int i;
-  double J;
-  double expo;
+  double j_bar = 0.0;
 
-  J = 0.0;                      // Avoid 03 error
-
-
-
-  if (geo.ioniz_mode == IONMODE_MATRIX_SPECTRALMODEL || geo.ioniz_mode == IONMODE_MATRIX_ESTIMATORS)    /*If we are using power law ionization, use PL estimators */
+  if (geo.spec_mod > 0)
   {
-    if (geo.spec_mod > 0)       /* do we have a spectral model yet */
+    /*
+     * Thus we have some spectral models, since we have run some ionization
+     * cycles.
+     */
+
+    for (i = 0; i < geo.nxfreq; i++)
     {
-      for (i = 0; i < geo.nxfreq; i++)
+      // Check that the band has the correct frequency range
+      if (geo.xfreq[i] < freq && freq <= geo.xfreq[i + 1])
       {
-        if (geo.xfreq[i] < freq && freq <= geo.xfreq[i + 1])    //We have found the correct model band
+        // Check we have a model for this band
+        if (xplasma->spec_mod_type[i] > 0)
         {
-          if (xplasma->spec_mod_type[i] > 0)    //Only bother if we have a model in this band
+          // Check the spectral model is defined for the frequency in question
+          // todo: this seems redundant, but possibly can be important if the model
+          //       in question isn't complete due to photon statistics
+          if (freq > xplasma->fmin_mod[i] && freq < xplasma->fmax_mod[i])
           {
-
-            if (freq > xplasma->fmin_mod[i] && freq < xplasma->fmax_mod[i])     //The spectral model is defined for the frequency in question
+            if (xplasma->spec_mod_type[i] == SPEC_MOD_PL)
             {
-
-              if (xplasma->spec_mod_type[i] == SPEC_MOD_PL)     //Power law model
-              {
-                J = pow (10, (xplasma->pl_log_w[i] + log10 (freq) * xplasma->pl_alpha[i]));
-              }
-
-              else if (xplasma->spec_mod_type[i] == SPEC_MOD_EXP)       //Exponential model
-              {
-                J = xplasma->exp_w[i] * exp ((-1 * PLANCK * freq) / (BOLTZMANN * xplasma->exp_temp[i]));
-              }
-              else
-              {
-                Error ("mean_intensity: unknown spectral model (%i) in band %i\n", xplasma->spec_mod_type[i], i);
-                J = 0.0;        //Something has gone wrong
-              }
+              j_bar = pow (10, (xplasma->pl_log_w[i] + log10 (freq) * xplasma->pl_alpha[i]));
             }
-
+            else if (xplasma->spec_mod_type[i] == SPEC_MOD_EXP)
+            {
+              j_bar = xplasma->exp_w[i] * exp ((-1 * PLANCK * freq) / (BOLTZMANN * xplasma->exp_temp[i]));
+            }
             else
             {
-              /* We have a spectral model, but it doesnt apply to the frequency 
-                 in question. clearly this is a slightly odd situation, where last
-                 time we didnt get a photon of this frequency, but this time we did. 
-                 Still this should only happen in very sparse cells, so induced Compton 
-                 is unlikely to be important in such cells. We generate a warning, just 
-                 so we can see if this is happening a lot */
-              J = 0.0;
-
-              /* JM140723 -- originally we threw an error here. No we count these errors and 
-                 in wind_updates because you actually expect 
-                 it to happen in a converging run */
-              nerr_Jmodel_wrong_freq++;
+              Error ("mean_intensity: unknown spectral model (%i) in band %i\n", xplasma->spec_mod_type[i], i);
+              j_bar = 0.0;
             }
           }
-          else                  /* There is no model in this band - this should not happen very often  */
+          else
           {
-            J = 0.0;            //There is no model in this band, so the best we can do is assume zero J
-
-            /* JM140723 -- originally we threw an error here. No we count these errors and 
-               in wind_updates because you actually expect 
-               it to happen in a converging run */
-            nerr_no_Jmodel++;
+            /* We have a spectral model, but it doesnt apply to the frequency
+               in question. clearly this is a slightly odd situation, where last
+               time we didnt get a photon of this frequency, but this time we did.
+               Still this should only happen in very sparse cells, so induced Compton
+               is unlikely to be important in such cells. We generate a warning, just
+               so we can see if this is happening a lot */
+            j_bar = 0.0;
+            nerr_Jmodel_wrong_freq++;
           }
-
-
-
+        }
+        else                    /* There is no model in this band - this should not happen very often  */
+        {
+          j_bar = 0.0;
+          nerr_no_Jmodel++;
         }
       }
     }
-    else                        //We have not completed an ionization cycle, so no chance of a model
-    {
-      if (mode == 1)            //We need a guess, so we use the initial guess of a dilute BB
-      {
-        expo = (PLANCK * freq) / (BOLTZMANN * xplasma->t_r);
-        J = (2 * PLANCK * freq * freq * freq) / (VLIGHT * VLIGHT);
-        J *= 1 / (exp (expo) - 1);
-        J *= xplasma->w;
-      }
-      else                      //A guess is not a good idea (i.e. we need the model for induced Compton), so we return zero.
-      {
-        J = 0.0;
-      }
+  }
+  else
+  {
+    /*
+     * We have not run any ionization cycles, so we either return j_bar = 0
+     * or we can use a BB estimate if that mode is enabled
+     */
 
+    if (mode == MEAN_INTENSITY_BB_MODEL)
+    {
+      j_bar = mean_intensity_bb_estimate (freq, xplasma->t_r, xplasma->w);
+    }
+    else
+    {
+      j_bar = 0.0;
     }
   }
 
-  else                          /*Else, use dilute BB estimator of J */
-  {
-    expo = (PLANCK * freq) / (BOLTZMANN * xplasma->t_r);
-    J = (2 * PLANCK * freq * freq * freq) / (VLIGHT * VLIGHT);
-    J *= 1 / (exp (expo) - 1);
-    J *= xplasma->w;
-  }
+  return j_bar;
+}
 
-  return J;
+/**********************************************************/
+/**
+ * @brief Calculate the mean intensity of the field at a specific frequency
+ *        for a specific cell.
+ *
+ * @param[in] double freq  The frequency to calculate j_bar at
+ * @param[in] double t_r   The (radiation) temperature of the black body
+ * @param[in] double w     The blackbody dilution factor for the cell
+ *
+ * @return  double j_bar  The mean intensity at a specific frequency
+ *
+ * @details
+ *
+ * The temperature of the blackbody is the radiation temperature of the cell,
+ * as such we also pass the dilution factor of the same cell.
+ *
+ **********************************************************/
+
+double
+mean_intensity_bb_estimate (double freq, double t_r, double w)
+{
+  double j_bar, exponent;
+
+  exponent = PLANCK * freq / BOLTZMANN / t_r;
+  j_bar = 2 * PLANCK * pow (freq, 3) / VLIGHT / VLIGHT;
+  j_bar *= 1 / (exp (exponent) - 1);
+  j_bar *= w;
+
+  return j_bar;
 }

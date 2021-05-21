@@ -671,20 +671,21 @@ spectrum_create (p, nangle, select_extract)
 
   Log ("\nNo. of photons which have scattered n times.     The max number of scatters seen was %d\n", max_scat);
 
-  for (j = 0; j <= max_scat; j++)
-  {
-    Log ("%-9.3g", (double) nscat[j]);
-    if ((j % 10) == 9)
-      Log ("\n");
-  }
+  //for (j = 0; j <= max_scat; j++)
+  //{
+  //  Log ("%-9.3g", (double) nscat[j]);
+  //  if ((j % 10) == 9)
+  //    Log ("\n");
+  //}
 
   Log ("\nNumber of photons resonantly scattering n times.  The max number of scatters seen was %d\n", max_res);
-  for (j = 0; j <= max_res; j++)
-  {
-    Log ("%-9.3g", (double) nres[j]);
-    if ((j % 10) == 9)
-      Log ("\n");
-  }
+  //for (j = 0; j <= max_res; j++)
+  //{
+  //  Log ("%-9.3g", (double) nres[j]);
+  //  if ((j % 10) == 9)
+  //    Log ("\n");
+  //}
+
   Log ("\nNo of photons and their fates\n!!PhotFate: ");
   for (j = 0; j < NSTAT; j++)
   {

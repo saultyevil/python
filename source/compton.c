@@ -104,7 +104,7 @@ kappa_ind_comp (xplasma, freq)
   /* Obtain a model for the mean intensity - we call this with mode=2, which means
      that if we have not yet completed a cycle, dont return a dilute blackbody
      estimate if we are in PL mode. */
-  J = mean_intensity (xplasma, freq, 2);
+  J = mean_intensity (xplasma, freq, MEAN_INTENSITY_ESTIMATOR_MODEL);
 
 
   sigma = THOMPSON * alpha (freq);      //obtain the energy exchange cross section
@@ -521,6 +521,6 @@ double
 comp_cool_integrand (double nu, void *params)
 {
   double value;
-  value = THOMPSON * beta (nu) * mean_intensity (xplasma, nu, 2);
+  value = THOMPSON * beta (nu) * mean_intensity (xplasma, nu, MEAN_INTENSITY_ESTIMATOR_MODEL);
   return (value);
 }

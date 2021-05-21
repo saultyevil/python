@@ -56,16 +56,11 @@ check_frame (p, desired_frame, msg)
   {
     return (0);
   }
-  else if (ncheck_frame < 1000)
+  else
   {
     Error ("check_frame: %s :Photon (%5d) of istat (%2d) and origin (%2d) not in desired frame %d (0=Loc,1=Obs)\n", msg, p->np, p->istat,
            p->origin, desired_frame);
-    ncheck_frame++;
     return (1);
-  }
-  else
-  {
-    return (0);
   }
 }
 

@@ -212,8 +212,8 @@ two_level_atom (line_ptr, xplasma, d1, d2)
      PlasmaPtr xplasma;
      double *d1, *d2;
 {
-  double a, a21 ();
-  double q, q21 (), c12, c21;
+  double a;
+  double q, c12, c21;
   double freq;
   double g2_over_g1;
   double n2_over_n1;
@@ -243,7 +243,7 @@ two_level_atom (line_ptr, xplasma, d1, d2)
   dd = xplasma->density[nion];
 
   /* Calculate the number density of the lower level for the transition using the partition function */
-  ;
+
   if (ion[nion].nlevels > 0)
   {
     dd *= config[ion[nion].firstlevel].g / xplasma->partition[nion];
@@ -256,16 +256,15 @@ two_level_atom (line_ptr, xplasma, d1, d2)
   }
   else
   {
-    if (line_ptr->el == 0.0)
-    {                           // Then the lower level is the ground state
-
-/* For a ground state connected transition we correct for the partition
-function in calculating the density of the lower level, and then we
-make an on-the-spot approximation for the upper level.  The only reason
-this is a "improvement" over the numbers available from the partition
-function directly is the allowance for collisions, and also for the
-possibility that not all lines have upper levels that are included
-in the configuration structure. 01dec ksl */
+    if (line_ptr->el == 0.0)    // Then the lower level is the ground state
+    {
+      /* For a ground state connected transition we correct for the partition
+         function in calculating the density of the lower level, and then we
+         make an on-the-spot approximation for the upper level.  The only reason
+         this is a "improvement" over the numbers available from the partition
+         function directly is the allowance for collisions, and also for the
+         possibility that not all lines have upper levels that are included
+         in the configuration structure. 01dec ksl */
 
       a = a21 (line_ptr);
       q = q21 (line_ptr, te);
@@ -279,45 +278,39 @@ in the configuration structure. 01dec ksl */
 
       z = (VLIGHT * VLIGHT) / (2. * PLANCK * freq * freq * freq);       //This is the factor which relates the A coefficient to the b coefficient
 
-
       /* we call mean intensity with mode 1 - this means we are happy to use the
          dilute blackbody approximation even if we havent run enough spectral cycles
          to have a model for J */
-      J = mean_intensity (xplasma, freq, 1);
+      J = mean_intensity (xplasma, freq, MEAN_INTENSITY_BB_MODEL);
 
       /* this equation is equivalent to equation 4.29 in NSH's thesis with the
          einstein b coefficients replaced by a multiplied by suitable conversion
          factors from the einstein relations. */
       n2_over_n1 = (c12 + g2_over_g1 * a * z * J) / (c21 + a * (1. + (J * z)));
 
-
-
-
       *d1 = dd;
       *d2 = *d1 * n2_over_n1;
-
     }
     else
     {                           // The transition has both levels above the ground state
-
-/*
- * In the event that both levels are above the ground state, we assume
- * that the upper level population is given by an on-the-spot approximation.
- * We make the same assumption for the lower level, unless the lower level
- * is matastable in which case we set the weight to 1 and force equlibrium
-*/
+      /*
+       * In the event that both levels are above the ground state, we assume
+       * that the upper level population is given by an on-the-spot approximation.
+       * We make the same assumption for the lower level, unless the lower level
+       * is matastable in which case we set the weight to 1 and force equlibrium
+       */
 
       gg = ion[line_ptr->nion].g;
       z = w / (exp (line_ptr->eu / (BOLTZMANN * tr)) + w - 1.);
       n2_over_ng = line_ptr->gu / gg * z;
 
-/* For lower level, use an on the spot approximation if the lower level has a short radiative lifetive;
-Othewise, assert that the lower level is metastable and set the radiative weight to 1
-ERROR -- At present I don't believe what one should do with metastable lower levels is
-ERROR -- worked out, either in the program... where are we getting radiative rates
-ERROR -- or conceptually
-07mar - ksl - We still need to determine whether this makes sense at all !!
-*/
+      /* For lower level, use an on the spot approximation if the lower level has a short radiative lifetive;
+         Othewise, assert that the lower level is metastable and set the radiative weight to 1
+         ERROR -- At present I don't believe what one should do with metastable lower levels is
+         ERROR -- worked out, either in the program... where are we getting radiative rates
+         ERROR -- or conceptually
+         07mar - ksl - We still need to determine whether this makes sense at all !!
+       */
 
       xw = w;                   // Assume all lower levels are allowed at present
 
@@ -328,7 +321,6 @@ ERROR -- or conceptually
       *d2 = dd * n2_over_ng;
       n2_over_n1 = n2_over_ng / n1_over_ng;
     }
-
 
     old_line_ptr = line_ptr;
     old_ne = ne;

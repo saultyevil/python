@@ -410,7 +410,7 @@ rtheta_volumes (ndom, w)
       cell_volume = 2. * 2. / 3. * PI * (rmax * rmax * rmax - rmin * rmin * rmin) * (cos (thetamin) - cos (thetamax));
 
 
-      if (w[n].inwind == W_NOT_INWIND)
+      if (w[n].inwind == W_NOT_INWIND || w[n].inwind == W_IGNORE)
       {
         w[n].vol = 0.0;
       }

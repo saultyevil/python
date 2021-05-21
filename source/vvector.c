@@ -146,13 +146,10 @@ renorm (a, scalar)
      double a[], scalar;
 {
   double x;
-  double dot ();
   x = (dot (a, a));
   if (x < EPS)
   {
-    Log ("renorm: Cannot renormalize a vector of length 0\n");
-    Log ("renorm: %e %e %e\n", a[0], a[1], a[2]);
-    Log ("renorm returning -1\n");
+    Error ("renorm: Cannot renormalize a vector of length 0 (x = %e)\nrenorm: %e %e %e\nreturning -1\n", x, a[0], a[1], a[2]);
     return (-1);
   }
   x = scalar / sqrt (x);

@@ -84,9 +84,6 @@ main (argc, argv)
   int np_mpi;                   // rank and number of processes, 0 and 1 in non-parallel
 
 
-
-
-
 #ifdef MPI_ON
   MPI_Init (&argc, &argv);
   MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);

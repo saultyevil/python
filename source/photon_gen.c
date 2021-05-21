@@ -415,7 +415,9 @@ iwind = -1 	Don't generate any wind photons at all
       geo.f_matom = get_matom_f_accelerate (CALCULATE_MATOM_EMISSIVITIES);
     }
     else
+    {
       geo.f_matom = get_matom_f_accelerate (USE_STORED_MATOM_EMISSIVITIES);
+    }
 #else
     Log ("Using old slow calculation of emissivities\n");
     if (geo.pcycle == 0)

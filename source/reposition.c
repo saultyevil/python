@@ -9,7 +9,7 @@
  * ### Programming Notes ###
  *
  * This is a very short function and may not justify being in its own file. The
- * (only) function reposition could be moved into extract.c or trans_phot.c.
+ * (only) function reposition could be moved into photon2d.c.
  *
  ***********************************************************/
 
@@ -49,11 +49,8 @@ reposition (PhotPtr p)
   int hit_disk;
   int ierr = 0;
 
-
   if (p->nres > -1 && p->nres < NLINES)
   {
-
-
     if ((p->grid = n = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
     {
       Error ("reposition: Photon not in grid when routine entered %d \n", n);
@@ -70,6 +67,7 @@ reposition (PhotPtr p)
         s = 0.1 * s_disk;
       }
     }
+
     s_star = ds_to_sphere (geo.rstar, p);
     if (s_star > 0 && s_star < s)
     {
@@ -77,7 +75,6 @@ reposition (PhotPtr p)
     }
 
     ierr = move_phot (p, s);
-
     if (ierr)
     {
       Error ("reposition: move_phot error: Photon %d - %10.3e %10.3e %10.3e\n", p->np, p->x[0], p->x[1], p->x[2]);
@@ -90,9 +87,7 @@ reposition (PhotPtr p)
       Error ("reposition: s (%10.3e) < 0", s);
       ierr = TRUE;
     }
-
   }
-
 
   return (ierr);
 }

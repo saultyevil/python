@@ -317,6 +317,7 @@ init_advanced_modes ()
 
 
   modes.keep_photoabs = 1;      // keep photoabsorption in final spectrum
+  modes.error_summary_cycle = 0;
 
   return (0);
 }

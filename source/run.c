@@ -295,6 +295,12 @@ calculate_ionization (restart_stat)
 
     wind_update (w);
 
+    if (modes.error_summary_cycle)
+    {
+      char message[LINELENGTH];
+      snprintf (message, LINELENGTH, "total errors at end of ionization cycle %d", geo.wcycle + 1);
+      error_summary (message);
+    }
 
     Log ("Completed ionization cycle %d :  The elapsed TIME was %f\n", geo.wcycle + 1, timer ());
 
@@ -332,7 +338,6 @@ calculate_ionization (restart_stat)
     /* Save everything after each cycle and prepare for the next cycle 
        JM1304: moved geo.wcycle++ after xsignal to record cycles correctly. First cycle is cycle 0. */
     /* NSH1306 - moved geo.wcycle++ back, but moved the log and xsignal statements */
-
 
     xsignal (files.root, "%-20s Finished %3d of %3d ionization cycles \n", "OK", geo.wcycle + 1, geo.wcycles);
     geo.wcycle++;               //Increment ionisation cycles
@@ -588,6 +593,14 @@ make_spectra (restart_stat)
 #ifdef MPI_ON
     }
 #endif
+
+    if (modes.error_summary_cycle && geo.pcycle < geo.pcycles - 1)
+    {
+      char message[LINELENGTH];
+      snprintf (message, LINELENGTH, "total errors at end of spectrum cycle %d", geo.pcycle + 1);
+      error_summary (message);
+    }
+
     Log ("Completed spectrum cycle %3d :  The elapsed TIME was %f\n", geo.pcycle + 1, timer ());
 
     /* JM1304: moved geo.pcycle++ after xsignal to record cycles correctly. First cycle is cycle 0. */

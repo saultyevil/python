@@ -283,13 +283,7 @@ spherical_volumes (ndom, w)
 
     w[n].vol = 4. / 3. * PI * (rmax * rmax * rmax - rmin * rmin * rmin);
 
-    if (i == ndim - 1)
-    {
-      fraction = 0.0;           /* Force outside edge volues to zero */
-      jj = 0;
-      kk = RESOLUTION;
-    }
-    else if (i == ndim - 2)
+    if (i == ndim - 1 || i == ndim - 2)
     {
       fraction = 0.0;           /* Force outside edge volues to zero */
       jj = 0;
@@ -309,7 +303,7 @@ spherical_volumes (ndom, w)
           kk++;
           x[0] = r * sin (theta);
           x[1] = 0;
-          x[2] = r * cos (theta);;
+          x[2] = r * cos (theta);
           if (where_in_wind (x, &ndomain) == W_ALL_INWIND)
           {
             num += r * r * sin (theta);
