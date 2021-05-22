@@ -74,6 +74,8 @@ double DENSITY_PHOT_MIN;        /* This constant is a minimum density for the pu
 #define LDEN_MIN        1e-3    /* The minimum density required for a line to be conidered for scattering
                                    or emission in calculate_ds and lum_lines */
 
+#define DILUTION_FACTOR_MINIMUM 1e-10
+
 
 /* End of "care factor" definition */
 

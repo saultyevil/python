@@ -836,7 +836,7 @@ vwind_xyz (ndom, p, v)
  * is not tightly tied to any particular wind model.
  *
  **********************************************************/
-int wind_div_err = (-3);
+int wind_div_err = 0;
 
 int
 wind_div_v ()
@@ -857,9 +857,9 @@ wind_div_v ()
 
     if (div < 0 && (wind_div_err < 0 || wmain[icell].inwind == W_ALL_INWIND))
     {
-//      Error
-//        ("wind_div_v: div v %e negative in cell %d Domain %d. Major problem if inwind (%d) == 0\n",
-//         div, icell, wmain[icell].ndom, wmain[icell].inwind);
+      // Error
+      //   ("wind_div_v: div v %e negative in cell %d Domain %d. Major problem if inwind (%d) == 0\n",
+      //    div, icell, wmain[icell].ndom, wmain[icell].inwind);
       wind_div_err++;
     }
   }
