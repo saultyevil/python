@@ -653,6 +653,10 @@ error_summary (message)
      char *message;
 {
   int n;
+
+  if (nerrors == 0)
+    return 0;
+
   Log ("\nError summary: %s\n", message);
   Log ("Recurrences --  Description\n");
   for (n = 0; n < nerrors; n++)
@@ -684,6 +688,9 @@ int
 error_summary_parallel (char *msg)
 {
   int i;
+
+  if (nerrors == 0)
+    return 0;
 
   Log_parallel ("\nError summary for thread %i: %s\n", my_rank, msg);
   Log_parallel ("Recurrences --  Description\n");

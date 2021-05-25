@@ -337,7 +337,7 @@ modify_wind:  $(modify_wind_objects)
 	mv $@ $(BIN)/modify_wind$(VERSION)                                         
 	@if [ $(INDENT) = yes ] ; then  ../py_progs/run_indent.py -changed ; fi         
 
-py_optical_depth_objects = py_optical_depth.o py_optical_depth_sub.o \
+py_optical_depth_objects = py_optical_depth.o py_optical_depth_transport.o py_optical_depth_output.o py_optical_depth_util.o \
 		bb.o atomicdata.o atomicdata_init.o atomicdata_sub.o photon2d.o photon_gen.o parse.o setup_files.o \
 		saha.o spectra.o wind2d.o wind.o  vvector.o recipes.o \
 		trans_phot.o phot_util.o resonate.o radiation.o estimators_simple.o\
