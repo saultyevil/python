@@ -153,7 +153,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
     smax *= 0.5;
   }
 
-  if(smax < dfudge_to_use)
+  if (smax < dfudge_to_use)
     smax = dfudge_to_use;
 
   freq_inner = p_start_cmf.freq;

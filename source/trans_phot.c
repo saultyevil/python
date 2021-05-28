@@ -99,13 +99,13 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
     {
       if (geo.ioniz_or_extract == CYCLE_IONIZ)
       {
-        Log(" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, basename, nphot, NPHOT,
-          nphot * 100. / NPHOT);
+        Log (" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, basename, nphot, NPHOT,
+             nphot * 100. / NPHOT);
       }
       else
       {
-        Log("Spec. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.pcycle + 1, geo.pcycles, basename, nphot, NPHOT,
-          nphot * 100. / NPHOT);
+        Log ("Spec. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.pcycle + 1, geo.pcycles, basename, nphot, NPHOT,
+             nphot * 100. / NPHOT);
       }
     }
 
@@ -135,7 +135,7 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
   {
     Error
       ("trans_phot: %ld photons were lost due to DFUDGE (%8.4e) pushing them outside of the wind after scatter\n",
-        n_lost_to_dfudge, DFUDGE);
+       n_lost_to_dfudge, DFUDGE);
   }
 
   return (0);

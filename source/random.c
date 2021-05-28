@@ -327,7 +327,7 @@ save_gsl_rng_state ()
     Error ("save_gsl_rng_state: gsl_rng_fwrite failed to write RNG state to file\n");
   }
   {
-    Log("GSL RNG state saved to %s\n", files.rngsave);
+    Log ("GSL RNG state saved to %s\n", files.rngsave);
   }
 
   if (fclose (file))
@@ -375,7 +375,7 @@ reload_gsl_rng_state ()
   }
   else
   {
-    Log("GSL RNG state loaded from %s\n", files.rngsave);
+    Log ("GSL RNG state loaded from %s\n", files.rngsave);
   }
 
   if (fclose (file))

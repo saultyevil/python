@@ -476,11 +476,11 @@ translate_in_wind (w, p, tau_scat, tau, nres)
     const double distance_limit = 0.5 * wmain[p->grid].dfudge;
     if (ds_current < distance_limit)
     {
-      if(n_errors_uncaught_repeated_resonance < max_resonance_errors_report)
+      if (n_errors_uncaught_repeated_resonance < max_resonance_errors_report)
       {
         Error
           ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
-            *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
+           *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
       }
 
       n_errors_uncaught_repeated_resonance++;
@@ -610,7 +610,7 @@ ds_in_cell (ndom, p)
   double smax;
 
   /* First verify that the photon is in the grid, and if not
-  return and record an error */
+     return and record an error */
 
   if ((p->grid = n = where_in_grid (ndom, p->x)) < 0)
   {

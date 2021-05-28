@@ -215,14 +215,16 @@ calculate_ionization (restart_stat)
 
     trans_phot (w, p, 0);
 
-    if(n_errors_resonances_skipped)
+    if (n_errors_resonances_skipped)
     {
-      Error("calculate_ionization: there were %lud resonance interactions skipped for ionization cycle %d\n", n_errors_uncaught_repeated_resonance, geo.wcycle + 1);
+      Error ("calculate_ionization: there were %lud resonance interactions skipped for ionization cycle %d\n",
+             n_errors_uncaught_repeated_resonance, geo.wcycle + 1);
     }
 
-    if(n_errors_uncaught_repeated_resonance)
+    if (n_errors_uncaught_repeated_resonance)
     {
-      Error("calculate_ionization: there were %lud uncaught repeated resonance errors for ionization cycle %d\n", n_errors_uncaught_repeated_resonance, geo.wcycle + 1);
+      Error ("calculate_ionization: there were %lud uncaught repeated resonance errors for ionization cycle %d\n",
+             n_errors_uncaught_repeated_resonance, geo.wcycle + 1);
     }
 
 
@@ -568,14 +570,16 @@ make_spectra (restart_stat)
 
     trans_phot (w, p, geo.select_extract);
 
-    if(n_errors_resonances_skipped)
+    if (n_errors_resonances_skipped)
     {
-      Error("make_spectra: there were %lud resonance interactions skipped for spectrum cycle %d\n", n_errors_uncaught_repeated_resonance, geo.pcycle + 1);
+      Error ("make_spectra: there were %lud resonance interactions skipped for spectrum cycle %d\n", n_errors_uncaught_repeated_resonance,
+             geo.pcycle + 1);
     }
 
-    if(n_errors_uncaught_repeated_resonance)
+    if (n_errors_uncaught_repeated_resonance)
     {
-      Error("make_spectra: there were %lud uncaught repeated resonance errors for spectrum cycle %d\n", n_errors_uncaught_repeated_resonance, geo.pcycle + 1);
+      Error ("make_spectra: there were %lud uncaught repeated resonance errors for spectrum cycle %d\n",
+             n_errors_uncaught_repeated_resonance, geo.pcycle + 1);
     }
 
     spectrum_create (p, geo.nangles, geo.select_extract);
