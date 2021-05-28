@@ -83,74 +83,60 @@ int
 trans_phot (WindPtr w, PhotPtr p, int iextract)
 {
   int nphot;
-  struct photon pp, pextract;
-  int absorb_reflect;           /* this is a variable used to store geo.absorb_reflect during exxtract */
-  int nreport;
+  struct photon pextract;
   struct timeval timer_t0;
 
-  nreport = NPHOT / 10;
-  Log ("\n");
-
+  const int nreport = NPHOT / 10;
   timer_t0 = init_timer_t0 ();
 
-  /* Beginning of loop over photons */
-
-  n_lost_to_dfudge = 0;
-  n_errors_resonance = 0;
+  Log ("\n");
 
   for (nphot = 0; nphot < NPHOT; nphot++)
   {
+    p[nphot].np = nphot;
 
-    check_frame (&p[nphot], F_OBSERVER, "trans_phot_start\n");
-
-
-    /* This is just a watchdog method to tell the user the program is still running */
     if (nphot % nreport == 0)
     {
       if (geo.ioniz_or_extract == CYCLE_IONIZ)
-        Log (" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, basename, nphot, NPHOT,
-             nphot * 100. / NPHOT);
+      {
+        Log(" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, basename, nphot, NPHOT,
+          nphot * 100. / NPHOT);
+      }
       else
-        Log ("Spec. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.pcycle + 1, geo.pcycles, basename, nphot, NPHOT,
-             nphot * 100. / NPHOT);
+      {
+        Log("Spec. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.pcycle + 1, geo.pcycles, basename, nphot, NPHOT,
+          nphot * 100. / NPHOT);
+      }
     }
+
     Log_flush ();
-
-    stuff_phot (&p[nphot], &pp);
-    absorb_reflect = geo.absorb_reflect;
-
 
     /* The next if statement is executed if we are calculating the detailed spectrum and makes sure we always run extract on
        the original photon no matter where it was generated */
+
     if (iextract)
     {
-
       stuff_phot (&p[nphot], &pextract);
       extract (w, &pextract, pextract.origin);
-
     }
 
-    p[nphot].np = nphot;
-
-    /* Transport a single photon */
     trans_phot_single (w, &p[nphot], iextract);
-
   }
 
-  /* This is the end of the loop over all of the photons; after this the routine returns */
-
-  /* Line to complete watchdog timer */
   Log ("\n");
 
   print_timer_duration ("!!python: photon transport completed in", timer_t0);
-  /* sometimes photons scatter near the edge of the wind and get pushed out by DFUDGE. We record these */
+
+  /* Sometimes photons resonance scatter near the edge of the wind and get pushed
+   * out of the wind by reposition()
+   */
+
   if (n_lost_to_dfudge > 0)
+  {
     Error
       ("trans_phot: %ld photons were lost due to DFUDGE (%8.4e) pushing them outside of the wind after scatter\n",
-       n_lost_to_dfudge, DFUDGE);
-
-  if(n_errors_resonance > 0)
-    Log("trans_phot: %ld repeated resonance interactions happened this cycle\n", n_errors_resonance);
+        n_lost_to_dfudge, DFUDGE);
+  }
 
   return (0);
 }

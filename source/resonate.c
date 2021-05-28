@@ -136,8 +136,9 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    */
 
   const double MAXDIFF = VCHECK / VLIGHT;
+  const double dfudge_to_use = wmain[p->grid].dfudge;
 
-  while (smax > DFUDGE)
+  while (smax > dfudge_to_use)
   {
     stuff_phot (p, &p_now);
     move_phot (&p_now, smax * 0.5);
@@ -151,6 +152,9 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
     stuff_phot (&p_now_cmf, &p_stop_cmf);
     smax *= 0.5;
   }
+
+  if(smax < dfudge_to_use)
+    smax = dfudge_to_use;
 
   freq_inner = p_start_cmf.freq;
   freq_outer = p_stop_cmf.freq;
@@ -244,6 +248,9 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    * with the photon in the cell
    */
 
+  const int last_resonance = p_now.nres;
+  const double distance_limit = 0.5 * wmain[p_now.grid].dfudge;
+
   for (n = 0; n < nline_delt; n++)
   {
     current_res_number = nstart + n * ndelt;
@@ -257,10 +264,11 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
        * then we flag this as an error and skip over it...
        */
 
-      if (p_now.nres == current_res_number && ds < wmain[p_now.grid].dfudge)
+      if (last_resonance == current_res_number && ds < distance_limit)
       {
-        // Error ("calculate_ds: photon trying to interact with same resonance within %e cm of last interaction\n",
-        //        wmain[p_start_cmf.grid].dfudge + ds);
+        n_errors_resonances_skipped++;
+        // Error ("calculate_ds: photon trying to interact with same resonance within %e (limit + ds) cm of last interaction so skipping\n",
+        //        distance_limit + ds);
         continue;
       }
 
@@ -390,8 +398,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   {
     *nres = select_continuum_scattering_process (kap_cont, kap_es, kap_ff, xplasma);
 
-    /* A scattering event has occurred in the shell  and we
-     * remain in the same shell */
+    /* A scattering event has occurred in the shell and we remain in the same shell */
 
     ds_current += (tau_scat - running_tau) / (kap_cont_obs);
     *istat = P_SCAT;

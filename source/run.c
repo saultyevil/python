@@ -209,7 +209,22 @@ calculate_ionization (restart_stat)
       pop_kappa_ff_array ();
 
     /* Transport the photons through the wind */
+
+    n_errors_resonances_skipped = 0;
+    n_errors_uncaught_repeated_resonance = 0;
+
     trans_phot (w, p, 0);
+
+    if(n_errors_resonances_skipped)
+    {
+      Error("calculate_ionization: there were %lud resonance interactions skipped for ionization cycle %d\n", n_errors_uncaught_repeated_resonance, geo.wcycle + 1);
+    }
+
+    if(n_errors_uncaught_repeated_resonance)
+    {
+      Error("calculate_ionization: there were %lud uncaught repeated resonance errors for ionization cycle %d\n", n_errors_uncaught_repeated_resonance, geo.wcycle + 1);
+    }
+
 
     /* Determine how much energy was absorbed in the wind. first zero counters. 
        There are counters for total energy absorbed and for each entry in the istat enum */
@@ -548,7 +563,20 @@ make_spectra (restart_stat)
 
     /* Tranport photons through the wind */
 
+    n_errors_resonances_skipped = 0;
+    n_errors_uncaught_repeated_resonance = 0;
+
     trans_phot (w, p, geo.select_extract);
+
+    if(n_errors_resonances_skipped)
+    {
+      Error("make_spectra: there were %lud resonance interactions skipped for spectrum cycle %d\n", n_errors_uncaught_repeated_resonance, geo.pcycle + 1);
+    }
+
+    if(n_errors_uncaught_repeated_resonance)
+    {
+      Error("make_spectra: there were %lud uncaught repeated resonance errors for spectrum cycle %d\n", n_errors_uncaught_repeated_resonance, geo.pcycle + 1);
+    }
 
     spectrum_create (p, geo.nangles, geo.select_extract);
 

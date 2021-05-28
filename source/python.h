@@ -51,7 +51,6 @@ double DFUDGE;
 
 #define VCHECK	1.e4            // The maximum allowable error in calculation of the velocity in calculate_ds
 
-
 double SMAX_FRAC;               /* In translate_in_wind, a limit is placed on the maximum distance a
                                    photon can travel in one step.  It is a fraction SMAX_FRAC of the
                                    distance of the photon from the origin.  This had been hardwired to
@@ -1550,4 +1549,5 @@ struct rdpar_choices zz_spec;
 
 #define Exit(error_code) {exit_python(error_code); exit(error_code);}
 
-unsigned long n_errors_resonance;
+unsigned long n_errors_uncaught_repeated_resonance;
+unsigned long n_errors_resonances_skipped;

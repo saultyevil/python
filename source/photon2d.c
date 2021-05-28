@@ -469,57 +469,21 @@ translate_in_wind (w, p, tau_scat, tau, nres)
   }
 
   move_phot (p, ds_current);
+  const int max_resonance_errors_report = 50;
 
   if (*nres > -1 && *nres <= NLINES && *nres == p->nres && istat == P_SCAT)
   {
-    if (ds_current < 1e5)
+    const double distance_limit = 0.5 * wmain[p->grid].dfudge;
+    if (ds_current < distance_limit)
     {
-      Error
-        ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
-         *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
+      if(n_errors_uncaught_repeated_resonance < max_resonance_errors_report)
+      {
+        Error
+          ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
+            *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
+      }
 
-      // int i;
-      // struct photon p_b4_dfudge;
-      // struct photon p_b4_ds_current;
-      //
-      // // stuff in p, which has moved ds, reverse direction and move ds_current
-      // // should put it back in original place
-      // stuff_phot (p, &p_b4_ds_current);
-      // for (i = 0; i < 3; ++i)
-      // {
-      //   p_b4_ds_current.lmn[i] *= -1;
-      // }
-      // move_phot (&p_b4_ds_current, ds_current);
-      //
-      // // take the photon moved back, then move it back dfudge so should be where
-      // // it interacted with last resonance
-      // stuff_phot (&p_b4_ds_current, &p_b4_dfudge);
-      // move_phot (&p_b4_dfudge, wmain[p_b4_dfudge.grid].dfudge);
-      //
-      // int ndom = wmain[p->grid].ndom;
-      // double v_p[3], v_p_b4_ds_current[3], v_p_b4_dfudge[3];
-      //
-      // vwind_xyz (ndom, p, v_p);
-      // vwind_xyz (ndom, &p_b4_ds_current, v_p_b4_ds_current);
-      // vwind_xyz (ndom, &p_b4_dfudge, v_p_b4_dfudge);
-      //
-      // Log ("ds_current %e dfudge %e\n", ds_current, wmain[p->grid].dfudge);
-      //
-      // Log ("velocity before dfudge reposition     r %e v [%e, %e, %e] %e\n", length (p_b4_dfudge.x), v_p_b4_dfudge[0], v_p_b4_dfudge[1],
-      //      v_p_b4_dfudge[2], sqrt (dot (v_p_b4_dfudge, v_p_b4_dfudge)));
-      //
-      // Log ("velocity before moving to interaction r %e v [%e, %e, %e] %e\n", length (p_b4_ds_current.x), v_p_b4_ds_current[0],
-      //      v_p_b4_ds_current[1], v_p_b4_ds_current[2], sqrt (dot (v_p_b4_ds_current, v_p_b4_ds_current)));
-      //
-      // Log ("velocity at interaction               r %e v [%e, %e, %e] %e\n", length (p->x), v_p[0], v_p[1], v_p[2], sqrt (dot (v_p, v_p)));
-      //
-      // Log ("\n");
-
-      if (modes.save_photons)
-        save_photons (p, "HitSameResonance");
-
-      istat = P_INWIND;
-      *tau = 0;
+      n_errors_uncaught_repeated_resonance++;
     }
   }
 
