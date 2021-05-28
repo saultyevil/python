@@ -136,7 +136,16 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    */
 
   const double MAXDIFF = VCHECK / VLIGHT;
-  const double dfudge_to_use = wmain[p->grid].dfudge;
+  double dfudge_to_use;
+
+  if(p->grid > NDIM2 - 1 || p->grid < 0)
+  {
+    dfudge_to_use = DFUDGE;
+  }
+  else
+  {
+    dfudge_to_use = wmain[p->grid].dfudge;
+  }
 
   while (smax > dfudge_to_use)
   {
@@ -249,7 +258,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    */
 
   const int last_resonance = p_now.nres;
-  const double distance_limit = 0.5 * wmain[p_now.grid].dfudge;
+  const double distance_limit = 0.5 * dfudge_to_use;
 
   for (n = 0; n < nline_delt; n++)
   {
