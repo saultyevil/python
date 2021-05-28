@@ -317,6 +317,8 @@ initialize_inclination_angles (int *n_angles)
 int
 create_photon (PhotPtr p_out, double freq, double *lmn)
 {
+  int i;
+
   if (freq < 0)
   {
     errormsg ("photon can't be created with negative frequency\n");
@@ -339,7 +341,7 @@ create_photon (PhotPtr p_out, double freq, double *lmn)
   else
   {
     move_phot (p_out, zdom[N_DOMAIN].rmax - DFUDGE);
-    for (int i = 0; i < 3; ++i)
+    for (i = 0; i < 3; ++i)
     {
       p_out->lmn[i] *= -1.0;    // Make the photon point inwards
     }
