@@ -47,9 +47,9 @@ char basename[132];             // The root of the parameter file name being use
  * */
 
 double DFUDGE;
-#define XFUDGE   1e-5           // The scale factor used in setting up cell x cell dfudge
+#define XFUDGE   1e-3           // The scale factor used in setting up cell x cell dfudge
 
-#define VCHECK	1.e6            // The maximum allowable error in calculation of the velocity in calculate_ds
+#define VCHECK	1.e4            // The maximum allowable error in calculation of the velocity in calculate_ds
 
 
 double SMAX_FRAC;               /* In translate_in_wind, a limit is placed on the maximum distance a
@@ -1203,6 +1203,7 @@ typedef struct photon
                                    purposes */
   double path;                  /* The total path length of a photon (used for reverberation calcuations) */
   double ds;                    /* the distance a photon has moved since its creation or last interaction */
+  double dvds;
 }
 p_dummy, *PhotPtr;
 

@@ -253,7 +253,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
        position of the photon. */
 
 
-    istat = translate (w, &pp, tau_scat, &tau, &current_nres);
+    translate (w, &pp, tau_scat, &tau, &current_nres);
 
     icell++;
     istat = walls (&pp, p, normal);
@@ -539,6 +539,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
       stuff_phot (&pp, p);
       icell = 0;
+      p->dvds = -1.0;
     }
 
     /* This completes the portion of the code that handles the scattering of a photon.
