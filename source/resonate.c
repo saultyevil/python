@@ -136,16 +136,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    */
 
   const double MAXDIFF = VCHECK / VLIGHT;
-  double dfudge_to_use;
-
-  if(p->grid > NDIM2 - 1 || p->grid < 0)
-  {
-    dfudge_to_use = DFUDGE;
-  }
-  else
-  {
-    dfudge_to_use = wmain[p->grid].dfudge;
-  }
+  double dfudge_to_use = wmain[p->grid].dfudge;
 
   while (smax > dfudge_to_use)
   {
@@ -153,8 +144,8 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
     move_phot (&p_now, smax * 0.5);
     observer_to_local_frame (&p_now, &p_now_cmf);
     diff = fabs (p_now_cmf.freq - 0.5 * (p_start_cmf.freq + p_stop_cmf.freq)) / p_start_cmf.freq;
-    if (diff < MAXDIFF)         // check vcheck to something small, < 1? or 1
-    {                           // increase dfudge?
+    if (diff < MAXDIFF)
+    {
       break;
     }
     stuff_phot (&p_now, &p_stop);

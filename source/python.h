@@ -47,9 +47,9 @@ char basename[132];             // The root of the parameter file name being use
  * */
 
 double DFUDGE;
-#define XFUDGE   1e-3           // The scale factor used in setting up cell x cell dfudge
+#define XFUDGE   1e-5           // The scale factor used in setting up cell x cell dfudge
 
-#define VCHECK	1.e4            // The maximum allowable error in calculation of the velocity in calculate_ds
+#define VCHECK	1.e6            // The maximum allowable error in calculation of the velocity in calculate_ds
 
 double SMAX_FRAC;               /* In translate_in_wind, a limit is placed on the maximum distance a
                                    photon can travel in one step.  It is a fraction SMAX_FRAC of the
