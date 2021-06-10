@@ -406,9 +406,8 @@ bb_estimators_increment (one, p, tau_sobolev, dvds, nn)
  **********************************************************/
 
 int
-mc_estimator_normalise (n)
+normalise_macro_estimators (n)
      int n;
-
 {
   double invariant_volume_time;
   int i, j, nlev_upper;
@@ -422,11 +421,10 @@ mc_estimator_normalise (n)
   xplasma = &plasmamain[one->nplasma];
   mplasma = &macromain[xplasma->nplasma];
 
-
-  /* one->vol contains the CMF volume. This converts it to 
+  /* one->vol contains the CMF volume. This converts it to
      observer frame volume, or perhaps more correctly, it calculates the
-     Lorentz invariant quantity (Delta V Delta t). Because Delta t_obs == 1 
-     in the code, (Delta V Delta t) == (Delta V_obs * 1.0). 
+     Lorentz invariant quantity (Delta V Delta t). Because Delta t_obs == 1
+     in the code, (Delta V Delta t) == (Delta V_obs * 1.0).
      Note, this is also equivalent to multiplying Delta V_cmf by Delta t_cmf,
      which is Delta t_obs / gamma, i.e. 1.0/gamma. All other quantities that
      have been incremented should have been done so with CMF values.
@@ -434,39 +432,36 @@ mc_estimator_normalise (n)
 
   invariant_volume_time = one->vol / one->xgamma_cen;
 
-
   /* bf estimators. During the mc calculation the quantity stored
      was weight * cross-section * path-length / frequency.
      To normalise this we need to put in:
      1 / h  (Planck constant)
      1 / Volume
-     1 / Time 
-     I think that the weights are chosen such that Time = 1. 
-     So the normalisation of gamma and gamma_e is easy. 
+     1 / Time
+     I think that the weights are chosen such that Time = 1.
+     So the normalisation of gamma and gamma_e is easy.
    */
-
 
   /* For the alpha_st estimators (stimulated recombination) the
      estimator also needs to be multiplied by a temperature
      dependent factor which is almost, but not quite, given by
-     the LTE population ratio. The muliplicative factor
+     the LTE population ratio. The multiplicative factor
      is given by: */
+
   stimfac = 0.5 * pow (PLANCK * PLANCK / 2. / PI / MELEC / BOLTZMANN / xplasma->t_e, 3. / 2.);
 
   for (i = 0; i < nlte_levels; i++)
   {
     for (j = 0; j < config[i].n_bfu_jump; j++)
     {
-
-      mplasma->gamma_old[config[i].bfu_indx_first + j] = mplasma->gamma[config[i].bfu_indx_first + j] / PLANCK / invariant_volume_time; //normalise
+      mplasma->gamma_old[config[i].bfu_indx_first + j] = mplasma->gamma[config[i].bfu_indx_first + j] / PLANCK / invariant_volume_time; // normalize by invariant_volume_time
+      mplasma->gamma_e_old[config[i].bfu_indx_first + j] = mplasma->gamma_e[config[i].bfu_indx_first + j] / PLANCK / invariant_volume_time;
       mplasma->gamma[config[i].bfu_indx_first + j] = 0.0;       //re-initialise for next iteration
-      mplasma->gamma_e_old[config[i].bfu_indx_first + j] = mplasma->gamma_e[config[i].bfu_indx_first + j] / PLANCK / invariant_volume_time;     //normalise
-      mplasma->gamma_e[config[i].bfu_indx_first + j] = 0.0;     //re-initialise for next iteration
+      mplasma->gamma_e[config[i].bfu_indx_first + j] = 0.0;
 
       /* For the stimulated recombination parts we need the the
-         ratio of statistical weights too. 
-         For free electron statistical weight = 2 is included in
-         stimfac above. */
+         ratio of statistical weights too. For free electron statistical
+         weight = 2 is included in stimfac above. */
 
       stat_weight_ratio = config[phot_top[config[i].bfu_jump[j]].uplev].g / config[i].g;
 
@@ -482,7 +477,7 @@ mc_estimator_normalise (n)
          is given by a black body. */
 
       /* For now place the limit at 7.5e12 which is 400000AA */
-      /* Try also doing it for very high energy ones - greater than 50eV: 1.2e16 since up there the statistics of the estimators are very poor at the moment. 
+      /* Try also doing it for very high energy ones - greater than 50eV: 1.2e16 since up there the statistics of the estimators are very poor at the moment.
          Ideally we don't want to have this so should probably switch this back sometime (SS August 05) !!!BUG */
 
       if (phot_top[config[i].bfu_jump[j]].freq[0] < 7.5e12 || phot_top[config[i].bfu_jump[j]].freq[0] > 5e18)
@@ -492,7 +487,6 @@ mc_estimator_normalise (n)
         mplasma->alpha_st_e_old[config[i].bfu_indx_first + j] = get_alpha_st_e (&phot_top[config[i].bfu_jump[j]], xplasma);
         mplasma->alpha_st_old[config[i].bfu_indx_first + j] = get_alpha_st (&phot_top[config[i].bfu_jump[j]], xplasma);
       }
-
     }
 
     /* That deals with the bf jumps. Now need to sort out the bb jumps. */
@@ -504,51 +498,46 @@ mc_estimator_normalise (n)
        c / nu  - to convert dvds^-1 to dnuds^-1
 
        Also, I'm putting the correction factor for stimulated emission in here - so that it doesn't have to be
-       computed in the macro atom jumping probabilities. (SS)
-
-
+       computed in the macro atom jumping probabilities.
      */
 
     for (j = 0; j < config[i].n_bbu_jump; j++)
     {
-
-      /* The correction for stimulated emission is (1 - n_lower * g_upper / n_upper / g_lower) */
       nlev_upper = line[config[i].bbu_jump[j]].nconfigu;
       lower_density = den_config (xplasma, i);
       upper_density = den_config (xplasma, nlev_upper);
+
+      /* The correction for stimulated emission is (1 - n_lower * g_upper / n_upper / g_lower) */
+
       stimfac = upper_density / lower_density;
       stimfac = stimfac * config[i].g / config[line[config[i].bbu_jump[j]].nconfigu].g;
+
       if (stimfac < 1.0 && stimfac >= 0.0)
       {
-        stimfac = 1. - stimfac; //all's well
+        stimfac = 1. - stimfac;
       }
-
-      /* check for population inversions. We don't worry about this if the densities are extremely low or if the
-         upper level has hit the density floor - the lower level is still allowed to hit this floor because it 
-         should never cause an inversion */
       else if (upper_density > DENSITY_PHOT_MIN && lower_density > DENSITY_PHOT_MIN
                && xplasma->levden[config[nlev_upper].nden] > DENSITY_MIN)
       {
-        Error ("mc_estimator_normalise: bb stimulated correction factor is out of bound. Abort.\n");
-        Error ("stimfac %g, i %d, line[config[i].bbu_jump[j]].nconfigu %d\n", stimfac, i, line[config[i].bbu_jump[j]].nconfigu);
-        Log
-          ("estimators: den_config (xplasma, i) %g  den_config (xplasma, line[config[i].bbu_jump[j]].nconfigu) %g \n",
-           den_config (xplasma, i), den_config (xplasma, line[config[i].bbu_jump[j]].nconfigu));
+        /* check for population inversions. We don't worry about this if the densities are extremely low or if the
+           upper level has hit the density floor - the lower level is still allowed to hit this floor because it
+           should never cause an inversion */
+        Error ("normalise_macro_estimators: bb stimulated correction factor is out of bounds, 0 <= stimfac < 1 but got %g\n", stimfac);
+        Error ("normalise_macro_estimators: upper_density %g lower_density %g xplasma->levden[config[nlev_upper].nden] %g\n",
+               upper_density, lower_density, xplasma->levden[config[nlev_upper].nden]);
+        Exit (EXIT_FAILURE);
         stimfac = 0.0;
-        //Exit (0);
       }
       else
       {
         stimfac = 0.0;
       }
 
-      //get the line frequency
-      line_freq = line[config[i].bbu_jump[j]].freq;
-
       /* normalise jbar. Note that this uses the cell volume rather than the filled volume */
+
+      line_freq = line[config[i].bbu_jump[j]].freq;
       mplasma->jbar_old[config[i].bbu_indx_first + j] =
         mplasma->jbar[config[i].bbu_indx_first + j] * VLIGHT * stimfac / 4. / PI / invariant_volume_time / line_freq;
-
       mplasma->jbar[config[i].bbu_indx_first + j] = 0.0;
     }
   }
@@ -567,9 +556,9 @@ mc_estimator_normalise (n)
   xplasma->heat_photo_macro = heat_contribution;
   xplasma->heat_tot += heat_contribution;
 
-
   /* finally, check if we have any places where stimulated recombination wins over
      photoionization */
+
   check_stimulated_recomb (xplasma);
 
   /* Now that we have estimators, set the flag to use them for the level populations */
@@ -972,7 +961,6 @@ get_dilute_estimators (xplasma)
   MacroPtr mplasma;
   mplasma = &macromain[xplasma->nplasma];
 
-
   for (i = 0; i < nlte_levels; i++)
   {
     for (j = 0; j < config[i].n_bfu_jump; j++)
@@ -985,9 +973,8 @@ get_dilute_estimators (xplasma)
     for (j = 0; j < config[i].n_bbu_jump; j++)
     {
       line_ptr = &line[config[i].bbu_jump[j]];
-      mplasma->jbar_old[config[i].bbu_indx_first + j] = mean_intensity (xplasma, line_ptr->freq, 1);
+      mplasma->jbar_old[config[i].bbu_indx_first + j] = mean_intensity (xplasma, line_ptr->freq, MEAN_INTENSITY_BB_MODEL);
     }
-
   }
 
   return (0);

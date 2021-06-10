@@ -337,7 +337,7 @@ int emit_matom(WindPtr w, PhotPtr p, int *nres, int upper, double freq_min, doub
 /* estimators_macro.c */
 int bf_estimators_increment(WindPtr one, PhotPtr p, double ds);
 int bb_estimators_increment(WindPtr one, PhotPtr p, double tau_sobolev, double dvds, int nn);
-int mc_estimator_normalise(int n);
+int normalise_macro_estimators(int n);
 double total_fb_matoms(PlasmaPtr xplasma, double t_e, double f1, double f2);
 double total_bb_cooling(PlasmaPtr xplasma, double t_e);
 double macro_bb_heating(PlasmaPtr xplasma, double t_e);
@@ -496,7 +496,7 @@ double get_matom_f_accelerate(int mode);
 int macro_gov(PhotPtr p, int *nres, int matom_or_kpkt, int *which_out);
 int macro_pops(PlasmaPtr xplasma, double xne);
 int macro_pops_fill_rate_matrix(MacroPtr mplasma, PlasmaPtr xplasma, double xne, int index_element, double rate_matrix[200][200], int radiative_flag[200][200], int conf_to_matrix[200]);
-void macro_pops_check_for_population_inversion(int index_element, double *populations, int radiative_flag[200][200], int conf_to_matrix[200]);
+int macro_pops_check_for_population_inversion(int index_element, double *populations, int radiative_flag[200][200], int conf_to_matrix[200]);
 int macro_pops_check_densities_for_numerical_errors(PlasmaPtr xplasma, int index_element, double *populations, int conf_to_matrix[200], int n_iterations);
 void macro_pops_copy_to_xplasma(PlasmaPtr xplasma, int index_element, double *populations, int conf_to_matrix[200]);
 /* windsave2table_sub.c */

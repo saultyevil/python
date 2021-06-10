@@ -104,14 +104,13 @@ main (argc, argv)
                                    a restart */
   time_max = 13.8e9 * 3.2e7;    /* The maximum time the program will run without stopping.  This
                                    is initially set to the lifetime of the universe */
-  time_max = -1;
+
   set_max_time (files.root, time_max);
 
   rel_mode = REL_MODE_FULL;
   run_xtest = FALSE;
   run_ztest = FALSE;
   NWAVE_MAX = (int) NWAVE_IONIZ;
-
 
   /* Set the verbosity level for logging.  To get more info raise the verbosity level to a higher number. To
      get less set the verbosity to a lower level. The verbosity can be reset from the comamnd line */

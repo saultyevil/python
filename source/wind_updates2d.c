@@ -180,7 +180,7 @@ WindPtr (w);
 
     if (geo.rt_mode == RT_MODE_MACRO && geo.macro_simple == FALSE)      //test for macro atoms
     {
-      mc_estimator_normalise (nwind);
+      normalise_macro_estimators(nwind);
       macromain[n].kpkt_rates_known = -1;
     }
 

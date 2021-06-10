@@ -34,11 +34,10 @@
 #define RYD2ERGS                        2.1798741e-11   /* Rydberg in units of ergs */
 
 
-/* The next term attempts gloabally to define a minimum density to prevent zero devides in some routines */
+/* The next term attempts to globally define a minimum density to prevent zero divides in some routines */
 #define DENSITY_MIN		1.e-20
-/* 
 
-
+/*
    Note that the structure ele array may not be completely filled.  In this structure, the dimension is simply
    the order in which elements are read in, and one may skip elements (which are not of interest).
 
