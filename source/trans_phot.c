@@ -84,7 +84,6 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
 {
   int nphot;
   struct photon pp, pextract;
-  int nreport;
   struct timeval timer_t0;
 
   const int nreport = NPHOT / 10;
