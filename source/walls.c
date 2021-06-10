@@ -134,7 +134,6 @@ walls (p, pold, normal)
 
     if (s_disk < 0 && fabs (pold->x[2]) < wmain[pold->grid].dfudge && pold->lmn[2] * p->lmn[2] < 0.0)
     {
-      Error ("walls: Reposition error\n");
       return (p->istat = P_REPOSITION_ERROR);
     }
 

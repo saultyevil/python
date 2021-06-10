@@ -151,8 +151,6 @@ setup_created_files ()
      This is intended so that files which you really want to keep have unique names, while
      those which are for short-term diagnostics are overwritten.   */
 
-  strcpy (basename, files.root);
-
   strcpy (files.wspec, files.root);     //generated photons
   strcpy (files.lwspec, files.root);    //generated photon in log space
 

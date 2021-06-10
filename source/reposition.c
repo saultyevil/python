@@ -44,47 +44,50 @@
 int
 reposition (PhotPtr p)
 {
-  int n;
-  double s, s_disk, s_star;
-  int hit_disk;
   int ierr = 0;
 
-  if (p->nres > -1 && p->nres < NLINES)
-  {
-    if ((p->grid = n = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
-    {
-      Error ("reposition: Photon not in grid when routine entered %d \n", n);
-      return (n);
-    }
+  /* todo: in the future, this may not be required
+    int n;
+    double s, s_disk, s_star;
+    int hit_disk;
 
-    s = wmain[p->grid].dfudge;
-    if (geo.disk_type != DISK_NONE)
+    if (p->nres > -1 && p->nres < NLINES)
     {
-      s_disk = ds_to_disk (p, 1, &hit_disk);    // Allow negative values
-      if (s_disk > 0 && s_disk < s)
+      if ((p->grid = n = where_in_grid (wmain[p->grid].ndom, p->x)) < 0)
       {
-        s = 0.1 * s_disk;
+        Error ("reposition: Photon not in grid when routine entered %d \n", n);
+        return (n);
+      }
+
+      s = wmain[p->grid].dfudge;
+      if (geo.disk_type != DISK_NONE)
+      {
+        s_disk = ds_to_disk (p, 1, &hit_disk);    // Allow negative values
+        if (s_disk > 0 && s_disk < s)
+        {
+          s = 0.1 * s_disk;
+        }
+      }
+
+      s_star = ds_to_sphere (geo.rstar, p);
+      if (s_star > 0 && s_star < s)
+      {
+        s = 0.1 * s_star;
+      }
+
+      if (s < 0)
+      {
+        Error ("reposition: reposition s %10.3e < 0 so photon has not been repositioned\n", s);
+        return ierr = TRUE;
+      }
+
+      ierr = move_phot (p, s);
+      if (ierr)
+      {
+        Error ("reposition: move_phot error: Photon %d - %10.3e %10.3e %10.3e\n", p->np, p->x[0], p->x[1], p->x[2]);
       }
     }
-
-    s_star = ds_to_sphere (geo.rstar, p);
-    if (s_star > 0 && s_star < s)
-    {
-      s = 0.1 * s_star;
-    }
-
-    if (s < 0)
-    {
-      Error ("reposition: reposition s %10.3e < 0 so photon has not been repositioned\n", s);
-      return ierr = TRUE;
-    }
-
-    ierr = move_phot (p, s);
-    if (ierr)
-    {
-      Error ("reposition: move_phot error: Photon %d - %10.3e %10.3e %10.3e\n", p->np, p->x[0], p->x[1], p->x[2]);
-    }
-  }
+    */
 
   return (ierr);
 }

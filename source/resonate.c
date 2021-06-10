@@ -22,8 +22,6 @@
 #include "atomic.h"
 #include "python.h"
 
-int resonate_number_freq_diff_low = 0;
-
 /**********************************************************/
 /**
  * @brief     calculate the distance a photon can travel
@@ -69,6 +67,8 @@ int resonate_number_freq_diff_low = 0;
  *
  **********************************************************/
 
+const double MAXDIFF = VCHECK / VLIGHT;
+
 double
 calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
      WindPtr w;
@@ -78,7 +78,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
      double smax;
      int *istat;
 {
-  int kkk;
+  int nion_for_resonance;
   int n, current_res_number, nstart, ndelt;
   double kap_es;
   double freq_inner, freq_outer, dfreq, running_tau, freq_av;
@@ -95,7 +95,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   WindPtr one, two;
   int check_in_grid;
   int nplasma;
-  PlasmaPtr xplasma, xplasma2;
+  PlasmaPtr xplasma;
   int ndom;
   double normal[3];
   double diff;
@@ -114,7 +114,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (running_tau < 0.0)
   {
-    Error ("calculate_ds: Photon %d has negative tau  %8.2e at %g entering calculate_ds\n", p->np, running_tau, p->freq);
+    Error ("calculate_ds: photon %d has negative tau  %8.2e at %g entering calculate_ds\n", p->np, running_tau, p->freq);
   }
 
   /* XFRAME - Next section is a problem, but not directly related to CMF.  ksl thinks we want just the
@@ -135,10 +135,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    * to the change in frequency is not reasonable
    */
 
-  const double MAXDIFF = VCHECK / VLIGHT;
-  double dfudge_to_use = wmain[p->grid].dfudge;
-
-  while (smax > dfudge_to_use)
+  while (smax > wmain[p->grid].dfudge)
   {
     stuff_phot (p, &p_now);
     move_phot (&p_now, smax * 0.5);
@@ -152,9 +149,6 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
     stuff_phot (&p_now_cmf, &p_stop_cmf);
     smax *= 0.5;
   }
-
-  if (smax < dfudge_to_use)
-    smax = dfudge_to_use;
 
   freq_inner = p_start_cmf.freq;
   freq_outer = p_stop_cmf.freq;
@@ -174,23 +168,16 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   mean_freq = 0.5 * (freq_inner + freq_outer);
   dfreq = freq_outer - freq_inner;
 
-  /* The next section checks to see if the frequency difference on
-   * the two sides is very small and if not limits the resonances
-   * one has to worry about
-   *
-   * 201219 - ksl - Previously resonate simple returned if the frequency
-   * difference between two sides was too low and recorded an error.  Now,
-   * resonate attempts to calculate opacities anyway, and stops reporting
-   * small dfreq after 1000 examples.
+  /* The next section limits the the resonances we have to worry about, and it
+   * checks to see if the frequency difference at the start and end of the path
+   * is very small .If there difference is smaller, then there are no resonances
+   * to consider. Previously, we would have returned at this point but now we
+   * allow the photon to still try and scatter.
    */
 
-  if (fabs (dfreq) < EPSILON && resonate_number_freq_diff_low < 1000)
+  if (fabs (dfreq) < EPSILON)
   {
-    /* The frequency difference is very small so there are not resonances to consider in the
-       Sobolev approximation */
-
-    Error ("calculate_ds: freq same along path in cell %d\n", one->nwind);
-
+    Error ("calculate_ds: the frequency along the photon %d path's in cell %d is the same\n", one->nwind, p_now.np);
     limit_lines (freq_inner, freq_outer);
     nstart = nline_min;
     ndelt = 1;
@@ -228,8 +215,6 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   if (geo.rt_mode == RT_MODE_MACRO)
   {
-    /* if problems arise with next line, see issue #777. */
-
     freq_av = 0.5 * (freq_inner + freq_outer);
     kap_bf_tot = kappa_bf (xplasma, freq_av, 0);
     kap_ff = kappa_ff (xplasma, freq_av);
@@ -238,7 +223,7 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
   if (one->inwind < 0)
   {
     kap_bf_tot = kap_ff = 0.0;
-    Error_silent ("ds_calculate vol = 0: cell %d position %g %g %g\n", p->grid, p->x[0], p->x[1], p->x[2]);
+    Error_silent ("ds_calculate: wind vol = 0 for cell %d photon position %g %g %g\n", p->grid, p->x[0], p->x[1], p->x[2]);
   }
 
   kap_cont = kap_es + kap_bf_tot + kap_ff;      //total continuum opacity in CMF frame
@@ -248,27 +233,21 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
    * with the photon in the cell
    */
 
-  const int last_resonance = p_now.nres;
-  const double distance_limit = 0.5 * dfudge_to_use;
-
   for (n = 0; n < nline_delt; n++)
   {
     current_res_number = nstart + n * ndelt;
     fraction_to_resonance = (lin_ptr[current_res_number]->freq - freq_inner) / dfreq;
 
-    if (0.0 < fraction_to_resonance && fraction_to_resonance < 1.0)
-    {                           /* this particular line is in resonance */
+    if (0.0 < fraction_to_resonance && fraction_to_resonance < 1.0)     /* this particular line is in resonance */
+    {
       ds = fraction_to_resonance * smax;
 
-      /* If the last interaction (p->nres) was current_res_number and is happening within dfudge
-       * then we flag this as an error and skip over it...
+      /* If the last interaction (p->nres) was current_res_number and is happening
+       * within dfudge then we skip over the resonance.
        */
 
-      if (last_resonance == current_res_number && ds < distance_limit)
+      if (p_now.nres == current_res_number && ds < wmain[p->grid].dfudge)
       {
-        n_errors_resonances_skipped++;
-        // Error ("calculate_ds: photon trying to interact with same resonance within %e (limit + ds) cm of last interaction so skipping\n",
-        //        distance_limit + ds);
         continue;
       }
 
@@ -278,30 +257,33 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
       if (running_tau + (kap_cont_obs) * (ds - ds_current) > tau_scat)
       {
-        /* then the photon was scattered by the continuum before reaching the
-         * resonance.  Need to randomly select the continumm process which caused
-         * the photon to scatter.  The variable threshold is used for this. */
+        /* A photon was scattered by the continuum before reaching the resonance.
+         * We need to randomly select the continuum process which caused
+         * the photon to scatter. The variable threshold is used for this. */
 
         *nres = select_continuum_scattering_process (kap_cont, kap_es, kap_ff, xplasma);
-        *istat = P_SCAT;        //flag as scattering
-        ds_current += (tau_scat - running_tau) / (kap_cont_obs);        //distance travelled
+        *istat = P_SCAT;
+        ds_current += (tau_scat - running_tau) / (kap_cont_obs);
         running_tau = tau_scat;
         *tau = running_tau;
+
         return (ds_current);
       }
       else
       {
-        /* increment tau by the continuum optical depth to this point */
+        /* ds_current is exactly the position of the resonance. We also
+         * increment tau by the continuum optical depth to this point */
+
         running_tau += kap_cont_obs * (ds - ds_current);
-        ds_current = ds;        /* At this point ds_current is exactly the position of the resonance */
-        kkk = lin_ptr[current_res_number]->nion;
+        ds_current = ds;
+        nion_for_resonance = lin_ptr[current_res_number]->nion;
 
         /* The density is calculated in the wind array at the center of a cell.
          * We use that as the first estimate of the density.  */
 
         stuff_phot (p, &p_now);
-        move_phot (&p_now, ds_current); // So p_now contains the current position of the photon
-        density_cmf = get_ion_density (ndom, p_now.x, kkk);
+        move_phot (&p_now, ds_current);
+        density_cmf = get_ion_density (ndom, p_now.x, nion_for_resonance);
 
         if (density_cmf > LDEN_MIN)
         {
@@ -309,22 +291,22 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
            * Otherwise there is no need to do this, especially as dvwind_ds_cmf is an
            * expensive calculation time wise */
 
-          if (init_dvds == 0)
+          if (init_dvds == FALSE)
           {
             dvds1 = dvwind_ds_cmf (p);
             dvds2 = dvwind_ds_cmf (&p_stop);
-            init_dvds = 1;
+            init_dvds = TRUE;
           }
 
-          p->dvds = dvds_cmf = (1. - fraction_to_resonance) * dvds1 + fraction_to_resonance * dvds2;
+          dvds_cmf = (1. - fraction_to_resonance) * dvds1 + fraction_to_resonance * dvds2;
 
-          /* sobolev does not use fraction_to_resonance, unless density_cmf is les than 0 */
-          // tau_sobolev is invariant, but all inputs must be in the same frame, using cmf  here
+          /* sobolev does not use x, unless density_cmf is les than 0 tau_sobolev is invariant, but all inputs
+           * must be in the same frame, using cmf here */
 
           tau_sobolev = sobolev (one, p_now.x, density_cmf, lin_ptr[current_res_number], dvds_cmf);
           running_tau += tau_sobolev;
 
-          if (geo.rt_mode == RT_MODE_MACRO)     //Macro Atom case (SS)
+          if (geo.rt_mode == RT_MODE_MACRO)
           {
             /* Because push through distance may take us out of the cell we want,
              * need to make sure that the cell is correct before incrementing the
@@ -336,15 +318,10 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
             if (check_in_grid != P_HIT_STAR && check_in_grid != P_HIT_DISK && check_in_grid != P_ESCAPE)
             {
-              /* The next line may be redundant.  */
               two = &w[where_in_grid (wmain[p_now.grid].ndom, p_now.x)];
 
-              if (two->inwind < 0)
+              if (two->inwind < 0)      /* Sometimes DFUDGE pushes a photon into a cell with no volume. */
               {
-                /* See issue #389 - Sometimes DFUDGE pushes a photon into a cell with no volume.  Note that this
-                 * should be very rare, so if this error occurs in significant numbers the problem should be
-                 * investigated further.  ksl -180626
-                 */
                 Error ("calculate_ds: Macro atom problem when photon moved into cell with no volume\n");
               }
               else if (geo.ioniz_or_extract == CYCLE_IONIZ)
@@ -357,14 +334,11 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
                 else
                 {
                   /* The line is from a simple ion. Record the heating contribution and move on. */
-                  xplasma2 = &plasmamain[two->nplasma];
-                  bb_simple_heat (xplasma2, &p_now_cmf, tau_sobolev, current_res_number);
+                  bb_simple_heat (&plasmamain[two->nplasma], &p_now_cmf, tau_sobolev, current_res_number);
                 }
               }
             }
           }
-
-          /* Completed special calculations for the Macro Atom case */
 
         }
 
@@ -386,28 +360,21 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   /* If the photon reaches this point it was not scattered by resonances.
    * ds_current is either 0 if there were no resonances or the position of the
-   * "last" resonance if there were resonances.  But we need to check one
+   * "last" resonance if there were resonances. But we need to check one
    * last time to see if it was scattered by continuum process.
-   * Note: ksl -- It is generally a bad policy to have a bunch of repeated code
-   * like this.  We should probably rewrite some of this in terms of subroutines
-   * for clarity, especially the bit that calculates where the continuum
-   * scattering event occurred.  04 apr
    */
 
-  if (running_tau + kap_cont_obs * (smax - ds_current) > tau_scat)
+  if (running_tau + kap_cont_obs * (smax - ds_current) > tau_scat)      /* A scattering event has occurred in the shell and we remain in the same shell */
   {
     *nres = select_continuum_scattering_process (kap_cont, kap_es, kap_ff, xplasma);
-
-    /* A scattering event has occurred in the shell and we remain in the same shell */
-
     ds_current += (tau_scat - running_tau) / (kap_cont_obs);
     *istat = P_SCAT;
     running_tau = tau_scat;
   }
-  else                          /* Then we did hit the other side of the shell */
-  {                             /* (or possibly the another wall of the same shell) */
+  else                          /* Then we did hit the other side of the shell or possibly the another wall of the same shell) */
+  {
     *istat = P_INWIND;
-    running_tau += kap_cont_obs * (smax - ds_current);  /* kap_es replaced with kap_cont (SS) */
+    running_tau += kap_cont_obs * (smax - ds_current);
     ds_current = smax;
   }
 
@@ -415,8 +382,6 @@ calculate_ds (w, p, tau_scat, tau, nres, smax, istat)
 
   return (ds_current);
 }
-
-
 
 /**********************************************************/
 /**

@@ -27,7 +27,6 @@
 #include "atomic.h"
 #include "python.h"
 
-
 /**********************************************************/
 /** 
  * @brief      run the ionization cycles for a 

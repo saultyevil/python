@@ -5,8 +5,6 @@
 #define UV_low 7.4e14           //The lower frequency bound of the UV band as defined in IOS 21348
 #define UV_hi 3e16              //The lower frequency bound of the UV band as defined in IOS 21348
 
-int q_test_count;
-
 int np_mpi_global;              // Global variable which holds the number of MPI processes
 
 int rank_global;
@@ -35,16 +33,13 @@ int run_ztest;                  /* Provides a way the optionally run certain cod
 int NDIM2;                      //The total number of wind cells in wmain
 int NPLASMA;                    //The number of cells with non-zero volume or the size of plasma structure
 
-char basename[132];             // The root of the parameter file name being used by python
-
 /* These are tunable parameters that control various aspects of python
  * and the assorted programs.  In some cases they affect the "care" with
  * which a calculation is made, and this can in principle affect the
  * speed of the program.  One day if may be desirable to change some
  * of these parameters with time in the program.  At present they are
  * simply collected here
- *
- * */
+ */
 
 double DFUDGE;
 #define XFUDGE   1e-5           // The scale factor used in setting up cell x cell dfudge
@@ -72,8 +67,6 @@ double DENSITY_PHOT_MIN;        /* This constant is a minimum density for the pu
 
 #define LDEN_MIN        1e-3    /* The minimum density required for a line to be conidered for scattering
                                    or emission in calculate_ds and lum_lines */
-
-#define DILUTION_FACTOR_MINIMUM 1e-10
 
 
 /* End of "care factor" definition */
@@ -1202,7 +1195,6 @@ typedef struct photon
                                    purposes */
   double path;                  /* The total path length of a photon (used for reverberation calcuations) */
   double ds;                    /* the distance a photon has moved since its creation or last interaction */
-  double dvds;
 }
 p_dummy, *PhotPtr;
 

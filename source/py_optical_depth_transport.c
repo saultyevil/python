@@ -17,7 +17,7 @@
 #include "python.h"
 #include "py_optical_depth.h"
 
-const double MAXDIFF = VCHECK / VLIGHT; // For linear velocity requirement for photon transport
+static const double MAXDIFF = VCHECK / VLIGHT;  // For linear velocity requirement for photon transport
 
 /* ************************************************************************* */
 /**
