@@ -1,6 +1,6 @@
 
 /***********************************************************/
-/** @file  disk_init.c 
+/** @file  disk_init.c
  * @author ksl
  * @date   April, 2020
  *
@@ -65,24 +65,23 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
      double rmin, rmax, m, mdot, freqmin, freqmax, *ftot;
      int ioniz_or_final;
 {
-  double t, tref;
-  double log_g, gref;
+  double t;
+  double log_g;
   double v, dr, r;
   double logdr, logrmin, logrmax, logr;
   double f, ltot;
   double q1;
   int nrings, i, icheck;
   int spectype;
-  double emit, emittance_bb (), emittance_continuum ();
+  double emit;
   double factor;
 
-  /* Calculate the reference temperature and luminosity of the disk */
-  tref = tdisk (m, mdot, rmin);
-  gref = gdisk (m, mdot, rmin);
 
-  /* Now compute the apparent luminosity of the disk.  This is not actually used
-     to determine how annulae are set up.  It is just used to populate geo.ltot.
-     It can change if photons hitting the disk are allowed to raise the temperature
+  /*
+   * Compute the apparent luminosity of the disk.  This is not
+   * actually used to determine how annulae are set up.  It is just
+   * used to populate geo.ltot. It can change if photons hitting the
+   * disk are allowed to raise the temperature
    */
 
   logrmax = log (rmax);
@@ -111,7 +110,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
   {
     r = exp (logr);
     dr = exp (logr + logdr) - r;
-    t = teff (tref, (r + 0.5 * dr) / rmin);
+    t = teff ((r + 0.5 * dr) / rmin);
     ltot += t * t * t * t * (2. * r + dr) * dr;
   }
   geo.lum_disk_init = ltot *= 2. * STEFAN_BOLTZMANN * PI;
@@ -124,10 +123,12 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
   else
     spectype = geo.disk_ion_spectype;
 
-/* Next compute the band limited luminosity ftot */
+  /* Next compute the band limited luminosity ftot */
 
-/* The area of an annulus is  PI*((r+dr)**2-r**2) = PI * (2. * r +dr) * dr.
-   The extra factor of two arises because the disk radiates from both of its sides.
+  /*
+   * The area of an annulus is  PI*((r+dr)**2-r**2) = PI * (2. * r +dr) *
+   * dr. The extra factor of two arises because the disk radiates from
+   * both of its sides.
    */
 
   q1 = 2. * PI;
@@ -140,8 +141,8 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
   {
     r = exp (logr);
     dr = exp (logr + logdr) - r;
-    t = teff (tref, (r + 0.5 * dr) / rmin);
-    log_g = log10 (geff (gref, (r + 0.5 * dr) / rmin));
+    t = teff ((r + 0.5 * dr) / rmin);
+    log_g = (geff ((r + 0.5 * dr) / rmin));
     v = sqrt (GRAV * geo.mstar / r);
     v /= VLIGHT;
     if (rel_mode == REL_MODE_FULL)
@@ -169,17 +170,21 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
 
 
 
-  /* If *ftot is 0 in this energy range then all the photons come elsewhere, e. g. the star or BL  */
+  /*
+   * If *ftot is 0 in this energy range then all the photons come
+   * elsewhere, e. g. the star or BL
+   */
 
   if ((*ftot) < EPSILON)
   {
     Log_silent ("disk_init: Warning! Disk does not radiate enough to matter in this wavelength range\n");
     return (ltot);
   }
-
-  /* Now find the boundaries of the each annulus, which depends on the band limited flux.
-     Note that disk.v is calculated at the boundaries, because vdisk() interporlates on
-     the actual radius. */
+  /*
+   * Now find the boundaries of the each annulus, which depends on the
+   * band limited flux. Note that disk.v is calculated at the
+   * boundaries, because vdisk() interporlates on the actual radius.
+   */
 
   disk.r[0] = rmin;
   disk.v[0] = sqrt (GRAV * geo.mstar / rmin);
@@ -191,10 +196,11 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
   {
     r = exp (logr);
     dr = exp (logr + logdr) - r;
-    t = teff (tref, (r + 0.5 * dr) / rmin);
-    log_g = log10 (geff (gref, (r + 0.5 * dr) / rmin));
+    t = teff ((r + 0.5 * dr) / rmin);
+    log_g = (geff ((r + 0.5 * dr) / rmin));
     v = sqrt (GRAV * geo.mstar / r);
     v /= VLIGHT;
+
     if (rel_mode == REL_MODE_FULL)
     {
       factor = sqrt (1. - v * v);
@@ -215,10 +221,14 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
 
     f += q1 * emit * (2. * r + dr) * dr * factor;
     i++;
-    /* EPSILON to assure that roundoffs don't affect result of if statement */
+    /*
+     * EPSILON to assure that roundoffs don't affect result of if
+     * statement
+     */
     if (f / (*ftot) * (NRINGS - 1) >= nrings)
     {
-      if (r <= disk.r[nrings - 1])      //If the radius we have reached is smaller than or equal to the last assigned radius - we make a tiny annulus
+      if (r <= disk.r[nrings - 1])
+        //If the radius we have reached is smaller than or equal to the last assigned radius - we make a tiny annulus
       {
         r = disk.r[nrings - 1] * (1. + 1.e-10);
       }
@@ -236,8 +246,6 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
     Error ("error: disk_init: Integration on setting r boundaries got %d nrings instead of %d\n", nrings, NRINGS - 1);
     Exit (0);
   }
-
-
   disk.r[NRINGS - 1] = exp (logrmax);
   disk.v[NRINGS - 1] = sqrt (GRAV * geo.mstar / disk.r[NRINGS - 1]);
 
@@ -247,8 +255,8 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
   for (nrings = 0; nrings < NRINGS - 1; nrings++)
   {
     r = 0.5 * (disk.r[nrings + 1] + disk.r[nrings]);
-    disk.t[nrings] = teff (tref, r / rmin);
-    disk.g[nrings] = geff (gref, r / rmin);
+    disk.t[nrings] = teff (r / rmin);
+    disk.g[nrings] = geff (r / rmin);
   }
 
   /* Wrap up by zeroing other parameters */
@@ -269,7 +277,7 @@ disk_init (rmin, rmax, m, mdot, freqmin, freqmax, ioniz_or_final, ftot)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      Initialize a structure (qdisk) for recording information about photons/energy impinging
  * 	on the disk, which is stored in a disk structure called qdisk.
  *
@@ -299,7 +307,6 @@ qdisk_init (rmin, rmax, m, mdot)
   int nrings;
   double log_rmin, log_rmax, dlog_r, log_r;
   double r;
-  double tref, gref;
 
   log_rmin = log10 (disk.r[0]);
   log_rmax = log10 (disk.r[NRINGS - 1]);
@@ -312,9 +319,6 @@ qdisk_init (rmin, rmax, m, mdot)
     qdisk.r[nrings] = pow (10, log_r);
   }
 
-  /* Calculate the reference temperature and luminosity of the disk */
-  tref = tdisk (m, mdot, rmin);
-  gref = gdisk (m, mdot, rmin);
 
   for (nrings = 0; nrings < NRINGS; nrings++)
   {
@@ -326,8 +330,8 @@ qdisk_init (rmin, rmax, m, mdot)
     {
       r = qdisk.r[nrings];
     }
-    qdisk.t[nrings] = teff (tref, r / rmin);
-    qdisk.g[nrings] = geff (gref, r / rmin);
+    qdisk.t[nrings] = teff (r / rmin);
+    qdisk.g[nrings] = geff (r / rmin);
     qdisk.v[nrings] = sqrt (GRAV * geo.mstar / r);
     qdisk.heat[nrings] = 0.0;
     qdisk.nphot[nrings] = 0;
@@ -342,7 +346,7 @@ qdisk_init (rmin, rmax, m, mdot)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      Save the information in the qdisk structure to a file
  *
  * @param [in] char *  diskfile   Name of the file whihc is writteen
@@ -372,26 +376,27 @@ qdisk_save (diskfile, ztot)
   int n;
   double area, theat, ttot;
   qptr = fopen (diskfile, "w");
-  fprintf (qptr, "r          zdisk      t_disk    heat       nhit nhit/nemit  t_heat    t_irrad  W_irrad  t_tot\n");
+  fprintf (qptr, "r          zdisk      t_disk    g      heat       nhit nhit/nemit  t_heat    t_irrad  W_irrad  t_tot\n");
 
   for (n = 0; n < NRINGS; n++)
   {
     area = (2. * PI * (qdisk.r[n + 1] * qdisk.r[n + 1] - qdisk.r[n] * qdisk.r[n]));
     theat = qdisk.heat[n] / area;
-    theat = pow (theat / STEFAN_BOLTZMANN, 0.25);       // theat is temperature if no internal energy production
+    theat = pow (theat / STEFAN_BOLTZMANN, 0.25);
+    //theat is temperature if no internal energy production
     if (qdisk.nhit[n] > 0)
     {
 
       qdisk.ave_freq[n] /= qdisk.heat[n];
-      qdisk.t_hit[n] = PLANCK * qdisk.ave_freq[n] / (BOLTZMANN * 3.832);        // Basic conversion from freq to T
+      qdisk.t_hit[n] = PLANCK * qdisk.ave_freq[n] / (BOLTZMANN * 3.832);
+      //Basic conversion from freq to T
       qdisk.w[n] = qdisk.heat[n] / (4. * PI * STEFAN_BOLTZMANN * area * qdisk.t_hit[n] * qdisk.t_hit[n] * qdisk.t_hit[n] * qdisk.t_hit[n]);
     }
-
     ttot = pow (qdisk.t[n], 4) + pow (theat, 4);
     ttot = pow (ttot, 0.25);
     fprintf (qptr,
-             "%9.4e %9.4e %8.3e %8.3e %5d %8.3e %8.3e %8.3e %8.3e %8.3e\n",
-             qdisk.r[n], zdisk (qdisk.r[n]), qdisk.t[n],
+             "%9.4e %9.4e %8.3e %8.3e %8.3e %5d %8.3e %8.3e %8.3e %8.3e %8.3e\n",
+             qdisk.r[n], zdisk (qdisk.r[n]), qdisk.t[n], qdisk.g[n],
              qdisk.heat[n], qdisk.nhit[n], qdisk.heat[n] * NRINGS / ztot, theat, qdisk.t_hit[n], qdisk.w[n], ttot);
   }
 
@@ -404,17 +409,17 @@ qdisk_save (diskfile, ztot)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief      Read the temperature profile from a file
  *
  * @param [in] char *  tprofile   Name of the input file
- * @return     Returns the maximum radius 
+ * @return     Returns the maximum radius
  *
  * @details
  *
- * Each line of the input file 
+ * Each line of the input file
  * a radius and a temperature in the first two columns.
- * Any extra columns are ignored.  
+ * Any extra columns are ignored.
  *
  * Comment lines (and other lines) that can not
  * be parsed are ignored, but will be printed out
@@ -446,7 +451,8 @@ read_non_standard_disk_profile (tprofile)
 
   FILE *fopen (), *fptr;
   int n;
-  float dumflt1, dumflt2;
+  float r, t, g;
+  int one, two;
 
   char *line;
   size_t buffsize = LINELENGTH;
@@ -456,18 +462,29 @@ read_non_standard_disk_profile (tprofile)
     Error ("read_non_standard_disk_profile: Could not open filename %s\n", tprofile);
     Exit (1);
   }
-
   line = (char *) malloc (buffsize * sizeof (char));
   blmod.n_blpts = 0;
+  one = 0;
+  two = 0;
 
 
   while (getline (&line, &buffsize, fptr) > 0)
   {
-    n = sscanf (line, "%g %g", &dumflt1, &dumflt2);
-    if (n == 2)
+    n = sscanf (line, "%g %g  %g", &r, &t, &g);
+    if (n >= 2)
     {
-      blmod.r[blmod.n_blpts] = dumflt1;
-      blmod.t[blmod.n_blpts] = dumflt2;
+      blmod.r[blmod.n_blpts] = r;
+      blmod.t[blmod.n_blpts] = t;
+      if (n == 3)
+      {
+        blmod.g[blmod.n_blpts] = g;
+        two += 1;
+      }
+      else
+      {
+        blmod.g[blmod.n_blpts] = -9999.;
+        one += 1;
+      }
       blmod.n_blpts += 1;
     }
     else
@@ -482,19 +499,33 @@ read_non_standard_disk_profile (tprofile)
 
     }
   }
+  if (one == blmod.n_blpts)
+  {
+    blmod.n_params = 1;
+  }
+  else if (two == blmod.n_blpts)
+  {
+    blmod.n_params = 2;
+  }
+  else
+  {
+    Error ("read_non_standard_disk_file: Inconsistent input lines: one %d, two %d pts %d\n", one, two, blmod.n_blpts);
+  }
 
   for (n = 0; n < blmod.n_blpts; n++)
   {
-    Log ("Disk: r %.3e t %.3e \n", blmod.r[n], blmod.t[n]);
+    if (blmod.n_params == 1)
+    {
+      blmod.n_params = 1;
+      Log ("Disk: r %.3e t %.3e \n", blmod.r[n], blmod.t[n]);
+    }
+    else
+    {
+      Log ("Disk: r %.3e t %.3e g %.3e\n", blmod.r[n], blmod.t[n], blmod.g[n]);
+    }
   }
 
 
-//OLD  if (geo.diskrad > blmod.r[blmod.n_blpts - 1])
-//OLD  {
-//OLD    Error ("read_non_standard_disk_profile: The disk radius (%.2e) exceeds rmax (%.2e) in the temperature profile\n", geo.diskrad,
-//OLD           blmod.r[blmod.n_blpts - 1]);
-//OLD    Log ("read_non_standard_disk_profile: Portions of the disk outside are treated as part of a steady state disk\n");
-//OLD  }
 
   fclose (fptr);
 

@@ -432,14 +432,12 @@ double
 kn_vzero (r)
      double r;
 {
-  double tref, tdisk ();
   double t, teff ();
   double ratio, v;
-  tref = tdisk (geo.mstar, geo.disk_mdot, geo.rstar);
   ratio = r / geo.rstar;
   if (ratio < kfudge)
     ratio = kfudge;
-  t = teff (tref, ratio);
+  t = teff (ratio);
   v = 1.e6 * sqrt (t / 1e4);    // Frank, King & Raine 1985
   return (v);
 }
@@ -476,14 +474,12 @@ kn_wind_mdot_integral (double r, void *params)
 {
   double t;
   double x, ratio;
-  double tref;
 
 
-  tref = tdisk (geo.mstar, geo.disk_mdot, geo.rstar);
   ratio = r / geo.rstar;
   if (ratio < kfudge)
     ratio = kfudge;
-  t = teff (tref, ratio);
+  t = teff (ratio);
   x = 4. * PI * pow (t, 4. * kn_lambda) * r;
   return (x);
 }
@@ -509,7 +505,6 @@ kn_rho_zero (ndom, r)
      double r;
      int ndom;
 {
-  double tref;
   double t;
   double x, ratio;
   double vzero, dd, cosd;
@@ -520,13 +515,12 @@ kn_rho_zero (ndom, r)
   one_dom = &zdom[ndom];
 
 
-  tref = tdisk (geo.mstar, geo.disk_mdot, geo.rstar);
   ratio = r / geo.rstar;
 
   if (ratio < kfudge)
     ratio = kfudge;
 
-  t = teff (tref, ratio);
+  t = teff (ratio);
   x = one_dom->wind_mdot * pow (t, 4. * one_dom->kn_lambda) / one_dom->mdot_norm;
   vzero = kn_vzero (r);
   dd = geo.rstar * one_dom->kn_dratio;

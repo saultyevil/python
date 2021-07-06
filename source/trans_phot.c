@@ -100,8 +100,8 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
     {
       if (geo.ioniz_or_extract == CYCLE_IONIZ)
       {
-        Log(" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, files.root, nphot, NPHOT,
-          nphot * 100. / NPHOT);
+        Log (" Ion. Cycle %d/%d of %s : Photon %10d of %10d or %6.1f per cent \n", geo.wcycle + 1, geo.wcycles, files.root, nphot, NPHOT,
+             nphot * 100. / NPHOT);
       }
       else
       {
@@ -195,13 +195,12 @@ int
 trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 {
   double tau_scat, tau;
-  int i, n_grid, ierr, ndom;
+  int i, n_grid, ierr;
   enum istat_enum istat;
   int nnscat;
   int current_nres;
   double weight_min;
   struct photon pp, pextract;
-  double x_dfudge_check[3];
   double normal[3];
   double rho, dz;
 
@@ -283,7 +282,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
           extract (w, &pextract, PTYPE_STAR);   // Treat as stellar photon for purpose of extraction
         }
       }
-      else  /*In this case, photons that hit the star are simply absorbed so this is the end of the line. */
+      else                      /*In this case, photons that hit the star are simply absorbed so this is the end of the line. */
       {
         stuff_phot (&pp, p);
         break;
@@ -306,7 +305,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       i = 0;
       while (rho > qdisk.r[i] && i < NRINGS - 1)
         i++;
-      i--;                    /* So that the heating refers to the heating between i and i+1 */
+      i--;                      /* So that the heating refers to the heating between i and i+1 */
 
       qdisk.nhit[i]++;
       geo.lum_disk_back = qdisk.heat[i] += pp.w;
@@ -356,7 +355,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
           extract (w, &pextract, PTYPE_DISK);
         }
       }
-      else  /* In this case, photons that hit the disk are to be absorbed */
+      else                      /* In this case, photons that hit the disk are to be absorbed */
       {
         stuff_phot (&pp, p);
         break;
@@ -369,7 +368,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
     if (istat == P_SCAT)
     {
-      pp.grid = n_grid = where_in_grid(wmain[pp.grid].ndom, pp.x);
+      pp.grid = n_grid = where_in_grid (wmain[pp.grid].ndom, pp.x);
 
       if (n_grid < 0)
       {
@@ -381,7 +380,7 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
         break;
       }
 
-      if (wmain[n_grid].nplasma == NPLASMA)   /* If the next error reoccurs, see Issue #154 (on GitHub) for discussion */
+      if (wmain[n_grid].nplasma == NPLASMA)     /* If the next error reoccurs, see Issue #154 (on GitHub) for discussion */
       {
         Error ("trans_phot: Trying to scatter a photon which is not in a cell in the plasma structure\n");
         Error ("trans_phot: %d grid %3d x %8.2e %8.2e %8.2e\n", pp.np, pp.grid, pp.x[0], pp.x[1], pp.x[2]);
@@ -404,13 +403,13 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
 
       if ((geo.reverb == REV_WIND || geo.reverb == REV_MATOM) && geo.ioniz_or_extract == CYCLE_IONIZ && geo.wcycle == geo.wcycles - 1)
       {
-        wind_paths_add_phot(&wmain[n_grid], &pp);
+        wind_paths_add_phot (&wmain[n_grid], &pp);
       }
 
       nnscat = 1;
       pp.nscat++;
 
-      ierr = scatter (&pp, &current_nres, &nnscat);  // pp is modified
+      ierr = scatter (&pp, &current_nres, &nnscat);     // pp is modified
       if (ierr)
       {
         Error ("trans_phot_single: photon %d returned error code %d whilst scattering \n", pp.np, ierr);
@@ -432,13 +431,13 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
         pp.nrscat++;
 
         if (modes.track_resonant_scatters)
-          track_scatters(&pp, wmain[n_grid].nplasma, "Resonant");
+          track_scatters (&pp, wmain[n_grid].nplasma, "Resonant");
 
         plasmamain[wmain[n_grid].nplasma].scatters[line[current_nres].nion] += 1;
 
         if (geo.rt_mode == RT_MODE_2LEVEL)
         {
-          line_heat(&plasmamain[wmain[n_grid].nplasma], &pp, current_nres);
+          line_heat (&plasmamain[wmain[n_grid].nplasma], &pp, current_nres);
         }
 
         if (pp.w < weight_min)
@@ -466,51 +465,13 @@ trans_phot_single (WindPtr w, PhotPtr p, int iextract)
       /* Reinitialize parameters for the scattered photon so it can can continue through the wind
        */
 
+      tau = 0;
       tau_scat = -log (1. - random_number (0.0, 1.0));
       pp.istat = P_INWIND;
-      tau = 0;
-
       pp.ds = 0;
-      stuff_phot (&pp, p);
-
-      stuff_v (pp.x, x_dfudge_check);   // this is a vector we use to see if dfudge moved the photon outside the wind cone
-      ierr = reposition (&pp);
-      if (ierr)
-      {
-        Error("trans_phot: photon reposition after resonance scatter returned error code %d\n", ierr);
-
-      }
-
-      /*
-       * We now have to call walls again to see if dfudge pushed a photon out
-       * the wind if it scattered near the edge of wind. Note that istat in pp
-       * is updated by walls, as well. But istat is not updated if the photon
-       * is pushed outside of the wind. In this case, P_INWIND really means
-       * in the grid (and not escaped)...
-       */
-
-      istat = walls (&pp, p, normal);
-
-      if (istat == P_REPOSITION_ERROR)
-      {
-        Error ("trans_phot_single: photon %d encountered a (disc) reposition error -- this needs investigating\n", p->np);
-      }
-      else if (istat != p->istat)
-      {
-        Error ("trans_phot_single: photon %9d status changed from %d to %d after reposition when it should not have\n", p->np, p->istat, istat);
-      }
-
-      /*
-       * Check now to see if the photon was pushed out by dfudge. We do not throw an error until
-       * all the photons have been transported
-       */
-
-      if (where_in_wind (pp.x, &ndom) != W_ALL_INWIND && where_in_wind (x_dfudge_check, &ndom) == W_ALL_INWIND)
-      {
-        n_lost_to_dfudge++;
-      }
 
       stuff_phot (&pp, p);
+      istat = p->istat;
     }
 
     /*

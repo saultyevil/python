@@ -51,7 +51,7 @@ dvwind_ds_cmf (p)
   double lmn[3], dvel_ds[3], dvds;
   int j, k, nn;
   struct photon pp;
-  int nnn[4], nelem;            // At present the largest number of dimensions in the grid is 2
+  int nnn[4], nelem;
   double frac[4];
   double x;
   int ndom;
@@ -86,7 +86,8 @@ dvwind_ds_cmf (p)
     double ds;
     /* choose a small distance which is dependent on the cell size */
     vsub (pp.x, wmain[pp.grid].x, diff);
-    ds = 0.001 * length (diff);
+    vsub (wmain[pp.grid].xcen, wmain[pp.grid].x, diff);
+    ds = 0.000001 * length (diff);
     /* calculate the velocity at the position of the photon */
     /* note we use model velocity, which could potentially be slow,
        but avoids interpolating (see #118) */
@@ -208,12 +209,11 @@ dvds_ave ()
   char filename[LINELENGTH];
   int ndom;
 
-
   /* Open a diagnostic file if print_dvds_info is non-zero */
-  strcpy (filename, files.root);
-  strcat (filename, ".dvds.diag");
+
   if (modes.print_dvds_info)
   {
+    sprintf (filename, "%s.dvds.diag", files.root);
     optr = fopen (filename, "w");
   }
 
@@ -325,9 +325,9 @@ dvds_ave ()
 int
 dvds_max ()
 {
-  struct photon p, pp;
-  double v_zero[3], delta[3], vdelta[3], diff[3];
-  double sum, dvds, ds;
+  struct photon p;
+  double delta[3];
+  double sum, dvds;
   double dvds_max, lmn[3];
   int n;
   int icell;
@@ -335,12 +335,11 @@ dvds_max ()
   char filename[LINELENGTH];
   int ndom;
 
-
   /* Open a diagnostic file if print_dvds_info is non-zero */
-  strcpy (filename, files.root);
-  strcat (filename, ".dvds.diag");
+
   if (modes.print_dvds_info)
   {
+    sprintf (filename, "%s.dvds.diag", files.root);
     optr = fopen (filename, "w");
   }
 
@@ -356,28 +355,19 @@ dvds_max ()
 
     stuff_v (wmain[icell].x, p.x);
 
-    /* Define a small length */
+    /* Cannot calculate the velocity gradient along the z axis so fudge this */
+    if (p.x[0] == 0)
+    {
+      p.x[0] = 0.1 * wmain[icell].xcen[0];
+    }
 
-    vsub (wmain[icell].xcen, p.x, diff);
-    ds = 0.000001 * length (diff);
-
-    /* Find the velocity at the center of the cell */
-    model_velocity (ndom, p.x, v_zero);
+    p.grid = icell;
 
     sum = 0.0;
     for (n = 0; n < N_DVDS_AVE; n++)
     {
-      randvec (delta, ds);
-      if (p.x[2] + delta[2] < 0)
-      {                         // Then the new position would punch through the disk
-        delta[0] = (-delta[0]); // So we reverse the direction of the vector
-        delta[1] = (-delta[1]);
-        delta[2] = (-delta[2]);
-      }
-      vadd (p.x, delta, pp.x);
-      model_velocity (ndom, pp.x, vdelta);
-      vsub (vdelta, v_zero, diff);
-      dvds = length (diff);
+      randvec (p.lmn, 1);
+      dvds = dvwind_ds_cmf (&p);
 
       /* Find the maximum and minimum values of dvds and the direction
        * for this
@@ -400,14 +390,14 @@ dvds_max ()
     }
 
     /* Store the results in wmain */
-    wmain[icell].dvds_max = dvds_max / ds;
+    wmain[icell].dvds_max = dvds_max;
 
     if (modes.print_dvds_info)
     {
       fprintf (optr,
                "%d %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e %8.3e \n",
-               icell, p.x[0], p.x[1], p.x[2], dvds_max / ds,
-               dvds_min / ds, lmn[0], lmn[1], lmn[2], lmn_min[0], lmn_min[1], lmn_min[2], dot (lmn, lmn_min));
+               icell, p.x[0], p.x[1], p.x[2], dvds_max,
+               dvds_min, lmn[0], lmn[1], lmn[2], lmn_min[0], lmn_min[1], lmn_min[2], dot (lmn, lmn_min));
     }
 
   }

@@ -82,26 +82,29 @@ int nauger;                     /*Actual number of innershell edges for which au
 
 
 
+/* Element contains physical parameters that apply to element as a whole and 
+   provides and index to the atomic data 
+   */
+
 typedef struct elements
-{                               /* Element contains physical parameters that apply to element as a whole and 
-                                   provides and index to the atomic data */
+{                               
   char name[20];                /* Element name */
   int z;                        /* Atomic number */
   int firstion;                 /* Index into struct ions  ion[firstion] is the lowest ionization state of this ion */
   int lastion;                  /* Index into struct ions ion[lastion] is the higest ionization state of this ion */
   int nions;                    /* The number of ions actually read in from the data file for this element */
   double abun;                  /* Abundance */
+  double atomic_weight;         /* Atomic weight */
   int istate_max;               /* highest ionization stage of element */
 }
 ele_dummy, *ElemPtr;
 
 ElemPtr ele;
 
-double rho2nh;                  /* The conversion constant from rho to nh the total number of H atoms */
+double rho2nh;                  /* Conversion constant from rho to nh the number of H atoms per unit volume */
 
-/* Note that ion is the basic structure.  It is filled from 0 up to nions.  *ionzi is a set of pointers which 
-   can be accessed via z and i (the ionization state).  But it is important to know that the pointer is really
-   not pointed at foo_ion */
+/* ions is the basic structure describing individual ions.  It is filled from 0 up to nions. 
+ */
 
 
 typedef struct ions
@@ -161,7 +164,7 @@ typedef struct ions
   int nxtotalrr;                /* index into the bad_t_rr structure to give the location of the
                                    Badnell fit coefficient for the total radiative recombination rate for 
                                    this ion if it exists */
-  int bad_gs_rr_t_flag;         /* Flag to say wether we have badnell style resolved ground state radiative temperature
+  int bad_gs_rr_t_flag;         /* Flag to say whether we have badnell style resolved ground state radiative temperature
                                    data for this ion */
   int bad_gs_rr_r_flag;         /* Flag to say wether we have badnell style resolved ground state radiative rate 
                                    coefficients for this ion */
@@ -180,11 +183,10 @@ ion_dummy, *IonPtr;
 IonPtr ion;
 
 
-/* And now for the arrays which describe the energy levels.  In the Topbase data, g is float (although
-I have never seen it as anything else.  I have kept g an integer here, because I am pretty sure it is
-an integer everywhere else in the code....but this is something to watch ??? */
+/* The structrued descibing the  energy levels.  
 
-/* The number of configurations is given by nlevels */
+ The number of configurations is given by nlevels 
+ */
 
 typedef struct configurations
 {
@@ -267,7 +269,7 @@ int nline_min, nline_max, nline_delt;   /* Used to select a range of lines in a 
                                          */
 
 
-        /* coll_stren is the collision strength interpolation data extracted from Chianti */
+/* coll_stren is the collision strength interpolation data extracted from Chianti */
 
 
 #define N_COLL_STREN_PTS	20      //The maximum number of parameters in the interpolations
@@ -288,9 +290,7 @@ typedef struct coll_stren
   double scups[N_COLL_STREN_PTS];       //The sclaed coll sttengths in ythe fit.
 } Coll_stren, *Coll_strenptr;
 
-Coll_stren coll_stren[NLINES];  //Set up the structure - we could in principle have as many of these as we have lines
-
-
+Coll_stren coll_stren[NLINES];  
 
 
 
@@ -342,7 +342,7 @@ TopPhotPtr inner_cross_ptr[N_INNER * NIONS];
 
 
 
-/* This next is the electron yield data for inner shell ionization from Kaastra and Mewe */
+/* The structure for electron yield data for inner shell ionization from Kaastra and Mewe */
 typedef struct inner_elec_yield
 {
   int nion;                     /*Index to the ion which was the parent of the inner shell ionization */
@@ -355,7 +355,7 @@ typedef struct inner_elec_yield
 
 Inner_elec_yield inner_elec_yield[N_INNER * NIONS];
 
-/* This structure is for the flourescent photon yield following inner shell ionization from Kaastra and Mewe*/
+/* This structure for the flourescent photon yield following inner shell ionization from Kaastra and Mewe*/
 typedef struct inner_fluor_yield
 {
   int nion;                     /*Index to the ion which was the parent of the inner shell ionization */
@@ -366,8 +366,6 @@ typedef struct inner_fluor_yield
 } Inner_fluor_yield, Inner_fluor_yieldPtr;
 
 Inner_fluor_yield inner_fluor_yield[N_INNER * NIONS];
-
-
 
 
 
@@ -407,7 +405,7 @@ Drecomb drecomb[NIONS];         //set up the actual structure
 double dr_coeffs[NIONS];        //this will be an array to temprarily store the volumetric dielectronic recombination rate coefficients for the current cell under interest. We may want to make this 2D and store the coefficients for a range of temperatures to interpolate.
 
 
-#define T_RR_PARAMS 6           //This is the number of parameters.
+#define T_RR_PARAMS         6           //This is the number of parameters.
 #define RRTYPE_BADNELL	    0
 #define RRTYPE_SHULL	    1
 int n_total_rr;

@@ -179,12 +179,12 @@ parse_command_line (argc, argv)
         Log ("Run xstest, usually instead of normal Python.\n");
         j = i;
       }
-      else if (strcmp (argv[i], "-ztest") == 0)
-      {
-        run_ztest = TRUE;
-        Log ("Run ztest, optional code\n");
-        j = i;
-      }
+//OLD      else if (strcmp (argv[i], "-ztest") == 0)
+//OLD      {
+//OLD        run_ztest = TRUE;
+//OLD        Log ("Run ztest, optional code\n");
+//OLD        j = i;
+//OLD      }
       else if (strcmp (argv[i], "-f") == 0)
       {
         modes.fixed_temp = 1;

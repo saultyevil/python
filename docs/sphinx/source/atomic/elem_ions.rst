@@ -30,7 +30,14 @@ There are two sections to the file, first elements are defined:
 |Element |2 |  He  | 10.99   |   4.002602  |
 +--------+--+------+---------+-------------+
 
-and then the ions.
+and then the ions.   (Abundances are generally defined logarithmically 
+with respect to H at 12.00.  In principle, there are two choices if one
+wished to defien a plasma where, for example, He was the dominant 
+element.  One could leave the H abundance at 12 and define the He 
+abundance as for example 13.00 Alternatively, one could set the He 
+abundnace to 12.00 and define all of the other elements with respect
+to this.  Either choice should work but none has been tested. It is
+unclear whether code will work at all for a plasma with no H.)
 
 
 +------+-------+--+------+--+-----------+--------+---------+-------------+

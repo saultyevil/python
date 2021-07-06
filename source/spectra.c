@@ -29,8 +29,10 @@ int spec_initialized = FALSE;
  *
  * @details
  *
- * NWAVE_MAX bins is allocated. This is done because the ionization and spectral
- * cycles use a different number of wavelength bins.
+ * NWAVE_MAX bins is always allocated. 
+ * The number bins actually used may differ from this, and
+ * moreover the number of bins during the ionization and spectral
+ * cycles can differ.                               
  *
  ********************************************************/
 
@@ -92,7 +94,7 @@ spectrum_allocate (int nspec)
  * space for all the arrays even though they are not all used in the ionization step).
  * The total number of spectra created is nangle+MSPEC.)
  *
- * On subsequent calls to  spectrum_init, it rezeros all the spectrum information and
+ * On subsequent calls to spectrum_init, it rezeros all the spectrum information and
  * calculates the other information associated with each spectrum, such as the
  * angle cosines and the names of each spectrum.
  *
@@ -151,7 +153,7 @@ spectrum_init (f1, f2, nangle, angle, phase, scat_select, top_bot_select, select
       Exit (EXIT_FAILURE);
     }
     spectrum_allocate (nspec);
-    spec_initialized = TRUE;    /* This is to prevent reallocation of the same arrays on multiple calls to spectrum_init */
+    spec_initialized = TRUE;
   }
 
   /* Zero or rezero all spectral matrices */
@@ -198,7 +200,7 @@ spectrum_init (f1, f2, nangle, angle, phase, scat_select, top_bot_select, select
       xxspec[n].nphot[i] = 0;
     }
 
-    for (i = 0; i < NWAVE_MAX; i++)     // NWAVE_MAX is on purpose
+    for (i = 0; i < NWAVE_MAX; i++)
     {
       xxspec[n].f[i] = 0;
       xxspec[n].lf[i] = 0;
@@ -307,7 +309,7 @@ spectrum_init (f1, f2, nangle, angle, phase, scat_select, top_bot_select, select
     strcat (xxspec[n].name, dummy);
     xxspec[n].nscat = scat_select[n - MSPEC];
     if (xxspec[n].nscat < MAXSCAT)
-    {                           /* Then conditions have been place on the
+    {                           /* Then conditions have been placed on the
                                    number of scatters to be included so update the names */
       strcpy (dummy, "");
       if (xxspec[n].nscat > MAXSCAT)
@@ -398,7 +400,7 @@ spectrum_create (p, nangle, select_extract)
   double delta;
   double nlow, nhigh;
   int k_orig, k1_orig;
-  int iwind;                    // Variable defining whether this is a wind photon
+  int iwind;
   int max_scat, max_res;
 
   if (geo.ioniz_or_extract == CYCLE_IONIZ)
@@ -653,8 +655,6 @@ spectrum_create (p, nangle, select_extract)
     Log ("spectrum_create: Fraction of photons lost:  %4.2f wi/ freq. low, %4.2f w/freq hi\n", nlow / nphot, nhigh / nphot);
   }
 
-
-
   max_scat = max_res = 0;
 
   for (j = 1; j < MAXSCAT; j++)
@@ -875,14 +875,12 @@ spectrum_summary (filename, nspecmin, nspecmax, select_spectype, renorm, loglin,
     nwave = NWAVE_EXTRACT;
   }
 
-  /* Open or reopen a file for writing the spectrum */
   if ((fptr = fopen (filename, "w")) == NULL)
   {
     Error ("spectrum_summary: Unable to open %s for writing\n", filename);
     Exit (0);
   }
 
-  /* Check that nspecmin and nspecmax are reasonable */
   if (nspecmin < 0 || nspecmax < 0 || nspecmin > nspecmax)
   {
     Error ("spectrum_summary: nspecmin %d or nspecmax %d not reasonable \n", nspecmin, nspecmax);
@@ -938,7 +936,7 @@ spectrum_summary (filename, nspecmin, nspecmax, select_spectype, renorm, loglin,
 
   dd = 4. * PI * (D_SOURCE * PC) * (D_SOURCE * PC);
 
-  if (loglin == FALSE)          /* Then were are writing out the linear version of the spectra */
+  if (loglin == FALSE)          /* Then write the linear version of the spectra */
   {
     freqmin = xxspec[nspecmin].freqmin;
     dfreq = xxspec[nspecmin].dfreq;
@@ -956,20 +954,19 @@ spectrum_summary (filename, nspecmin, nspecmax, select_spectype, renorm, loglin,
 
 
         if (select_spectype == SPECTYPE_FLAMBDA)
-        {                       /* flambda */
+        {
           x *= (freq * freq * 1e-8) / (dfreq * dd * VLIGHT);
         }
         else if (select_spectype == SPECTYPE_FNU)
-        {                       /*fnu */
+        {
           x /= (dfreq * dd);
         }
         else if (select_spectype == SPECTYPE_RAW)
         {                       /*generated spectrum */
-          x /= (dfreq);         //With log spectra implemented, we should divide by nu, so log and lin spectra agree
+          x /= (dfreq);
         }
         fprintf (fptr, " %10.5g", x * renorm);
       }
-
 
       fprintf (fptr, "\n");
     }
@@ -993,20 +990,19 @@ spectrum_summary (filename, nspecmin, nspecmax, select_spectype, renorm, loglin,
         }
 
         if (select_spectype == SPECTYPE_FLAMBDA)
-        {                       /* flambda */
+        {
           x *= (freq * freq * 1e-8) / (dfreq * dd * VLIGHT);
         }
         else if (select_spectype == SPECTYPE_FNU)
-        {                       /*fnu */
+        {
           x /= (dfreq * dd);
         }
         else if (select_spectype == SPECTYPE_RAW)
-        {                       /*generated spectrum */
+        {
           x /= (dfreq);
         }
         fprintf (fptr, " %10.5g", x * renorm);
       }
-
 
       fprintf (fptr, "\n");
       freq1 = freq;

@@ -469,21 +469,14 @@ translate_in_wind (w, p, tau_scat, tau, nres)
   }
 
   move_phot (p, ds_current);
-  const int max_resonance_errors_report = 50;
 
   if (*nres > -1 && *nres <= NLINES && *nres == p->nres && istat == P_SCAT)
   {
-    const double distance_limit = 0.5 * wmain[p->grid].dfudge;
-    if (ds_current < distance_limit)
+    if (ds_current < wmain[p->grid].dfudge)
     {
-      if (n_errors_uncaught_repeated_resonance < max_resonance_errors_report)
-      {
-        Error
-          ("translate_in_wind: nres %5d repeat after motion of %10.3e for photon %d in plasma cell %d ion cycle %2d spec cycle %2d stat(%d -> %d)\n",
-           *nres, ds_current, p->np, wmain[p->grid].nplasma, geo.wcycle, geo.pcycle, p->istat, istat);
-      }
-
-      n_errors_uncaught_repeated_resonance++;
+      Error
+        ("translate_in_wind: uncaught repeated resonance scattering nres %5d after motion of %10.3e for photon %d in plasma cell %d)\n",
+         *nres, ds_current, p->np, wmain[p->grid].nplasma);
     }
   }
 

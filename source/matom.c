@@ -199,20 +199,6 @@ matom (p, nres, escape)
 
         eprbs_known[uplvl][m] = eprbs[m] = bb_cont * (config[uplvl].ex - config[line[config[uplvl].bbd_jump[n]].nconfigl].ex);  //energy difference
 
-//OLD        if (jprbs[m] < 0.)      //test (can be deleted eventually SS)
-//OLD        {
-//OLD          Error ("Negative probability (matom, 1). Abort.");
-//OLD          *escape = TRUE;
-//OLD          p->istat = P_ERROR_MATOM;
-//OLD          return (-1);
-//OLD        }
-//OLD        if (eprbs[m] < 0.)      //test (can be deleted eventually SS)
-//OLD        {
-//OLD          Error ("Negative probability (matom, 2). Abort.");
-//OLD          *escape = TRUE;
-//OLD          p->istat = P_ERROR_MATOM;
-//OLD          return (-1);
-//OLD        }
 
         pjnorm += jprbs[m];
         penorm += eprbs[m];
@@ -236,17 +222,6 @@ matom (p, nres, escape)
 
         jprbs_known[uplvl][m] = jprbs[m] = bf_cont * config[phot_top[config[uplvl].bfd_jump[n]].nlev].ex;       //energy of lower state
         eprbs_known[uplvl][m] = eprbs[m] = bf_cont * (config[uplvl].ex - config[phot_top[config[uplvl].bfd_jump[n]].nlev].ex);  //energy difference
-//OLD        if (jprbs[m] < 0.)      //test (can be deleted eventually SS)
-//OLD        {
-//OLD          Error ("Negative probability (matom, 3). Abort.");
-//OLD          *escape = 1;
-//OLD          p->istat = P_ERROR_MATOM;
-//OLD          return (0);
-//OLD        }
-//OLD        if (eprbs[m] < 0.)      //test (can be deleted eventually SS)
-//OLD        {
-//OLD          Error ("Negative probability (matom, 4). Abort.");
-//OLD        }
         pjnorm += jprbs[m];
         penorm += eprbs[m];
         m++;
@@ -273,14 +248,6 @@ matom (p, nres, escape)
         jprbs_known[uplvl][m] = jprbs[m] = (rad_rate + coll_rate) * config[uplvl].ex;   //energy of lower state
 
 
-
-//OLD        if (jprbs[m] < 0.)      //test (can be deleted eventually SS)
-//OLD        {
-//OLD          Error ("Negative probability (matom, 5). Abort.");
-//OLD          *escape = 1;
-//OLD          p->istat = P_ERROR_MATOM;
-//OLD          return (0);
-//OLD        }
         pjnorm += jprbs[m];
         m++;
       }
@@ -322,11 +289,6 @@ matom (p, nres, escape)
 
     }
 
-    /* Probabilities of jumping (j) and emission (e) are now known. The normalisation factor pnorm has
-       also been recorded. the integer m now gives the total number of possibilities too. 
-       now select what happens next. Start by choosing the random threshold value at which the
-       event will occur. */
-
 
     if ((pjnorm_known[uplvl] + penorm_known[uplvl]) <= 0.0)
     {
@@ -339,16 +301,20 @@ matom (p, nres, escape)
       return (-1);
     }
 
+    /* Probabilities of jumping (j) and emission (e) are now known. The normalisation factor pnorm has
+       also been recorded. The integer m now gives the total number of possibilities too. 
+       Now select what happens next. Start by choosing the random threshold value at which the
+       event will occur. */
+
+
     threshold = random_number (0.0, 1.0);
     if (((pjnorm_known[uplvl] / (pjnorm_known[uplvl] + penorm_known[uplvl])) < threshold) || (pjnorm_known[uplvl] == 0))
-      break;                    // An emission occurs and so we leave the for loop.
+      break;                    // A deactivation of the macro-atom has occurred and so we leave the for loop.
+
+    /* Othewise, a transition/jump to another state of the macro-atom has occurred, so we need 
+       to decide what the new state is. We use a running total to decide the new upper level */
 
     uplvl_old = uplvl;
-
-// Continue on if a jump has occured 
-
-    /* Use a running total to decide where event occurs. */
-
 
     threshold = random_number (0.0, 1.0);
     threshold = threshold * pjnorm_known[uplvl_old];
@@ -360,8 +326,7 @@ matom (p, nres, escape)
       run_tot += jprbs_known[uplvl_old][n];
       n++;
     }
-    /* This added to prevent case where theshold is essentially 0. 
-       It is already checked that the jumping probability is not zero
+    /* This added to prevent case where threshold is essentially 0. 
      */
 
     if (n > 0)
@@ -1298,13 +1263,11 @@ emit_matom (w, p, nres, upper, freq_min, freq_max)
     {
       line_ptr = &line[config[uplvl].bbd_jump[n]];
       *nres = line[config[uplvl].bbd_jump[n]].where_in_list;
-//OLD    p->freq = line[config[uplvl].bbd_jump[n]].freq;
       p->freq = xfreq = line[config[uplvl].bbd_jump[n]].freq;
     }
     else if (n < (nbbd + nbfd))
     {
       *nres = config[uplvl].bfd_jump[n - nbbd] + NLINES + 1;
-//OLD    p->freq = matom_select_bf_freq (one, config[uplvl].bfd_jump[n - nbbd]);
       xfreq = matom_select_bf_freq (one, config[uplvl].bfd_jump[n - nbbd]);
       p->freq = xfreq;
     }

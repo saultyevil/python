@@ -73,7 +73,7 @@
 
 double
 wind_luminosity (f1, f2, mode)
-     double f1, f2;             /* freqmin and freqmax */
+     double f1, f2;
      int mode;
 {
   double lum, lum_lines, lum_rr, lum_ff, factor;
@@ -102,7 +102,6 @@ wind_luminosity (f1, f2, mode)
     }
   }
 
-  /* only copy to geo if we are really calculating luminosities */
   if (mode == MODE_CMF_TIME)
   {
     geo.lum_lines = lum_lines;
@@ -150,9 +149,8 @@ wind_luminosity (f1, f2, mode)
 
 double
 total_emission (one, f1, f2)
-     WindPtr one;               /* WindPtr to a specific cell in the wind */
-     double f1, f2;             /* The minimum and maximum frequency over which the emission is
-                                   integrated */
+     WindPtr one;
+     double f1, f2;
 {
   double t_e;
   int nplasma;
@@ -272,9 +270,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
       ptype[n][nn] = 0;
   }
 
-  /* Limit the lines to consider */
   limit_lines (freqmin, freqmax);
-
 
   photstop = photstart + nphot;
   Log_silent ("photo_gen_wind creates nphot %5d photons from %5d to %5d \n", nphot, photstart, photstop);
@@ -293,7 +289,6 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
     icell = 0;
     while (xlumsum < xlum)
     {
-
 
       if (wmain[icell].inwind >= 0)
       {
@@ -337,7 +332,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
   }
 
 
-/* Now actually generate the photons looping over the Plasma cells */
+/* Now generate the photons looping over the Plasma cells */
 
   photstop = photstart;
 
@@ -345,8 +340,8 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
   for (n = 0; n < NPLASMA; n++)
   {
 
-    photstart = photstop;       //initially set to photstart, afterwards we start the photon number from the end of the last cell
-    photstop = photstart + ptype[n][FREE_FREE] + ptype[n][FREE_BOUND] + ptype[n][BOUND_BOUND];  //This is the number of photons in this cell
+    photstart = photstop;
+    photstop = photstart + ptype[n][FREE_FREE] + ptype[n][FREE_BOUND] + ptype[n][BOUND_BOUND];
 
     icell = plasmamain[n].nwind;
     ndom = wmain[icell].ndom;
@@ -356,7 +351,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
 
       if (np < photstart + ptype[n][FREE_FREE])
       {
-        p[np].freq = one_ff (&wmain[icell], freqmin, freqmax);  /*Get the frequency of one ff photon */
+        p[np].freq = one_ff (&wmain[icell], freqmin, freqmax);
         if (p[np].freq <= 0.0)
         {
           Error_silent
@@ -371,14 +366,17 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
       else
       {
 
+        /* fill the lin_ptr->pow array. This must be done because it is not stored for all cells.  
+           The if statement is intended to prevent recalculating the power if more than one 
+           line photon is generated from this cell in this cycle. 
+         */
         if (icell != icell_old)
         {
-          lum_lines (&wmain[icell], nline_min, nline_max);      /* fill the lin_ptr->pow array. This must be done because it is not stored
-                                                                   for all cells.  The if statement is intended to prevent recalculating the power if more than
-                                                                   one line photon is generated from this cell in this cycle. */
+          lum_lines (&wmain[icell], nline_min, nline_max);
           icell_old = icell;
         }
-        p[np].freq = one_line (&wmain[icell], &p[np].nres);     /*And fill all the rest of the luminosity up with line photons */
+
+        p[np].freq = one_line (&wmain[icell], &p[np].nres);
         if (p[np].freq == 0)
         {
           Error ("photo_gen_wind: one_line returned 0 for freq %g %g\n", freqmin, freqmax);
@@ -397,15 +395,15 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
 
       if (p[np].nres < 0 || geo.scatter_mode == SCATTER_MODE_ISOTROPIC)
       {
-        randvec (p[np].lmn, 1.0);       /* The photon is emitted isotropically */
+        randvec (p[np].lmn, 1.0);
       }
       else if (geo.scatter_mode == SCATTER_MODE_THERMAL)
-      {                         // It was a line photon and we want anisotropic scattering
+      {
         randwind_thermal_trapping (&p[np], &nnscat);
       }
       p[np].nnscat = nnscat;
 
-      /* Photons are generated in the local and so must be Doppler shifted into 
+      /* Photons are generated in the local frame and so must be Doppler shifted into 
          the observer frame.  
        */
 
@@ -413,9 +411,8 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
       p[np].istat = P_INWIND;
       p[np].frame = F_LOCAL;
       p[np].tau = p[np].nscat = p[np].nrscat = p[np].nmacro = 0;
-      p[np].origin = PTYPE_WIND;        // A wind photon
+      p[np].origin = PTYPE_WIND;
 
-      /* Make an in place transformation to the observe frame */
       if (local_to_observer_frame (&p[np], &p[np]))
       {
         Error ("photo_gen_wind: frame tranformation error\n");
@@ -423,7 +420,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
 
       /* Extra processing for reveberation calculations */
       switch (geo.reverb)
-      {                         // SWM 26-3-15: Added wind paths
+      {
       case REV_WIND:
       case REV_MATOM:
         wind_paths_gen_phot (&wmain[icell], &p[np]);
@@ -440,8 +437,7 @@ photo_gen_wind (p, weight, freqmin, freqmax, photstart, nphot)
 
   }
 
-
-  return (nphot);               /* Return the number of photons generated */
+  return (nphot);
 }
 
 
@@ -505,9 +501,6 @@ one_line (one, nres)
 }
 
 
-
-
-
 /**********************************************************/
 /** Next section deals with bremsstrahlung radiation
  * 4*PI* 8/3* sqrt(2*PI/3)*e**6/m**2/c**3 sqrt(m/kT) or
@@ -550,7 +543,7 @@ total_free (one, t_e, f1, f2)
   double g_ff_h, g_ff_he;
   double gaunt;
   double x, sum;
-  double gsqrd;                 /*The scaled inverse temperature experienced by an ion - used to compute the gaunt factor */
+  double gsqrd;                 /*The scaled inverse temperature  - used to compute the gaunt factor */
   int nplasma, nion;
   PlasmaPtr xplasma;
   nplasma = one->nplasma;
@@ -614,8 +607,6 @@ total_free (one, t_e, f1, f2)
 
 
 
-
-
 /**********************************************************/
 /**
  * @brief      calculate f_nu for free free emisssion
@@ -623,21 +614,23 @@ total_free (one, t_e, f1, f2)
  * @param [in] WindPtr  one   A wind cell
  * @param [in] double  t_e   The temperature of the plasma
  * @param [in] double  freq   The frequency at which f_nu is to be calculated
- * @return     f_nu for the specific freqency, temperature requested and densities
+ * @return     f_nu for the specific freqency and temperature requested and densities
  * contained in the cell indicated
  *
  * @details
  *
  * ### Notes ###
- * @bug f_nu is set to 0 for t_e less than 100K.  It's not clear
- * that this limit is applied to other functions anymore.  Was this
- * missed?  Not also that the code having to do with the gaunt factor
- * is duplicated from another routine.  Should a gaunt_ff routine
- * be created for both?
  *
  * Within python, this routine is accessed through one_ff
  *
+ * Most of the computation in this routine arises from calculating
+ * a the gaunt factor, so this version of the code checks to
+ * see if that can be avoided.
  **********************************************************/
+
+double ff_constant = 0;
+int ff_nplasma = -100;
+double ff_t_e = -100.;
 
 double
 ff (one, t_e, freq)
@@ -652,41 +645,52 @@ ff (one, t_e, freq)
   PlasmaPtr xplasma;
   nplasma = one->nplasma;
   xplasma = &plasmamain[nplasma];
+
+
   if (t_e < TMIN)
     return (0.0);
-  if (gaunt_n_gsqrd == 0)       //Maintain old behaviour because gaunt factors have not been provided in atomic data files
+
+  if (nplasma != ff_nplasma || t_e != ff_t_e)
   {
-    g_ff_h = g_ff_he = 1.0;
-    if (nelements > 1)
+    ff_nplasma = nplasma;
+    ff_t_e = t_e;
+
+    if (gaunt_n_gsqrd == 0)     //case  where gaunt factors have not been provided in atomic data files
     {
-      fnu = BREMS_CONSTANT * xplasma->ne * (xplasma->density[1] * g_ff_h + 4. * xplasma->density[4] * g_ff_he);
-    }
-    else
-    {
-      fnu = BREMS_CONSTANT * xplasma->ne * (xplasma->density[1] * g_ff_h);
-    }
-  }
-  else
-  {
-    sum = 0.0;
-    for (nion = 0; nion < nions; nion++)
-    {
-      if (ion[nion].istate != 1)        //The neutral ion does not contribute
+      g_ff_h = g_ff_he = 1.0;
+      if (nelements > 1)
       {
-        gsqrd = ((ion[nion].istate - 1) * (ion[nion].istate - 1) * RYD2ERGS) / (BOLTZMANN * t_e);
-        gaunt = gaunt_ff (gsqrd);
-        sum += xplasma->density[nion] * (ion[nion].istate - 1) * (ion[nion].istate - 1) * gaunt;
+        fnu = BREMS_CONSTANT * xplasma->ne * (xplasma->density[1] * g_ff_h + 4. * xplasma->density[4] * g_ff_he);
       }
       else
       {
-        sum += 0.0;
+        fnu = BREMS_CONSTANT * xplasma->ne * (xplasma->density[1] * g_ff_h);
       }
     }
-    fnu = BREMS_CONSTANT * xplasma->ne * (sum);
+    else
+    {
+      sum = 0.0;
+      for (nion = 0; nion < nions; nion++)
+      {
+        if (ion[nion].istate != 1)      //The neutral ion does not contribute
+        {
+          gsqrd = ((ion[nion].istate - 1) * (ion[nion].istate - 1) * RYD2ERGS) / (BOLTZMANN * t_e);
+          gaunt = gaunt_ff (gsqrd);
+          sum += xplasma->density[nion] * (ion[nion].istate - 1) * (ion[nion].istate - 1) * gaunt;
+        }
+        else
+        {
+          sum += 0.0;
+        }
+      }
+      fnu = BREMS_CONSTANT * xplasma->ne * (sum);
+    }
+
+    ff_constant = fnu * xplasma->vol;
   }
 
 
-  fnu *= exp (-H_OVER_K * freq / t_e) / sqrt (t_e) * xplasma->vol;
+  fnu = ff_constant * exp (-H_OVER_K * freq / t_e) / sqrt (t_e);
   return (fnu);
 }
 
@@ -764,7 +768,7 @@ one_ff (one, f1, f2)
     }
     one_ff_te = xplasma->t_e;
     one_ff_f1 = f1;
-    one_ff_f2 = f2;             /* Note that this may not be the best way to check for a previous pdf */
+    one_ff_f2 = f2;
   }
   freq = cdf_get_rand (&cdf_ff);
   return (freq);
@@ -793,6 +797,7 @@ one_ff (one, f1, f2)
  * gsquared is the scaled inverse temperature experienced by an ion,
  * Z**2/kT(Ry).
  *
+ * The Sutherland interpolation data is a spline fit to the gaunt function. 
  **********************************************************/
 
 double
@@ -804,14 +809,13 @@ gaunt_ff (gsquared)
   double log_g2;
   double delta;                 //The log difference between our G2 and the one in the table
 
-  delta = 0.0;                  /* NSH 130605 to remove o3 compile error */
-  index = 0;                    /* NSH 130605 to remove o3 compile error */
+  delta = 0.0;
+  index = 0;
   log_g2 = log10 (gsquared);    //The data is in log format
   if (log_g2 < gaunt_total[0].log_gsqrd || log_g2 > gaunt_total[gaunt_n_gsqrd - 1].log_gsqrd)
   {
     return (1.0);
   }
-
 
   i = 0;
   while (gaunt_total[i].log_gsqrd < log_g2)
@@ -821,8 +825,6 @@ gaunt_ff (gsquared)
 
   index = i - 1;
   delta = log_g2 - gaunt_total[index].log_gsqrd;
-
-  /* The Southerland interpolation data is a spline fit to the gaunt function. */
 
   gaunt = gaunt_total[index].gff + delta * (gaunt_total[index].s1 + delta * (gaunt_total[index].s2 + gaunt_total[index].s3));
   return (gaunt);

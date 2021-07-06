@@ -217,10 +217,8 @@ double kn_vzero(double r);
 double kn_wind_mdot_integral(double r, void *params);
 double kn_rho_zero(int ndom, double r);
 /* disk.c */
-double tdisk(double m, double mdot, double r);
-double teff(double t, double x);
-double gdisk(double mass, double mdot, double rmin);
-double geff(double g0, double x);
+double teff(double x);
+double geff(double x);
 double vdisk(double x[], double v[]);
 double zdisk(double r);
 double ds_to_disk(struct photon *p, int allow_negative, int *hit);

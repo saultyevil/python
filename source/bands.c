@@ -166,8 +166,8 @@ bands_init (imode, band)
     tmax = geo.tstar;
   if (geo.t_bl > tmax && geo.lum_bl > 0.0)
     tmax = geo.t_bl;
-  if ((0.488 * tdisk (geo.mstar, geo.disk_mdot, geo.rstar)) > tmax)
-    tmax = 0.488 * tdisk (geo.mstar, geo.disk_mdot, geo.rstar);
+  if ((0.488 * teff (1.)) > tmax)
+    tmax = 0.488 * teff (1.);
   freqmax = BOLTZMANN * tmax / PLANCK * 10.;
   if (freqmax < 2.0 * 54.418 / HEV)
   {

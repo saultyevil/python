@@ -29,7 +29,7 @@
 
  * @param [in,out]  PhotPtr  p   the packet at the point of activation
  * @param [in,out]  int *  nres   the process which activates the Macro Atom
- * @param [in]      int  matom_or_kpkt   initially excite a matom (1) or create a kpkt (2)
+ * @param [in]      int  matom_or_kpkt   initially excite a matom (MATOM) or create a kpkt (KPKT)
  * @param [in,out]     int *  which_out   set to 1 if return is via macro atom and 2 if via kpkt
  * @return 0        Will return an r-packet after (possibly) several calls to matom and kpkt
  *
@@ -68,10 +68,10 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
   /* Beginning of the main loop for processing a macro-atom */
   while (escape == FALSE)
   {
-    if (matom_or_kpkt == 1)     //excite a macro atom (either complete or simple)
+    if (matom_or_kpkt == MATOM) //excite a macro atom 
     {
 
-      /* Make a bb transition of a full macro atom (macro_simple==FALSE). */
+      /* if it's a bb transition of a full macro atom  */
       if (*nres > (-1) && *nres < NLINES && geo.macro_simple == FALSE && lin_ptr[*nres]->macro_info == TRUE)
       {
 
@@ -87,10 +87,10 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
 
           if (escape == TRUE)
           {
-            /* It is going to escape as a r-packet that was created by de-activation of a macro atom.
-               Therefore, if the frequency is suitable it should be recorded as a macro atom emission event for use in the
-               computation of the k-packet emissivity needed for the final spectrum calculation. */
-            *which_out = 1;
+            /* It escapes as a r-packet that was created by de-activation of a macro atom.
+             */
+            *which_out = MATOM;
+
             /* Update the the photon origin to indicate the packet has been processed
                by a macro atom */
             if (p->origin < 10)
@@ -100,13 +100,13 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
         }
       }
 
-      /*  Make a bb transition  without the full macro atom treatment. */
+      /*  if it's a bb transition  without the full macro atom treatment. */
       else if (*nres > (-1) && *nres < NLINES && (geo.macro_simple == TRUE || lin_ptr[*nres]->macro_info == FALSE))
       {
         fake_matom_bb (p, nres, &escape);
       }
 
-      /* Make a transition to the bf continuum of a macro atom and we want the full treatment. */
+      /* if it's bf tranisition of a full macro atom. */
       else if (*nres > NLINES && phot_top[*nres - NLINES - 1].macro_info == TRUE && geo.macro_simple == FALSE)
       {
 
@@ -122,10 +122,13 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
 
           if (escape == TRUE)
           {
-            /* It is going to escape as a r-packet that was created by de-activation of a macro atom.
-               Therefore, if the frequency is suitable it should be recorded as a macro atom emission event for use in the
-               computation of the k-packet emissivity needed for the final spectrum calculation. */
-            *which_out = 1;
+            /* It  escapes as a r-packet that was created by de-activation of a macro atom.
+             */
+            *which_out = MATOM;
+            /* Update the the photon origin to indicate the packet has been processed
+               by a macro atom */
+            if (p->origin < 10)
+              p->origin += 10;
 
             //If reverb is on, and this is the last ionisation cycle, then track the photon path
             if (geo.reverb == REV_MATOM && geo.ioniz_or_extract == CYCLE_IONIZ && geo.fraction_converged > geo.reverb_fraction_converged)
@@ -133,20 +136,19 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
               line_paths_add_phot (&(wmain[p->grid]), p, nres);
             }
 
-            /* Update the the photon origin to indicate the packet has been processed
-               by a macro atom */
-            if (p->origin < 10)
-              p->origin += 10;
             return (0);
           }
         }
       }
 
-      /* This is a bf continuum but we don't want the full macro atom treatment. In the pre-2018
+      /* if it's bf continuum without the full macro atom treatment. 
+
+         In the pre-2018
          approach, we process the photon in a way that makes it return a bf photon of the same type
          as caused the excitation.  In the old approach, escape will be set to 1, and we will escape.
          In the new "simple emissivity" approach, we should never satisfy the do loop, and so an error
          is thrown and we exit. */
+
       else if (*nres > NLINES && (phot_top[*nres - NLINES - 1].macro_info == FALSE || geo.macro_simple == TRUE))
       {
 #if BF_SIMPLE_EMISSIVITY_APPROACH
@@ -157,15 +159,16 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
       }
 
       /* If it did not escape then it must have had a
-         de-activation by collision processes, and so we label it a kpkt.  On the next go-through
-         of the loop we will process it as such */
-      matom_or_kpkt = 2;
+         de-activation by collision processes, and so we label it a kpkt.  
+       */
+
+      matom_or_kpkt = KPKT;
     }
 
 
     /* This the end of the section of the loop that deals with matom excitations. next domes the
        section of the loop that deals with kpts */
-    else if (matom_or_kpkt == 2)
+    else if (matom_or_kpkt == KPKT)
     {
       if (geo.matom_radiation == 1)
       {
@@ -178,10 +181,10 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
         kpkt (p, nres, &escape, KPKT_MODE_ALL); // 1 implies include the possibility of deactivation due to non-thermal processes
       }
 
-      matom_or_kpkt = 1;
       /* if it did not escape then the k-packet must have been
-         destroyed by collisionally exciting a macro atom -
-         excite a macro atom next, which is set by making matom_or_kpkt 1 */
+         destroyed by collisionally exciting a macro atom so...
+       */
+      matom_or_kpkt = MATOM;
     }
     else
     {
@@ -204,11 +207,12 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
     n_loop++;
   }
 
-  /* End of main matom processing loop
-     When it gets here an escpae has taken place.
+  /* End of main matom processing loop that began with while (escape==FALSE)
+
+     If it gets here, the escape is as a KPKT    
    */
 
-  *which_out = 2;
+  *which_out = KPKT;
 
   /* Update the the photon origin to indicate the packet has been processed
      by a macro atom */

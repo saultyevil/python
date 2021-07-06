@@ -105,9 +105,9 @@ extract (w, p, itype)
     {
       /* we normalised our rejection method by the escape probability along the vector of maximum velocity gradient.
          First find the sobolev optical depth along that vector. The -1 enforces calculation of the ion density 
-         PNORM_FUDGE_FACTROR is a bandaide for a issue #815   */
+       */
 
-      dvds_max = PNORM_FUDGE_FACTOR * get_dvds_max (&p_in);
+      dvds_max = get_dvds_max (&p_in);
       tau_norm = sobolev (&wmain[p_in.grid], p_in.x, -1.0, lin_ptr[p_in.nres], dvds_max);
 
       /* then turn into a probability */
@@ -351,13 +351,13 @@ extract_one (w, pp, itype, nspec)
              pp->x[0], pp->x[1], pp->x[2], pp->lmn[0], pp->lmn[1], pp->lmn[2]);
     }
 
-    if (run_ztest == FALSE)
-    {
-      if ((ierr = reposition (pp)))
-      {
-        Error ("extract_one: reposition returned error %d\n", ierr);    //BEFORE
-      }                         //AFTER
-    }
+//OLD    if (run_ztest == FALSE)
+//OLD    {
+//OLD      if ((ierr = reposition (pp)))
+//OLD      {
+//OLD        Error ("extract_one: reposition returned error %d\n", ierr);    //BEFORE
+//OLD      }                         //AFTER
+//OLD    }
     pstart.lmn[0] = pp->lmn[0];
     pstart.lmn[1] = pp->lmn[1];
     pstart.lmn[2] = pp->lmn[2];
@@ -391,8 +391,8 @@ extract_one (w, pp, itype, nspec)
        to reweight.  This is the isotropic assumption.  Otherwise, one
        needs to reweight
 
-       Once the photon is reweighted, reposition it so it does not interact ith
-       the same resonance a second time.
+       //OLD       Once the photon is reweighted, reposition it so it does not interact ith
+       //OLD       the same resonance a second time.
      */
 
     if (geo.scatter_mode == SCATTER_MODE_THERMAL)
@@ -407,14 +407,14 @@ extract_one (w, pp, itype, nspec)
 
     /* XXX - It is unclear why reposition needs to be here, but at present this
      * produces  better agreement with live or die than below */
-    if (run_ztest == TRUE)
-    {
-      /* Fudge to be able to reposition photon while it is in the local frame */
-      pp->frame = F_OBSERVER;
-      if ((ierr = reposition (pp)))
-        Error ("extract_one: reposition returned error %d\n", ierr);    //BEFORE
-      pp->frame = F_LOCAL;
-    }
+//OLD    if (run_ztest == TRUE)
+//OLD    {
+//OLD      /* Fudge to be able to reposition photon while it is in the local frame */
+//OLD      pp->frame = F_OBSERVER;
+//OLD      if ((ierr = reposition (pp)))
+//OLD        Error ("extract_one: reposition returned error %d\n", ierr);    //BEFORE
+//OLD      pp->frame = F_LOCAL;
+//OLD    }
 //HOLD    if (pp->x[2] * pstart.x[2] < 0)
 //HOLD    {
 //HOLD      Error ("Extract_one: Went through xz plane on reposition\n");

@@ -15,7 +15,6 @@ int verbosity;                  /* verbosity level. 0 low, 10 is high */
 #define FALSE 0
 
 
-#define PNORM_FUDGE_FACTOR     1        /*An extra factor used for fudging the velocity factor See #815 */
 #define USE_GRADIENTS        TRUE       /*IF true use interpolated velcity gradients to calculate dv_ds */
 
 
@@ -26,7 +25,7 @@ int verbosity;                  /* verbosity level. 0 low, 10 is high */
 int rel_mode;                   /* How doppler effects and co-moving frames are  */
 
 int run_xtest;                  /* Variable if TRUE causes a special test mode to be run */
-int run_ztest;                  /* Provides a way the optionally run certain code within python */
+//OLD int run_ztest;                  /* Provides a way the optionally run certain code within python */
 
 int NDIM2;                      //The total number of wind cells in wmain
 int NPLASMA;                    //The number of cells with non-zero volume or the size of plasma structure
@@ -688,16 +687,21 @@ disk, qdisk;                    /* disk defines zones in the disk which in a spe
                                    illumination by the star or wind. It's boundaries are fixed throughout a cycle */
 
 /* the next structure is intended to store a non standard temperature
-   profile for the disk
+   and (optionally gravity) profile for the disk
+
+   n_params should be 1 or 2, depending on whether t, or t and g 
+   are read in
    */
 
 #define NBLMODEL 5000
 
 struct blmodel
 {
+  int n_params;        
   int n_blpts;
   double r[NBLMODEL];
   double t[NBLMODEL];
+  double g[NBLMODEL];
 }
 blmod;
 
@@ -1470,7 +1474,10 @@ files;
 #define CALCULATE_MATOM_EMISSIVITIES 0
 #define USE_STORED_MATOM_EMISSIVITIES 1
 
-
+/* Used in macro_gov elsewhere to descibe choices between being or going
+   to a kpkt or macro atom state */
+#define KPKT 2
+#define MATOM 1
 /* modes for kpkt calculations */
 #define KPKT_MODE_CONTINUUM  0  /* only account for k->r processes */
 #define KPKT_MODE_ALL        1  /* account for all cooling processes */

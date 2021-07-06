@@ -53,9 +53,14 @@ Non-Standard Temperature Profile
 ================================
 
 If desired the user can read the temperature profile for the disk from a file. Each
-line in the file should consist of a radius and a temperature separated by whitespace (in the
+line in the file should consist of a radius and a temperature (and optionally a value of log g)
+separated by whitespace (in the
 first two columns)  The values are assumed to be entered in a logical order, that is in 
-ascending values of raidus. Lines, such as comments or header names of an astropy table, will be ignored.
+ascending values of radius. Lines, such as comments or header names of an astropy table, will be ignored.
+
+The log g value is not required to generate BB spectra, but is required if the spectrum from the disk is to be generated from a 
+two-dimensional grid of models, usually a set of spectra generated to represent the spectra from a set of stellar 
+atmospheres calculations.  
 
 With this option, the radius of the disk will be set to the maximum radius (the last value of r) in 
 the file.  

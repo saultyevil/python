@@ -76,7 +76,7 @@ randwind_thermal_trapping (p, nnscat)
   double z_prime[3], z_min[3];
   int nscat;
   double tau_min = VERY_BIG;
-  double dvds_max;
+  double dvds_max, dvds_test = 0;
   WindPtr one;
 
   /* find the wind pointer for the photon */
@@ -86,25 +86,22 @@ randwind_thermal_trapping (p, nnscat)
      probability along the vector of maximum velocity gradient.
      First find the sobolev optical depth along that vector 
 
-     PNORM_FUDGE_FACTOR is a bandaide to address #815.  It should
-     not be the final solution
    */
 
 
-  dvds_max = PNORM_FUDGE_FACTOR * get_dvds_max (p);
-//OLD  dvds_max = get_dvds_max (p);
+  dvds_max = get_dvds_max (p);
   tau_norm = sobolev (one, p->x, -1.0, lin_ptr[p->nres], dvds_max);
 
-  /* then turn into a probability. Note that we take account of
-     this in trans_phot before calling extract */
+  /* then turn into a probability. p_norm is the probability a
+     photon will escape along the line so sight with maximum
+     velocity graident, which is the easiest way for aphoton
+     to escape.
+   */
   p_norm = p_escape_from_tau (tau_norm);
 
   /* Throw error if p_norm is 0 */
   if (p_norm <= 0)
     Error ("randwind_thermal_trapping: p_norm is %8.4e in cell %i", p_norm, one->nplasma);
-
-  ztest = 1.0;
-  z = 0.0;
 
   /* JM 1406 -- we increment nnscat here, and it is recorded in the photon
      structure. This is done because we actuall have to multiply the photon weight
@@ -114,18 +111,22 @@ randwind_thermal_trapping (p, nnscat)
   *nnscat = *nnscat - 1;
   nscat = 0;
 
-  /* rejection method loop, which chooses direction and also calculated nnscat */
+  ztest = 1.0;
+  z = 0.0;
+
+  /* rejection method loop, which chooses direction and also calculates nnscat */
   while (ztest > z && nscat < NSCAT_MAX)
   {
     *nnscat = *nnscat + 1;
     randvec (z_prime, 1.0);
     stuff_v (z_prime, p->lmn);
 
-
-    /* generate random number, normalised by p_norm as dvds_max is worked out with a sample of directions) */
-    ztest = random_number (0.0, 1.0) * p_norm;
-
     dvds = dvwind_ds_cmf (p);
+
+    if (dvds > dvds_test)
+    {
+      dvds_test = dvds;
+    }
 
     if (dvds > dvds_max)
     {
@@ -140,7 +141,9 @@ randwind_thermal_trapping (p, nnscat)
       tau_min = tau;
     }
 
-    z = p_escape_from_tau (tau);        /* probability to see if it escapes in that direction */
+    z = p_escape_from_tau (tau);        /* probability of escaping in a given (random) direction */
+    /* generate random number, normalised by p_norm as dvds_max is worked out with a sample of directions) */
+    ztest = random_number (0.0, 1.0) * p_norm;
 
     nscat++;
   }
@@ -149,8 +152,8 @@ randwind_thermal_trapping (p, nnscat)
   {
     stuff_v (z_min, p->lmn);    // copy to photon pointer
     Error
-      ("rand_wind_thermal_trapping: photon had more than  %d internal scatters in cell %d at %e %e %e with p_norm %e zmin %e tau_min %e\n",
-       nscat, p->grid, p->x[0], p->x[1], p->x[2], p_norm, z, tau_min);
+      ("randwind_thermal_trapping: photon %d needed > %5d directions in cell %4d at %9.2e %9.2e %9.2e with p_norm %9.2e zmin %9.2e tau_min %9.2e tau_norm %9.2e dvds_test %9.2e dvds_max %9.2e\n",
+       p->np, nscat, p->grid, p->x[0], p->x[1], p->x[2], p_norm, z, tau_min, tau_norm, dvds_test, dvds_max);
   }
 
   return (0);
