@@ -326,14 +326,12 @@ int
 dvds_max ()
 {
   struct photon p;
-  double delta[3];
-  double sum, dvds;
+  double dvds;
   double dvds_max, lmn[3];
   int n;
   int icell;
   double dvds_min, lmn_min[3];
   char filename[LINELENGTH];
-  int ndom;
 
   /* Open a diagnostic file if print_dvds_info is non-zero */
 
@@ -345,8 +343,6 @@ dvds_max ()
 
   for (icell = 0; icell < NDIM2; icell++)
   {
-    ndom = wmain[icell].ndom;
-
     dvds_max = 0.0;
     dvds_min = 1.e30;
 
@@ -363,7 +359,6 @@ dvds_max ()
 
     p.grid = icell;
 
-    sum = 0.0;
     for (n = 0; n < N_DVDS_AVE; n++)
     {
       randvec (p.lmn, 1);
@@ -376,14 +371,12 @@ dvds_max ()
       if (dvds > dvds_max)
       {
         dvds_max = dvds;
-        renorm (delta, 1.0);
-        stuff_v (delta, lmn);
+        stuff_v (p.lmn, lmn);
       }
       if (dvds < dvds_min)
       {
         dvds_min = dvds;
-        renorm (delta, 1.0);
-        stuff_v (delta, lmn_min);
+        stuff_v (p.lmn, lmn_min);
       }
 
 
