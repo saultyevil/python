@@ -190,7 +190,7 @@ dvwind_ds_cmf (p)
  * There is an advanced mode which prints this information to
  * file.
  *
- * 210303 - ksl - Removed calculation of dvds_max from this 
+ * 210303 - ksl - Removed calculation of dvds_max from this
  * routine because we want this at the edges of cells, so one 
  * can interpolate.  Portions of the old routine still remain.
  **********************************************************/
@@ -326,7 +326,7 @@ int
 dvds_max ()
 {
   struct photon p;
-  double dvds;
+  double dvds, abs_dvds;
   double dvds_max, lmn[3];
   int n;
   int icell;
@@ -346,44 +346,43 @@ dvds_max ()
     dvds_max = 0.0;
     dvds_min = 1.e30;
 
-
     /*  x is the corner of the cell */
 
+    p.grid = icell;
     stuff_v (wmain[icell].x, p.x);
 
     /* Cannot calculate the velocity gradient along the z axis so fudge this */
+
     if (p.x[0] == 0)
     {
       p.x[0] = 0.1 * wmain[icell].xcen[0];
     }
 
-    p.grid = icell;
+    /* Find the maximum and minimum values of dvds and the direction
+     * for this
+     */
 
     for (n = 0; n < N_DVDS_AVE; n++)
     {
       randvec (p.lmn, 1);
       dvds = dvwind_ds_cmf (&p);
+      abs_dvds = fabs (dvds);
 
-      /* Find the maximum and minimum values of dvds and the direction
-       * for this
-       */
-
-      if (dvds > dvds_max)
+      if (abs_dvds > dvds_max)
       {
-        dvds_max = dvds;
+        dvds_max = abs_dvds;
         stuff_v (p.lmn, lmn);
       }
-      if (dvds < dvds_min)
+      if (abs_dvds < dvds_min)
       {
-        dvds_min = dvds;
+        dvds_min = abs_dvds;
         stuff_v (p.lmn, lmn_min);
       }
-
-
     }
 
     /* Store the results in wmain */
-    wmain[icell].dvds_max = dvds_max;
+
+    wmain[icell].abs_dvds_max = dvds_max;
 
     if (modes.print_dvds_info)
     {
@@ -392,9 +391,7 @@ dvds_max ()
                icell, p.x[0], p.x[1], p.x[2], dvds_max,
                dvds_min, lmn[0], lmn[1], lmn[2], lmn_min[0], lmn_min[1], lmn_min[2], dot (lmn, lmn_min));
     }
-
   }
-
 
   if (modes.print_dvds_info)
     fclose (optr);
@@ -424,8 +421,8 @@ dvds_max ()
  * ### Notes ###
  *
  * The routine uses both the position of the photon and 
- * the grid cell in which the photon exitsts, so this
- * must be acurrate.
+ * the grid cell in which the photon exists, so this
+ * must be accurate.
  **********************************************************/
 
 
@@ -445,7 +442,7 @@ get_dvds_max (p)
 
   for (nn = 0; nn < nelem; nn++)
   {
-    dvds += wmain[nnn[nn]].dvds_max;
+    dvds += wmain[nnn[nn]].abs_dvds_max;
   }
 
   return dvds;

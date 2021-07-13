@@ -1514,7 +1514,7 @@ get_one (ndom, variable_name)
       }
       else if (strcmp (variable_name, "dvds_max") == 0)
       {
-        x[n] = wmain[n].dvds_max;
+        x[n] = wmain[n].abs_dvds_max;
       }
       else if (strcmp (variable_name, "div_v") == 0)
       {
