@@ -486,7 +486,7 @@ double pe_escape;
 
 /**********************************************************/
 /**
- * @brief      Estimate the esccapte probability for a line
+ * @brief      Estimate the escape probability for a line
  * in a plasma cell
  *
  * @param [in] struct lines *  line_ptr   The element in the lines structure of a line
@@ -505,12 +505,12 @@ p_escape (line_ptr, xplasma)
      struct lines *line_ptr;
      PlasmaPtr xplasma;
 {
-  double tau, two_level_atom ();
+  double tau;
   double escape;
   double ne, te;
-  double dd;                    /* density of the relevent ion */
+  double dd;                    /* density of the relevant ion */
   double dvds;
-  double w, tr;                 /* the radiative weight, and radiation tempeature */
+  double w, tr;                 /* the radiative weight, and radiation temperature */
   WindPtr one;
 
   ne = xplasma->ne;
@@ -523,20 +523,16 @@ p_escape (line_ptr, xplasma)
   one = &wmain[xplasma->nwind];
   dvds = one->dvds_ave;
 
-  if (dvds <= 0.0)
-  {
-    Error ("Warning: p_escape: dvds <=0 \n");
-    return (0.0);
-  }
-
+  // if (dvds <= 0.0)
+  // {
+  //   Error ("Warning: p_escape: dvds <=0 \n");
+  //   return (0.0);
+  // }
 
   if (pe_line_ptr != line_ptr || pe_ne != ne || pe_te != te || pe_dd != dd || pe_dvds != dvds || pe_w != w || pe_tr != tr)
   {
-
     tau = sobolev (one, one->x, dd, line_ptr, dvds);
-
     escape = p_escape_from_tau (tau);
-
 
     pe_line_ptr = line_ptr;
     pe_ne = ne;

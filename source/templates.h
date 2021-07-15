@@ -299,11 +299,8 @@ double zero_emit2(double t, void *params);
 int levels(PlasmaPtr xplasma, int mode);
 /* gradv.c */
 double dvwind_ds_cmf(PhotPtr p);
-int dvds_ave(void);
-int dvds_max(void);
+int calc_dvds_max_dvds_ave(void);
 double get_dvds_max(PhotPtr p);
-/* reposition.c */
-int reposition(PhotPtr p);
 /* anisowind.c */
 int randwind_thermal_trapping(PhotPtr p, int *nnscat);
 /* wind_util.c */

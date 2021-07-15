@@ -756,7 +756,6 @@ typedef struct wind
   double div_v;                 /*Divergence of v at center of cell in the co-moving frame */
   double dvds_ave;              /* Average value of dvds */
   double dvds_max;              /*The maximum value of dvds */
-//OLD  double dvds_max; //, lmn[3];      /*The maximum value of dvds, and the direction in a cell in cylindrical coords */
   double vol;                   /* valid volume of this cell (that is the volume of the cell that is considered
                                    to be in the wind.  This differs from the volume in the Plasma structure
                                    where the volume is the volume that is actually filled with material. 

@@ -471,8 +471,8 @@ define_wind ()
 
 
   /* Calculate one over dvds */
-  dvds_ave ();
-  dvds_max ();
+  // dvds_ave ();
+  calc_dvds_max_dvds_ave();
 
 
   wind_check (w, -1);           // Check the wind for reasonability
