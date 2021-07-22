@@ -1524,7 +1524,7 @@ files;
 
 /* this variable controls whether to use the
    Altered mode for bound-free in "simple-macro mode" */
-#define BF_SIMPLE_EMISSIVITY_APPROACH 0
+#define BF_SIMPLE_EMISSIVITY_APPROACH 1
 
 
 /* Variable introducted to cut off macroatom / estimator integrals when exponential function reaches extreme values. Effectivevly a max limit imposed on x = hnu/kT terms */
