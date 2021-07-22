@@ -572,8 +572,6 @@ spectrum_create (p, nangle, select_extract)
     Log ("spectrum_create: Fraction of photons lost:  %4.2f wi/ freq. low, %4.2f w/freq hi\n", nlow / nphot, nhigh / nphot);
   }
 
-
-
   max_scat = max_res = 0;
 
   for (j = 1; j < MAXSCAT; j++)
@@ -590,20 +588,22 @@ spectrum_create (p, nangle, select_extract)
 
   Log ("\nNo. of photons which have scattered n times.     The max number of scatters seen was %d\n", max_scat);
 
-  for (j = 0; j <= max_scat; j++)
-  {
-    Log ("%6d", nscat[j]);
-    if ((j % 10) == 9)
-      Log ("\n");
-  }
+  // for (j = 0; j <= max_scat; j++)
+  // {
+  //   Log ("%6d", nscat[j]);
+  //   if ((j % 10) == 9)
+  //     Log ("\n");
+  // }
 
   Log ("\nNumber of photons resonantly scattering n times.  The max number of scatters seen was %d\n", max_res);
-  for (j = 0; j <= max_res; j++)
-  {
-    Log ("%6d", nres[j]);
-    if ((j % 10) == 9)
-      Log ("\n");
-  }
+
+  // for (j = 0; j <= max_res; j++)
+  // {
+  //   Log ("%6d", nres[j]);
+  //   if ((j % 10) == 9)
+  //     Log ("\n");
+  // }
+
   Log ("\nNo of photons and their fates\n!!PhotFate: ");
   for (j = 0; j < NSTAT; j++)
   {

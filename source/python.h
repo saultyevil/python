@@ -105,7 +105,7 @@ int NPHOT_MAX;                  /* The maximum number of photon bundles created 
 int NPHOT;                      /* The number of photon bundles created, defined in setup.c */
 
 #define NWAVE  			  50000 //This is the number of wavelength bins in spectra that are produced
-#define MAXSCAT 			2000
+#define MAXSCAT 			100000
 
 /* Define the structures */
 
@@ -244,7 +244,6 @@ typedef struct domain
   double wind_rho_min, wind_rho_max;    /*Min/Max rho for wind in disk plane */
   double wind_thetamin, wind_thetamax;  /*Angles defining inner and outer cones of wind, measured from disk plane */
   double mdot_norm;             /*A normalization factor used in SV wind, and Knigge wind */
-
   double twind;                 // Initial temperature for a domain
 
   /* Parameters defining Shlossman & Vitello Wind */
@@ -1525,7 +1524,7 @@ files;
 
 /* this variable controls whether to use the
    Altered mode for bound-free in "simple-macro mode" */
-#define BF_SIMPLE_EMISSIVITY_APPROACH 1
+#define BF_SIMPLE_EMISSIVITY_APPROACH 0
 
 
 /* Variable introducted to cut off macroatom / estimator integrals when exponential function reaches extreme values. Effectivevly a max limit imposed on x = hnu/kT terms */
