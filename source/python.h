@@ -105,7 +105,7 @@ int NPHOT_MAX;                  /* The maximum number of photon bundles created 
 int NPHOT;                      /* The number of photon bundles created, defined in setup.c */
 
 #define NWAVE  			  50000 //This is the number of wavelength bins in spectra that are produced
-#define MAXSCAT 			100000
+#define MAXSCAT  			100000
 
 /* Define the structures */
 
@@ -1185,7 +1185,8 @@ typedef struct photon
     PTYPE_BL_MATOM = 11,
     PTYPE_DISK_MATOM = 12,
     PTYPE_WIND_MATOM = 13,
-    PTYPE_AGN_MATOM = 14
+    PTYPE_AGN_MATOM = 14,
+    PTYPE_DUMMY = -1
   } origin, origin_orig;        /* Where this photon originated.  If the photon has
                                    scattered its "origin" may be changed to "wind". */
   /* note that we add 10 to origin when processed by a macro-atom
@@ -1524,7 +1525,8 @@ files;
 
 /* this variable controls whether to use the
    Altered mode for bound-free in "simple-macro mode" */
-#define BF_SIMPLE_EMISSIVITY_APPROACH 0
+#define BF_SIMPLE_EMISSIVITY_APPROACH 1
+#define ACCELERATED_MACRO TRUE
 
 
 /* Variable introducted to cut off macroatom / estimator integrals when exponential function reaches extreme values. Effectivevly a max limit imposed on x = hnu/kT terms */

@@ -21,14 +21,13 @@
 #include "atomic.h"
 #include "python.h"
 
-
 /**********************************************************/
-/** 
+/**
  * @brief      returns the specific luminosity in the band needed for the computation of the
  *        spectrum. It gets the total energy radiated by the process k-packet -> r-packet in the
  *        required wavelength range.
  *
- * @return double lum  The energy radiated by the process k-packet -> r-packet in the wind in the 
+ * @return double lum  The energy radiated by the process k-packet -> r-packet in the wind in the
  *            wavelength range required for the specrum calculation.
  *
  * ### Notes ###
@@ -54,15 +53,15 @@ get_kpkt_f ()
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief returns the specific luminosity in kpkts from nonthermal ("shock")
  *        heating. This is used to generate kpkts in the ionization cycles.
- *        This also populates the cell-by-cell kpkt luminosities in the 
+ *        This also populates the cell-by-cell kpkt luminosities in the
  *        variable plasmamain[n].kpkt_emiss.
  *
- * @return double lum  
- *         The energy created by non-radiative heating throughout the 
- *         computational domain. 
+ * @return double lum
+ *         The energy created by non-radiative heating throughout the
+ *         computational domain.
  *
  **********************************************************/
 
@@ -105,423 +104,8 @@ get_kpkt_heating_f ()
 
 
 /**********************************************************/
-/** 
- * @brief      returns the specific band-limited luminosity in macro-atoms
- *
- * @param [in] int  mode   vvariable which controls whether or not we need to compute the
- *            emissivities (CALCULATE_MATOM_EMISSIVITIES) or use stored ones
- *            because we are restarting a spectral cycle (USE_STORED_MATOM_EMISSIVITIES)
- *            see #define statements in python.h and code in xdefine_phot().
- * @return double lum  The energy radiated by the deactivation of macro atoms in the wind in the 
- *            wavelength range required for the specrum calculation.
- *
- * @details
- * this routine calculates the luminosity in the band needed for the computation of the
- * spectrum. It gets the total energy radiated by the deactivation of macro atoms in the
- * required wavelength range. This can be a slow process, as there is no priori way 
- * (at least with our method) to work out where a photon is going to come out when a 
- * macro-atom is generated
- *
- * ### Notes ###
- * Consult Matthews thesis. 
- *
- **********************************************************/
-
-double
-get_matom_f (mode)
-     int mode;
-{
-  int n, m;
-  int mm, ss;
-  double lum;
-  int level_emit[NLEVELS_MACRO], kpkt_emit;
-  int n_tries, n_tries_local;
-  struct photon ppp;
-  double contribution, norm;
-  int nres, which_out;
-  int my_nmin, my_nmax;         //These variables are used even if not in parallel mode
-
-
-  if (mode == USE_STORED_MATOM_EMISSIVITIES)
-  {
-    Log ("geo.pcycle (%i) > 0, so using saved level emissivities for macro atoms\n", geo.pcycle);
-  }
-
-  else                          // we need to compute the emissivities
-  {
-#ifdef MPI_ON
-    int num_mpi_cells, num_mpi_extra, position, ndo, n_mpi, num_comm, n_mpi2;
-    int size_of_commbuffer;
-    char *commbuffer;
-
-    /* the commbuffer needs to communicate 2 variables and the number of macor levels, 
-       plus the variable for how many cells each thread is doing */
-    size_of_commbuffer = 8 * (3 + nlevels_macro) * (floor (NPLASMA / np_mpi_global) + 1);
-
-    commbuffer = (char *) malloc (size_of_commbuffer * sizeof (char));
-#endif
-
-    /* add the non-radiative k-packet heating to the kpkt_abs quantity */
-    get_kpkt_heating_f ();
-
-    which_out = 0;
-    n_tries = 5000000;
-    geo.matom_radiation = 0;
-    n_tries_local = 0;
-
-
-
-    norm = 0;
-    for (n = 0; n < NPLASMA; n++)
-    {
-      for (m = 0; m < nlevels_macro; m++)
-      {
-        norm += macromain[n].matom_abs[m];
-        macromain[n].matom_emiss[m] = 0.0;
-        if (sane_check (macromain[n].matom_abs[m]))
-          Error ("matom_abs is %8.4e in matom %i level %i\n", macromain[n].matom_abs[m], n, m);
-      }
-      norm += plasmamain[n].kpkt_abs;
-      plasmamain[n].kpkt_emiss = 0.0;
-      if (sane_check (plasmamain[n].kpkt_abs))
-        Error ("kpkt_abs is %8.4e in matom %i\n", plasmamain[n].kpkt_abs, n);
-    }
-
-
-
-    Log ("Calculating macro-atom and k-packet emissivities- this might take a while...\n");
-    Log ("Number of macro-atom levels: %d\n", nlevels_macro);
-
-    /* For MPI parallelisation, the following loop will be distributed over multiple tasks. 
-       Note that the mynmim and mynmax variables are still used even without MPI on */
-    my_nmin = 0;
-    my_nmax = NPLASMA;
-
-#ifdef MPI_ON
-
-    num_mpi_cells = floor (NPLASMA / np_mpi_global);    // divide the cells between the threads
-    num_mpi_extra = NPLASMA - (np_mpi_global * num_mpi_cells);  // the remainder from the above division
-
-    /* this next loop splits the cells up between the threads. All threads with 
-       rank_global<num_mpi_extra deal with one extra cell to account for the remainder */
-    if (rank_global < num_mpi_extra)
-    {
-      my_nmin = rank_global * (num_mpi_cells + 1);
-      my_nmax = (rank_global + 1) * (num_mpi_cells + 1);
-    }
-    else
-    {
-      my_nmin = num_mpi_extra * (num_mpi_cells + 1) + (rank_global - num_mpi_extra) * (num_mpi_cells);
-      my_nmax = num_mpi_extra * (num_mpi_cells + 1) + (rank_global - num_mpi_extra + 1) * (num_mpi_cells);
-    }
-    ndo = my_nmax - my_nmin;
-
-    Log_parallel ("Thread %d is calculating macro atom emissivities for macro atoms %d to %d\n", rank_global, my_nmin, my_nmax);
-
-#endif
-
-
-
-
-    for (n = my_nmin; n < my_nmax; n++)
-    {
-
-      /* JM 1309 -- these lines are just log statements which track progress, as this section
-         can take a long time */
-#ifdef MPI_ON
-      if (n % 50 == 0)
-        Log
-          ("Thread %d is calculating  macro atom emissivity for macro atom %7d of %7d or %6.3f per cent\n",
-           rank_global, n, my_nmax, n * 100. / my_nmax);
-#else
-      if (n % 50 == 0)
-        Log ("Calculating macro atom emissivity for macro atom %7d of %7d or %6.3f per cent\n", n, my_nmax, n * 100. / my_nmax);
-#endif
-
-      for (m = 0; m < nlevels_macro + 1; m++)
-      {
-        if ((m == nlevels_macro && plasmamain[n].kpkt_abs > 0) || (m < nlevels_macro && macromain[n].matom_abs[m] > 0))
-        {
-          if (m < nlevels_macro)
-          {
-            if (macromain[n].matom_abs[m] > 0)
-            {
-              n_tries_local = (n_tries * macromain[n].matom_abs[m] / norm) + 10;
-            }
-            else
-            {
-              n_tries_local = 0;
-            }
-          }
-          else if (m == nlevels_macro)
-          {
-            if (plasmamain[n].kpkt_abs > 0)
-            {
-              n_tries_local = (n_tries * plasmamain[n].kpkt_abs / norm) + 10;
-            }
-            else
-            {
-              n_tries_local = 0;
-            }
-          }
-          /* We know "matom_abs" is the amount of energy absobed by
-             each macro atom level in each cell. We now want to determine what fraction of
-             that energy re-appears in the frequency range we want and from which macro atom
-             level it is re-emitted (or if it appears via a k-packet). */
-
-          for (mm = 0; mm < NLEVELS_MACRO; mm++)
-          {
-            level_emit[mm] = 0;
-          }
-          kpkt_emit = 0;
-          if (n_tries_local > 0)
-          {
-            for (ss = 0; ss < n_tries_local; ss++)
-            {
-              if (m < nlevels_macro)
-              {
-                /* Dealing with excitation of a macro atom level. */
-                /* First find a suitable transition in which to excite the macro atom (to get it
-                   in the correct starting level. */
-
-                /* As Knox pointed out in an earlier comment
-                   here, the next loop isn't the best way to
-                   do this - however I'm not sure we can
-                   just replace nlines->nlines_macro since
-                   we don't know for sure that the
-                   macro_lines are the first lines in the
-                   array. If this is really a bottle neck we
-                   should set up a quicker way to identify
-                   the level - the purpose is just to set
-                   the macro atom state to the appropriate
-                   upper level so all we need is some way to
-                   tell it which state it should be. */
-
-                nres = 0;
-                while ((nres < nlines))
-                {
-                  if (lin_ptr[nres]->nconfigu != m)
-                  {
-                    nres += 1;
-                  }
-                  else
-                  {
-                    break;
-                  }
-                }
-
-
-                if (nres > (nlines - 1))
-                {
-                  nres = NLINES + 1;
-                  while (nres < (NLINES + 1 + nphot_total))
-                  {
-                    if (phot_top[nres - NLINES - 1].uplev != m)
-                    {
-                      nres += 1;
-                    }
-                    else
-                    {
-                      break;
-                    }
-                  }
-                }
-
-                if (nres > NLINES + nphot_total)
-                {
-                  Error ("Problem in get_matom_f (1). Abort. nres is %d, NLINES %d, nphot_total %d m %d %8.4e\n",
-                         nres, NLINES, nphot_total, m, macromain[n].matom_abs[m]);
-                  Exit (0);
-                }
-
-                ppp.nres = nres;
-                ppp.grid = plasmamain[n].nwind;
-                ppp.w = 0;
-                /* this needs to be initialised because we set to istat to P_ADIABATIC
-                   for adiabatic destruction */
-                ppp.istat = P_INWIND;
-
-                macro_gov (&ppp, &nres, 1, &which_out);
-
-
-                /* Now a macro atom has been excited and followed until an r-packet is made. Now, if that 
-                   r-packet is in the correct frequency range we record it. If not, we throw it away. */
-              }
-              else if (m == nlevels_macro)
-              {
-                /* kpkt case. */
-
-                nres = -2;      //will do - just need
-                //something that will tigger kpkt
-
-                ppp.nres = nres;
-                ppp.grid = plasmamain[n].nwind;
-                ppp.w = 0;
-                /* this needs to be initialised because we set to istat to P_ADIABATIC
-                   for adiabatic destruction */
-                ppp.istat = P_INWIND;
-
-                macro_gov (&ppp, &nres, 2, &which_out);
-
-                /* We have an r-packet back again. */
-              }
-
-
-              if (ppp.freq > geo.sfmin && ppp.freq < geo.sfmax && ppp.istat != P_ADIABATIC)
-              {
-                if (which_out == 1)
-                {
-                  if (nres < 0)
-                  {
-                    Error ("Negative out from matom?? Abort.\n");
-                    Exit (0);
-                  }
-
-                  /* It was a macro atom de-activation. */
-                  if (nres < nlines)
-                  {             /* It was a line. */
-                    level_emit[lin_ptr[nres]->nconfigu] += 1;
-                  }
-                  else
-                  {
-                    level_emit[phot_top[nres - NLINES - 1].uplev] += 1;
-                  }
-                }
-                else if (which_out == 2)
-                {
-                  /* It was a k-packet de-activation. */
-                  kpkt_emit += 1;
-                }
-                else
-                {
-                  Error ("Packet didn't emerge from matom or kpkt??? Abort. \n");
-                  Exit (0);
-                }
-              }
-            }
-
-
-            /* Now we've done all the runs for this level de-activating so we can add the contributions
-               to the level emissivities, the k-packet emissivity and the total luminosity. */
-
-            for (mm = 0; mm < nlevels_macro; mm++)
-            {
-              contribution = 0;
-              if (m < nlevels_macro)
-              {
-                macromain[n].matom_emiss[mm] += contribution = level_emit[mm] * macromain[n].matom_abs[m] / n_tries_local;
-              }
-              else if (m == nlevels_macro)
-              {
-                macromain[n].matom_emiss[mm] += contribution = level_emit[mm] * plasmamain[n].kpkt_abs / n_tries_local;
-              }
-            }
-
-            if (m < nlevels_macro)
-            {
-              plasmamain[n].kpkt_emiss += kpkt_emit * macromain[n].matom_abs[m] / n_tries_local;
-            }
-            else if (m == nlevels_macro)
-            {
-              plasmamain[n].kpkt_emiss += kpkt_emit * plasmamain[n].kpkt_abs / n_tries_local;
-            }
-          }
-        }
-      }
-    }
-
-
-    /*This is the end of the update loop that is parallelised. We now need to exchange data between the tasks.
-       This is done much the same way as in wind_update */
-#ifdef MPI_ON
-
-    /* JM Add an MPI Barrier here */
-    MPI_Barrier (MPI_COMM_WORLD);
-
-    for (n_mpi = 0; n_mpi < np_mpi_global; n_mpi++)
-    {
-      /* here we loop over the number of threads. If the thread is this thread then we pack the macromain information
-         into memory and then broadcast it to ther other threads */
-      position = 0;
-
-      if (rank_global == n_mpi)
-      {
-
-        Log ("MPI task %d is working on matoms %d to max %d (total size %d).\n", rank_global, my_nmin, my_nmax, NPLASMA);
-
-        MPI_Pack (&ndo, 1, MPI_INT, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-        for (n = my_nmin; n < my_nmax; n++)
-        {
-
-          /* pack the number of the cell, and the kpkt and macro atom emissivites for that cell // */
-          MPI_Pack (&n, 1, MPI_INT, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-          MPI_Pack (&plasmamain[n].kpkt_emiss, 1, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-          MPI_Pack (macromain[n].matom_emiss, nlevels_macro, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
-
-        }
-
-        Log_silent ("MPI task %d broadcasting matom emissivity information.\n", rank_global);
-      }
-
-
-      /* Set MPI_Barriers and broadcast information to other threads */
-      MPI_Barrier (MPI_COMM_WORLD);
-      MPI_Bcast (commbuffer, size_of_commbuffer, MPI_PACKED, n_mpi, MPI_COMM_WORLD);
-      MPI_Barrier (MPI_COMM_WORLD);
-      Log_parallel ("MPI task %d survived broadcasting matom emissivity information.\n", rank_global);
-
-
-
-      position = 0;
-
-      /* If not this thread then we unpack the macromain information from the other threads */
-
-      if (rank_global != n_mpi)
-      {
-        MPI_Unpack (commbuffer, size_of_commbuffer, &position, &num_comm, 1, MPI_INT, MPI_COMM_WORLD);
-        for (n_mpi2 = 0; n_mpi2 < num_comm; n_mpi2++)
-        {
-
-          /* unpack the number of the cell, and the kpkt and macro atom emissivites for that cell */
-          MPI_Unpack (commbuffer, size_of_commbuffer, &position, &n, 1, MPI_INT, MPI_COMM_WORLD);
-          MPI_Unpack (commbuffer, size_of_commbuffer, &position, &plasmamain[n].kpkt_emiss, 1, MPI_DOUBLE, MPI_COMM_WORLD);
-          MPI_Unpack (commbuffer, size_of_commbuffer, &position, macromain[n].matom_emiss, nlevels_macro, MPI_DOUBLE, MPI_COMM_WORLD);
-        }
-      }
-    }                           // end of parallelised section
-
-    /* add an MPI Barrier after unpacking stage */
-    MPI_Barrier (MPI_COMM_WORLD);
-#endif
-
-  }                             // end of if loop which controls whether to compute the emissivities or not 
-
-  /* this next loop just calculates lum to be the correct summed value in parallel mode */
-  /* if mode == USE_STORED_MATOM_EMISSIVITIES this is all this routine does */
-  lum = 0.0;                    // need to rezero, fixes segfault bug #59 
-
-  for (n = 0; n < NPLASMA; n++)
-  {
-
-    for (mm = 0; mm < nlevels_macro; mm++)
-    {
-      lum += macromain[n].matom_emiss[mm];
-    }
-  }
-
-  geo.matom_radiation = 1;
-
-  return (lum);
-}
-
-/* All done. */
-
-
-
-/**********************************************************/
-/** 
- * @brief produces photon packets to account for creating of r-packets by k-packets. 
-
+/**
+ * @brief produces photon packets to account for creating of r-packets by k-packets.
  *
  * @param [in, out] PhotPtr  p   the ptr to the entire structure for the photons
  * @param [in] double  weight   the photon weight
@@ -529,14 +113,14 @@ get_matom_f (mode)
  * @param [in] int  nphot   the number of photons to be generated
  * @return int nphot  The number of photon packets that were generated from k-packet elliminations.
  *
- * @details produces photon packets to account for creating of r-packets by k-packets in the spectrum calculation. 
+ * @details produces photon packets to account for creating of r-packets by k-packets in the spectrum calculation.
  * It should only be used once the total energy emitted in this way in the wavelength range in question is well known
- * (calculated in the ionization cycles). This routine is closely related to photo_gen_wind from which much of the code 
+ * (calculated in the ionization cycles). This routine is closely related to photo_gen_wind from which much of the code
  * has been copied.
  *
- * Photons are generated at a position in the Observer frame.  
- * The weight of the photon should is the weight expected in the local 
- * frame since photon is first created in thea local 
+ * Photons are generated at a position in the Observer frame.
+ * The weight of the photon should is the weight expected in the local
+ * frame since photon is first created in thea local
  * rest frame, and then Doppler shifted to the Observer frame
  **********************************************************/
 
@@ -556,7 +140,7 @@ photo_gen_kpkt (p, weight, photstart, nphot)
   int nnscat;
   int nplasma, ndom;
   int kpkt_mode;
-  double fmin, fmax;
+  double freq_min, freq_max;
 
   photstop = photstart + nphot;
   Log ("photo_gen_kpkt  creates nphot %5d photons from %5d to %5d, weight %8.4e \n", nphot, photstart, photstop, weight);
@@ -564,15 +148,15 @@ photo_gen_kpkt (p, weight, photstart, nphot)
   if (geo.ioniz_or_extract == CYCLE_IONIZ)
   {
     /* we are in the ionization cycles, so use all frequencies. kpkt_mode should allow all processes */
-    fmin = xband.f1[0];
-    fmax = xband.f2[xband.nbands - 1];
+    freq_min = xband.f1[0];
+    freq_max = xband.f2[xband.nbands - 1];
     kpkt_mode = KPKT_MODE_ALL;
   }
   else
   {
     /* we are in the spectral cycles, so use all the required frequency range */
-    fmin = geo.sfmin;
-    fmax = geo.sfmax;
+    freq_min = geo.sfmin;
+    freq_max = geo.sfmax;
     /* we only want k->r processes */
     kpkt_mode = KPKT_MODE_CONTINUUM;
   }
@@ -602,12 +186,12 @@ photo_gen_kpkt (p, weight, photstart, nphot)
     pp.freq = 0.0;
     pp.grid = icell;
 
-    /* This following block is a bad way of doing it - kpkt could be modified to 
+    /* This following block is a bad way of doing it - kpkt could be modified to
        do what we want in a more elegant way. */
 
     test = pp.freq;
 
-    while (test > fmax || test < fmin)
+    while (test > freq_max || test < freq_min)
     {
       pp.w = p[n].w;
       kpkt (&pp, &nres, &esc_ptr, kpkt_mode);
@@ -627,7 +211,7 @@ photo_gen_kpkt (p, weight, photstart, nphot)
     }
 
     p[n].freq = pp.freq;
-    p[n].line_nres = p[n].nres = nres;
+    p[n].nres = nres;
     p[n].w = pp.w;
 
 
@@ -697,23 +281,23 @@ photo_gen_kpkt (p, weight, photstart, nphot)
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief      produces photon packets to account for creation of r-packets
- *      by deactivation of macro atoms in the spectrum calculation. It should only be used 
+ *      by deactivation of macro atoms in the spectrum calculation. It should only be used
  *      once the total energy emitted in this way in the wavelength range in question is well known
  *      (calculated in the ionization cycles).
  *
  * @param [in, out] PhotPtr  p   the ptr to the structire for the photons
  * @param [in] double  weight   the photon weight
  * @param [in] int  photstart   The position in the photon structure of the first photon to generate
- * @param [in] int  nphot   the number of the photons to be generated 
+ * @param [in] int  nphot   the number of the photons to be generated
  * @return int nphot When it finishes it should have generated nphot photons from macro atom deactivations.
  *
  * @details
  * This routine is closely related to photo_gen_kpkt from which much of the code has been copied.
  *
  * ### Notes ###
- * Consult Matthews thesis. 
+ * Consult Matthews thesis.
  *
  **********************************************************/
 
@@ -730,8 +314,7 @@ photo_gen_matom (p, weight, photstart, nphot)
   int nres;
   int n;
   double dot ();
-  int emit_matom ();
-  double test;
+//OLD  double test;
   int upper;
   int nnscat;
   int nplasma;
@@ -790,26 +373,27 @@ photo_gen_matom (p, weight, photstart, nphot)
     pp.grid = icell;
 
     /* This following block is a bad way of doing it but it'll do as
-       a quick and dirty test for now. Really kpkt should be modified to 
+       a quick and dirty test for now. Really kpkt should be modified to
        do what we want in a more elegant way. */
 
-    test = pp.freq;
+//OLD    test = pp.freq;
 
-    while (test > geo.sfmax || test < geo.sfmin)
-    {
+//OLD    while (test > geo.sfmax || test < geo.sfmin)
+//OLD    {
 
-      /* Call routine that will select an emission process for the
-         deactivating macro atom. If is deactivates outside the frequency
-         range of interest then ignore it and try again. SS June 04. */
+    /* Call routine that will select an emission process and a frequencyfor the
+       deactivating macro atom. */
+//OLD    If it deactivates outside the frequency
+//OLD         range of interest then ignore it and try again. SS June 04. */
 
-      emit_matom (wmain, &pp, &nres, upper);
+    emit_matom (wmain, &pp, &nres, upper, geo.sfmin, geo.sfmax);
 
-      test = pp.freq;
-    }
+//OLD      test = pp.freq;
+//OLD    }
 
 
     p[n].freq = pp.freq;
-    p[n].line_nres = p[n].nres = nres;
+    p[n].nres = nres;
     p[n].frame = F_LOCAL;
 
 

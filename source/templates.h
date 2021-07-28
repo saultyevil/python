@@ -109,6 +109,7 @@ double func_minimiser(double a, double m, double b, double (*func)(double, void 
 int trans_phot(WindPtr w, PhotPtr p, int iextract);
 int trans_phot_single(WindPtr w, PhotPtr p, int iextract);
 /* phot_util.c */
+int init_dummy_phot(PhotPtr p);
 int stuff_phot(PhotPtr pin, PhotPtr pout);
 int move_phot(PhotPtr pp, double ds);
 int comp_phot(PhotPtr p1, PhotPtr p2);
@@ -319,11 +320,12 @@ void print_timer_duration(char *msg, struct timeval timer_t0);
 int matom(PhotPtr p, int *nres, int *escape);
 double b12(struct lines *line_ptr);
 double alpha_sp(struct topbase_phot *cont_ptr, PlasmaPtr xplasma, int ichoice);
+double scaled_alpha_sp_integral_band_limited(struct topbase_phot *cont_ptr, PlasmaPtr xplasma, int ichoice, double fmin, double fmax);
 double alpha_sp_integrand(double freq, void *params);
 int kpkt(PhotPtr p, int *nres, int *escape, int mode);
 int fake_matom_bb(PhotPtr p, int *nres, int *escape);
 int fake_matom_bf(PhotPtr p, int *nres, int *escape);
-int emit_matom(WindPtr w, PhotPtr p, int *nres, int upper);
+int emit_matom(WindPtr w, PhotPtr p, int *nres, int upper, double fmin, double fmax);
 double matom_emit_in_line_prob(WindPtr one, struct lines *line_ptr_emit);
 /* estimators_macro.c */
 int bf_estimators_increment(WindPtr one, PhotPtr p, double ds);
@@ -477,7 +479,6 @@ double get_disk_params(void);
 /* photo_gen_matom.c */
 double get_kpkt_f(void);
 double get_kpkt_heating_f(void);
-double get_matom_f(int mode);
 int photo_gen_kpkt(PhotPtr p, double weight, int photstart, int nphot);
 int photo_gen_matom(PhotPtr p, double weight, int photstart, int nphot);
 /* macro_gov.c */
@@ -597,6 +598,13 @@ double local_to_observer_frame_velocity(double *v_cmf, double *v, double *v_obs)
 int local_to_observer_frame_ruler_transform(double v[], double dx_cmf[], double dx_obs[]);
 int observer_to_local_frame_ruler_transform(double v[], double dx_obs[], double dx_cmf[]);
 /* macro_accelerate.c */
+void calc_matom_matrix(PlasmaPtr xplasma, double **matom_matrix);
+int fill_kpkt_rates(PlasmaPtr xplasma, int *escape, PhotPtr p);
+double f_matom_emit_accelerate(PlasmaPtr xplasma, int upper, double freq_min, double freq_max);
+double f_kpkt_emit_accelerate(PlasmaPtr xplasma, double freq_min, double freq_max);
+/* macro_gen_f.c */
+double get_matom_f(int mode);
+double get_matom_f_accelerate(int mode);
 /* py_wind_sub.c */
 int zoom(int direction);
 int overview(WindPtr w, char rootname[]);

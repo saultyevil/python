@@ -1,4 +1,3 @@
-
 /***********************************************************/
 /** @file  photon_gen.c
  * @author ksl
@@ -86,6 +85,8 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
   int n;
   int iphot_start, nphot_rad, nphot_k;
   long nphot_tot_rad, nphot_tot_k;
+
+  nphot_k = nphot_tot_k = natural_weight = iphot_start = 0;     // Initialize to avoid compiler warnings
 
   /* if we are generating nonradiative kpackets, then we need to subtract 
      off the fraction reserved for k-packets */
@@ -185,6 +186,7 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
     photo_gen_kpkt (p, weight, iphot_start, nphot_k);
   }
 
+
   for (n = 0; n < NPHOT; n++)
   {
     p[n].w_orig = p[n].w;
@@ -198,6 +200,7 @@ define_phot (p, f1, f2, nphot_tot, ioniz_or_final, iwind, freq_sampling)
   }
 
   return (0);
+
 }
 
 
@@ -404,12 +407,24 @@ iwind = -1 	Don't generate any wind photons at all
        can use the saved emissivities.  The routine  returns the specific luminosity
        in the spectral band of interest */
 
+#if ACCELERATED_MACRO == TRUE
+    Log ("Using accelerated calculation of emissivities\n");
+    if (geo.pcycle == 0)
+    {
+      geo.f_matom = get_matom_f_accelerate (CALCULATE_MATOM_EMISSIVITIES);
+    }
+    else
+      geo.f_matom = get_matom_f_accelerate (USE_STORED_MATOM_EMISSIVITIES);
+#else
+    Log ("Using old slow calculation of emissivities\n");
     if (geo.pcycle == 0)
     {
       geo.f_matom = get_matom_f (CALCULATE_MATOM_EMISSIVITIES);
     }
     else
       geo.f_matom = get_matom_f (USE_STORED_MATOM_EMISSIVITIES);
+
+#endif
 
 
     geo.f_kpkt = get_kpkt_f (); /* This returns the specific luminosity
@@ -785,7 +800,6 @@ star_init (freqmin, freqmax, ioniz_or_final, f)
 
 }
 
-/* Generate nphot photons from the star in the frequency interval f1 to f2 */
 
 
 /**********************************************************/
@@ -848,7 +862,7 @@ photo_gen_star (p, r, t, weight, f1, f2, spectype, istart, nphot)
     p[i].istat = p[i].nscat = p[i].nrscat = p[i].nmacro = 0;
     p[i].grid = 0;
     p[i].tau = 0.0;
-    p[i].line_nres = p[i].nres = -1;    // It's a continuum photon
+    p[i].nres = -1;             // It's a continuum photon
     p[i].nnscat = 1;
 
     if (spectype == SPECTYPE_BB)
@@ -956,7 +970,7 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
     p[i].w = weight;
     p[i].istat = p[i].nscat = p[i].nrscat = p[i].nmacro = 0;
     p[i].tau = 0;
-    p[i].line_nres = p[i].nres = -1;    // It's a continuum photon
+    p[i].nres = -1;             // It's a continuum photon
     p[i].nnscat = 1;
     if (geo.reverb_disk == REV_DISK_UNCORRELATED)
       p[i].path = 0;            //If we're assuming disk photons are uncorrelated, leave them at 0
@@ -1016,7 +1030,7 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
 
     }
 
-    if (random_number (-0.5, 0.5) > 0.0)        //Get a uniform random number brtween -0.5 and 0.5- use sign to toss a coin.
+    if (random_number (-0.5, 0.5) > 0.0)
     {                           /* Then the photon emerges in the upper hemisphere */
       p[i].x[2] = (z + EPSILON);
     }
@@ -1037,9 +1051,8 @@ photo_gen_disk (p, weight, f1, f2, spectype, istart, nphot)
       p[i].freq = planck (t, freqmin, freqmax);
     }
     else if (spectype == SPECTYPE_UNIFORM)
-    {                           //Produce a uniform distribution of frequencies
-
-      p[i].freq = random_number (freqmin, freqmax);     //Get a random frequency between fmin and fmax (exluding the ends)
+    {
+      p[i].freq = random_number (freqmin, freqmax);
     }
 
     else
@@ -1162,6 +1175,7 @@ bl_init (lum_bl, t_bl, freqmin, freqmax, ioniz_or_final, f)
      int ioniz_or_final;
 {
   double q1;
+  double integ_planck_d ();
   double alphamin, alphamax;
 
   q1 = 2. * PI * (BOLTZMANN * BOLTZMANN * BOLTZMANN * BOLTZMANN) / (PLANCK * PLANCK * PLANCK * VLIGHT * VLIGHT);
