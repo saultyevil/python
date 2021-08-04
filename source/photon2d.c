@@ -518,7 +518,7 @@ return and record an error */
   }
   else
   {
-    radiation (p, ds_current, &kappa_tot);
+    radiation (p, ds_current);
   }
 
   move_phot (p, ds_current);

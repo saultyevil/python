@@ -56,8 +56,8 @@ int iicount = 0;
  *
  **********************************************************/
 
-int
-radiation (PhotPtr p, double ds, double *kappa_tot_return)
+double
+radiation (PhotPtr p, double ds)
 {
   TopPhotPtr x_top_ptr;
 
@@ -352,7 +352,6 @@ radiation (PhotPtr p, double ds, double *kappa_tot_return)
      we can now reduce weights and record certain estimators */
 
 
-  *kappa_tot_return = kappa_tot;
   kappa_tot_obs = kappa_tot / observer_to_local_frame_ds (p, 1);
   tau = kappa_tot_obs * ds;
 
@@ -417,7 +416,7 @@ radiation (PhotPtr p, double ds, double *kappa_tot_return)
   }
 
   if (geo.ioniz_or_extract == CYCLE_EXTRACT)
-    return 0;                   // 57h -- ksl -- 060715
+    return kappa_tot;           // 57h -- ksl -- 060715
 
 /* Everything after this point is only needed for ionization calculations */
 /* Update the radiation parameters used ultimately in calculating t_r */

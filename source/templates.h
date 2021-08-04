@@ -128,7 +128,7 @@ int kbf_need(double fmin, double fmax);
 double sobolev(WindPtr one, double x[], double den_ion, struct lines *lptr, double dvds);
 int scatter(PhotPtr p, int *nres, int *nnscat);
 /* radiation.c */
-int radiation(PhotPtr p, double ds, double *kappa_tot_return);
+double radiation(PhotPtr p, double ds);
 double kappa_ff(PlasmaPtr xplasma, double freq);
 double sigma_phot(struct topbase_phot *x_ptr, double freq);
 double den_config(PlasmaPtr xplasma, int nconf);

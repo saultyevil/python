@@ -132,8 +132,8 @@ set(RAD_HYDRO_SOURCE
         )
 
 set(OPTICAL_DEPTH_SOURCE
-        source/py_optical_depth.c source/py_optical_depth_sub.c
-        )
+        source/py_optical_depth.c source/py_optical_depth_util.c
+        source/py_optical_depth_output.c source/py_optical_depth_transport.c)
 
 # Create the executables for each program, and link the required libraries
 
