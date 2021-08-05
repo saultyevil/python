@@ -614,6 +614,7 @@ get_matom_f_accelerate (mode)
         {
           macromain[n].matom_emiss[j] += macromain[n].matom_abs[i] * matom_matrix[i][j];
         }
+        plasmamain[n].kpkt_emiss += macromain[n].matom_abs[i] * matom_matrix[i][nlevels_macro];
       }
 
       /* do the same for the thermal pool. we also normalise by banded_emiss_frac here */

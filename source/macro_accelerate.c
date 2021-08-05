@@ -101,6 +101,12 @@ calc_matom_matrix (xplasma, matom_matrix)
       rad_rate = (a21 (line_ptr) * p_escape (line_ptr, xplasma));
       coll_rate = q21 (line_ptr, t_e);  // this is multiplied by ne below
 
+      //OLD Unneeded check.  There is already a check in q21
+      //OLD      if (coll_rate < 0)
+      //OLD      {
+      //OLD        coll_rate = 0;
+      //OLD      }
+
       bb_cont = rad_rate + (coll_rate * ne);
 
       target_level = line_ptr->nconfigl;
@@ -160,6 +166,12 @@ calc_matom_matrix (xplasma, matom_matrix)
       rad_rate = (b12 (line_ptr) * mplasma->jbar_old[config[uplvl].bbu_indx_first + n]);
 
       coll_rate = q12 (line_ptr, t_e);  // this is multiplied by ne below
+
+      // Unneded check this has been checked previously
+      //OLD      if (coll_rate < 0)
+      //OLD      {
+      //OLD        coll_rate = 0;
+      //OLD      }
       target_level = line[config[uplvl].bbu_jump[n]].nconfigu;
       Q_matrix[uplvl][target_level] += Qcont = ((rad_rate) + (coll_rate * ne)) * config[uplvl].ex;      //energy of lower state
 
@@ -231,7 +243,7 @@ calc_matom_matrix (xplasma, matom_matrix)
     if (phot_top[i].macro_info == 1 && geo.macro_simple == 0)   //part of macro atom
     {
       target_level = phot_top[i].uplev;
-      Q_matrix[nlevels_macro][target_level] += Qcont = mplasma->cooling_bf[i];
+      Q_matrix[nlevels_macro][target_level] += Qcont = mplasma->cooling_bf_col[i];
       Q_norm[nlevels_macro] += Qcont;
 
     }
@@ -252,9 +264,27 @@ calc_matom_matrix (xplasma, matom_matrix)
 
   /* end kpacket */
 
+
+  //OLD  Log ("Q:\n");
+  //OLD  for (mm = 0; mm < nrows; mm++)
+  //OLD  {
+  //OLD    for (nn = 0; nn < nrows; nn++)
+  //OLD    {
+  //OLD      if (Q_norm[mm] > 0)
+  //OLD      {
+  //OLD        Log ("%10.3e ", Q_matrix[mm][nn] / Q_norm[mm]);
+  //OLD      }
+  //OLD      else
+  //OLD      {
+  //OLD        Log ("%10.3e ", 0.0);
+  //OLD      }
+  //OLD    }
+  //OLD    Log ("\n");
+  //OLD  }
+
   /* now in one step, we multiply by the identity matrix and normalise the probabilities
-     this means that what is now stored in Q_matrix is no longer Q, but N=(I - Q) using Vogl 
-     notation. We check that Q_norm is 0, because some states (ground states) can have 0 
+     this means that what is now stored in Q_matrix is no longer Q, but N=(I - Q) using Vogl
+     notation. We check that Q_norm is 0, because some states (ground states) can have 0
      jumping probabilities and so zero normalisation too */
   for (uplvl = 0; uplvl < nrows; uplvl++)
   {
@@ -274,7 +304,7 @@ calc_matom_matrix (xplasma, matom_matrix)
   }
 
 
-  /* Check normalisation of the matrix. the diagonals of R, minus N which is now stored in 
+  /* Check normalisation of the matrix. the diagonals of R, minus N which is now stored in
      Q_matrix, should be zero */
   for (uplvl = 0; uplvl < nrows; uplvl++)
   {
@@ -301,6 +331,17 @@ calc_matom_matrix (xplasma, matom_matrix)
       a_data[mm * nrows + nn] = Q_matrix[mm][nn];
     }
   }
+
+  //OLD  Log ("R:\n");
+  //OLD  for (mm = 0; mm < nrows; mm++)
+  //OLD  {
+  //OLD    for (nn = 0; nn < nrows; nn++)
+  //OLD    {
+  //OLD      Log ("%10.3e ", R_matrix[mm][nn]);
+  //OLD    }
+  //OLD    Log ("\n");
+  //OLD  }
+
 
   /* now get ready for the matrix operations. first let's assign variables for use with GSL */
   gsl_matrix_view N;
@@ -336,6 +377,17 @@ calc_matom_matrix (xplasma, matom_matrix)
     }
   }
 
+  //OLD  Log ("matom_matrix:\n");
+  //OLD  for (mm = 0; mm < nrows; mm++)
+  //OLD  {
+  //OLD    for (nn = 0; nn < nrows; nn++)
+  //OLD    {
+  //OLD      Log ("%10.3e ", matom_matrix[mm][nn]);
+  //OLD    }
+  //OLD    Log ("\n");
+  //OLD  }
+
+
   /* free memory */
   gsl_permutation_free (p);
   gsl_matrix_free (inverse_matrix);
@@ -354,16 +406,16 @@ calc_matom_matrix (xplasma, matom_matrix)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief calculate the cooling rates for the conversion of k-packets.
  *
- * @param [in] PlasmaPtr  xplasma  
- * @param [in,out] double **matom_matrix 
- *        the 2D matrix array we will populate with normalised probabilities 
+ * @param [in] PlasmaPtr  xplasma
+ * @param [in,out] double **matom_matrix
+ *        the 2D matrix array we will populate with normalised probabilities
  *
  *
  * @details
- * 
+ *
  *
  **********************************************************/
 
@@ -423,7 +475,7 @@ fill_kpkt_rates (xplasma, escape, p)
     cooling_bf_coltot = 0.0;
 
     /* Start of BF calculation */
-    /* JM 1503 -- we used to loop over ntop_phot here, 
+    /* JM 1503 -- we used to loop over ntop_phot here,
        but we should really loop over the tabulated Verner Xsections too
        see #86, #141 */
     for (i = 0; i < nphot_total; i++)
@@ -552,7 +604,7 @@ fill_kpkt_rates (xplasma, escape, p)
 
 
     /* JM -- 1310 -- we now want to add adiabatic cooling as another way of destroying kpkts
-       this should have already been calculated and stored in the plasma structure. Note that 
+       this should have already been calculated and stored in the plasma structure. Note that
        adiabatic cooling does not depend on type of macro atom excited */
 
     /* note the units here- we divide the total luminosity of the cell by volume and ne to give cooling rate */
@@ -566,7 +618,7 @@ fill_kpkt_rates (xplasma, escape, p)
     }
 
 
-    /* If the next error occurs see issue #70.  It is ghought to be fixed, with the possiple 
+    /* If the next error occurs see issue #70.  It is ghought to be fixed, with the possiple
        exception of cells that are partially in the wind.
      */
     if (cooling_adiabatic < 0)
@@ -595,19 +647,19 @@ fill_kpkt_rates (xplasma, escape, p)
 
 
 /**********************************************************/
-/** 
- * @brief a routine which calculates what fraction of a level 
+/**
+ * @brief a routine which calculates what fraction of a level
  *         emissivity comes out in a given frequency range
  *
  * @param [in]      PlasmaPtr   xplasma       Plasma cell in question
  * @param [in]      int         upper         macro-atom level
- * @param [in]      double      freq_min, freq    Frequency range requested 
+ * @param [in]      double      freq_min, freq    Frequency range requested
  *                                            (e.g. spectral cycle freq range)
  *
  * @details similar to routines like emit_matom, except that we calculate the fraction
- * of emission in a band rather than calculating frequencies for photons. Used to be 
+ * of emission in a band rather than calculating frequencies for photons. Used to be
  * done via a less efficient rejection method.
- * 
+ *
 ***********************************************************/
 
 double
@@ -628,7 +680,7 @@ f_matom_emit_accelerate (xplasma, upper, freq_min, freq_max)
   double bb_cont;
   double flast, fthresh, bf_int_full, bf_int_inrange;
 
-  t_e = xplasma->t_e;           //electron temperature 
+  t_e = xplasma->t_e;           //electron temperature
   ne = xplasma->ne;             //electron number density
 
   /* The first step is to identify the configuration that has been excited. */
@@ -708,7 +760,7 @@ f_matom_emit_accelerate (xplasma, upper, freq_min, freq_max)
       flast = cont_ptr->freq[cont_ptr->np - 1]; //last frequency in list
       bf_int_full = scaled_alpha_sp_integral_band_limited (cont_ptr, xplasma, 0, fthresh, flast);
 
-      /* the limits differ depending on whether the band covers all or part of the cross-section. 
+      /* the limits differ depending on whether the band covers all or part of the cross-section.
          four possibilities */
       if (fthresh < freq_min && flast > freq_max)
       {
@@ -754,22 +806,22 @@ f_matom_emit_accelerate (xplasma, upper, freq_min, freq_max)
 
 
 /**********************************************************/
-/** 
+/**
  * @brief calculate what fraction of the thermal continuum emission comes out in the required band
  *
- * This routine uses the various cooling rates to work out which k->r processes contribute 
- * in the frequency range requested (between freq_min and freq_max). This involves doing a series 
+ * This routine uses the various cooling rates to work out which k->r processes contribute
+ * in the frequency range requested (between freq_min and freq_max). This involves doing a series
  * of band-limited integrals, for the bound-free "alpha" estimators, for each cross-section.
  * It also calls functions like total_free() to work out the fraction of free-free emission
- * that emerges in the frequency range. 
+ * that emerges in the frequency range.
  *
  *
  *
  * @param [in]      PlasmaPtr   xplasma       Plasma cell in question
  *
- * @param [in]      double      freq_min, freq    Frequency range requested 
+ * @param [in]      double      freq_min, freq    Frequency range requested
  *                                            (e.g. spectral cycle freq range)
- * 
+ *
  * @return penorm_band / penorm   total fraction of k->r emission that emerges in the band
 ************************************************************/
 
@@ -814,7 +866,7 @@ f_kpkt_emit_accelerate (xplasma, freq_min, freq_max)
   }
 
 
-  /* Now need to do k-packet processes. This subroutine calculates the k-packet 
+  /* Now need to do k-packet processes. This subroutine calculates the k-packet
      cooling rates and stores them in mplasma->cooling. Dummy variables are needed
      because this routine is also used in the main kpkt routine */
   escape_dummy = 0;
@@ -858,56 +910,59 @@ f_kpkt_emit_accelerate (xplasma, freq_min, freq_max)
       }
       penorm_band += eprbs_band * bf_int_inrange / bf_int_full;
     }
+  }
 
-    for (i = 0; i < nlines; i++)
+  for (i = 0; i < nlines; i++)
+  {
+    if (line[i].macro_info == 1 && geo.macro_simple == 0)       //line is for a macro atom
     {
-      if (line[i].macro_info == 1 && geo.macro_simple == 0)     //line is for a macro atom
+      eprbs = 0.0;              //these are not deactivations in this approach any more but jumps to macro atom levels
+    }
+    else                        //line is not for a macro atom - use simple method
+    {
+      penorm += eprbs = mplasma->cooling_bb[i];
+      if ((line[i].freq > freq_min) && (line[i].freq < freq_max))       // correct range
       {
-        eprbs = 0.0;            //these are not deactivations in this approach any more but jumps to macro atom levels
-      }
-      else                      //line is not for a macro atom - use simple method
-      {
-        penorm += eprbs = mplasma->cooling_bb[i];
-        if ((line[i].freq > freq_min) && (line[i].freq < freq_max))     // correct range
-        {
-          penorm_band += eprbs_band = eprbs;
-        }
+        penorm_band += eprbs_band = eprbs;
       }
     }
+  }
 
 
 
-    /* consult issues #187, #492 regarding free-free */
-    penorm += eprbs = mplasma->cooling_ff + mplasma->cooling_ff_lofreq;
+  /* consult issues #187, #492 regarding free-free */
+  penorm += eprbs = mplasma->cooling_ff + mplasma->cooling_ff_lofreq;
 
-    total_ff_lofreq = total_free (one, xplasma->t_e, 0, ff_freq_min);
-    total_ff = total_free (one, xplasma->t_e, ff_freq_min, ff_freq_max);
+  total_ff_lofreq = total_free (one, xplasma->t_e, 0, ff_freq_min);
+  total_ff = total_free (one, xplasma->t_e, ff_freq_min, ff_freq_max);
 
-    /*
-     * Do not increment penorm_band when the total free-free luminosity is zero
-     */
+  /*
+   * Do not increment penorm_band when the total free-free luminosity is zero
+   */
 
-    if (freq_min > ff_freq_min)
-    {
-      if (total_ff > 0)
-        penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff * mplasma->cooling_ff;
-    }
-    else if (freq_max > ff_freq_min)
-    {
-      if (total_ff > 0)
-        penorm_band += total_free (one, xplasma->t_e, ff_freq_min, freq_max) / total_ff * mplasma->cooling_ff;
-      if (total_ff_lofreq > 0)
-        penorm_band += total_free (one, xplasma->t_e, freq_min, ff_freq_min) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
-    }
-    else
-    {
-      if (total_ff_lofreq > 0)
-        penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
-    }
+  if (freq_min > ff_freq_min)
+  {
+    if (total_ff > 0)
+      penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff * mplasma->cooling_ff;
+  }
+  else if (freq_max > ff_freq_min)
+  {
+    if (total_ff > 0)
+      penorm_band += total_free (one, xplasma->t_e, ff_freq_min, freq_max) / total_ff * mplasma->cooling_ff;
+    if (total_ff_lofreq > 0)
+      penorm_band += total_free (one, xplasma->t_e, freq_min, ff_freq_min) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
+  }
+  else
+  {
+    if (total_ff_lofreq > 0)
+      penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
+  }
 
-    penorm += eprbs = mplasma->cooling_adiabatic;
+  penorm += eprbs = mplasma->cooling_adiabatic;
 
-    for (i = 0; i < nphot_total; i++)
+  for (i = 0; i < nphot_total; i++)
+  {
+    if (phot_top[i].macro_info == 0 || geo.macro_simple == 1)
     {
       penorm += eprbs = mplasma->cooling_bf_col[i];
     }
