@@ -55,9 +55,12 @@ def generate_spectrum_bounds(spectrum: Table) -> ndarray:
     return np.array(bounds)
 
 
-def generate_tf(databases: dict, spectrum: Table, delay_bins: int,
-                line: int, wave: float, name: str, limit: int = 999999999,
-                dynamic_range: float = 2) -> TransferFunction:
+def generate_tf(
+        databases: dict, spectrum: Table, delay_bins: int,
+        line: int, wave: float, name: str, limit: int = 999999999,
+        dynamic_range: float = 2, observer: Optional[int] = None,
+        velocity: Optional[bool] = False
+) -> TransferFunction:
     """
     Generates the response function for a system.
 
@@ -71,6 +74,8 @@ def generate_tf(databases: dict, spectrum: Table, delay_bins: int,
         wave (float): Frequency of the line selected (in A)
         name (str): Name of the output files.
         limit (int): Number of photons to limit the DB query to. Set low for testing.
+        observer (int): Which observer (if several) to use.
+        velocity (bool): Whether to plot in velocity space or not.
 
     Returns:
         TransferFunction: The response-mapped transfer function.
@@ -88,20 +93,31 @@ def generate_tf(databases: dict, spectrum: Table, delay_bins: int,
     bounds = generate_spectrum_bounds(spectrum)
 
     tf_mid = TransferFunction(
-        db_mid, name, continuum=databases['mid']['continuum'], wave_bins=(len(bounds)-1), delay_bins=delay_bins
+        db_mid, name, continuum=databases['mid']['continuum'],
+        wave_bins=(len(bounds)-1), delay_bins=delay_bins
     )
+    if observer:
+        tf_mid.spectrum(observer)
+
     tf_mid.line(line, wave).wavelength_bins(bounds).delay_dynamic_range(dynamic_range).run(
-                scaling_factor=databases['mid']['scale'], limit=limit, verbose=True).plot()
+        scaling_factor=databases['mid']['scale'], limit=limit, verbose=True
+    ).plot(velocity=velocity)
 
     tf_min = TransferFunction(
         db_min, name+'_min', continuum=databases['min']['continuum'], template=tf_mid
-    ).run(scaling_factor=databases['min']['scale'], limit=limit).plot()
+    ).run(
+        scaling_factor=databases['min']['scale'], limit=limit
+    ).plot(velocity=velocity)
 
     tf_max = TransferFunction(
         db_max, name+'_max', continuum=databases['max']['continuum'], template=tf_mid
-    ).run(scaling_factor=databases['max']['scale'], limit=limit).plot()
+    ).run(
+        scaling_factor=databases['max']['scale'], limit=limit
+    ).plot(velocity=velocity)
 
-    tf_mid.response_map_by_tf(tf_min, tf_max).plot(response_map=True, name='resp')
+    tf_mid.response_map_by_tf(tf_min, tf_max).plot(
+        response_map=True, name='resp', velocity=velocity
+    )
     return tf_mid
 
 
@@ -219,8 +235,8 @@ def generate_spectra_min_max(times: Table, transfer_function: TransferFunction, 
         dC_max = np.amax(times['dC%'])
         dC_min = np.amin(times['dC%'])
         for j in range(0, len(spectrum)):
-            spectra["value_min"][j] += continuum_fit(spectrum["wave"].quantity[j]) * dC_min
-            spectra["value_max"][j] += continuum_fit(spectrum["wave"].quantity[j]) * dC_max
+            spectra["value_min"][j] += continuum_fit(spectrum["wave"][j]) * dC_min
+            spectra["value_max"][j] += continuum_fit(spectrum["wave"][j]) * dC_max
 
 
 def generate_spectra_details(times: Table, transfer_function: TransferFunction, spectra: Table, spectrum: Table,
@@ -292,7 +308,7 @@ def generate_spectra_details(times: Table, transfer_function: TransferFunction, 
                                                 x_int=spectra[column].meta['time'])
             for j in range(0, len(spectra)):
                 # Add the delta continuum to it
-                spectra[column][j] += continuum_fit(spectrum["wave"].quantity[j]) * dC_rel
+                spectra[column][j] += continuum_fit(spectrum["wave"][j]) * dC_rel
 
 
 def generate_times_line_emission(spectra: Table, spectra_times: Table, verbose: bool = False):

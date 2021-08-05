@@ -148,7 +148,7 @@ def read_spectrum(
         wave_name: Optional[str] = None, value_name: Optional[str] = None,
         error: Optional[str] = None,
         subtract_continuum_with_mask: Optional[Quantity] = None, rebin_to: Optional[int] = None
-) -> Union[Table, (Table, poly1d)]:
+) -> Union[Table, Tuple[Table, poly1d]]:
     """
     Imports a spectrum, and converts to target wavelength units, rebinning if requested.
 

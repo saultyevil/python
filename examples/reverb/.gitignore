@@ -1,0 +1,10 @@
+*.delay_dump
+*.out*
+*.spec*
+*.sig*
+*.log*
+*.wind*
+*.txt
+diag_*
+data
+.ipynb_checkpoints

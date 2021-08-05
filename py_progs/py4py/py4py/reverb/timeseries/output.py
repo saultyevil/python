@@ -23,7 +23,10 @@ from py4py.reverb import TransferFunction
 from typing import List, Optional, Tuple
 
 
-def write_caramel_data(lightcurve: Table, spectra: Table, spectra_times: Table, suffix: str):
+def write_caramel_data(
+        lightcurve: Table, spectra: Table, spectra_times: Table,
+        suffix: str, rescale: Optional[bool] = True
+):
     """
     Given a lightcurve, series of spectra and time outputs to CARAMEL format, and then
     compresses the output into a ZIP file.
@@ -33,6 +36,7 @@ def write_caramel_data(lightcurve: Table, spectra: Table, spectra_times: Table, 
         spectra (Table): Table of wavelengths and spectra. Continuum-subtracted.
         spectra_times (Table): Table of spectrum times.
         suffix (str): Suffix appended to filename. Intended to sort outputs as e.g. caramel/qso/caramel_lightcurve_qso.
+        rescale (bool): Whether or not the spectra should be rescaled to 1-100 range, defaults to yes.
 
     Outputs:
         caramel/{suffix}/caramel_lightcurve_{suffix}.txt: Continuum lightcurve.
@@ -78,24 +82,31 @@ def write_caramel_data(lightcurve: Table, spectra: Table, spectra_times: Table, 
     # Spectra file format:
     # First row is # INT, where INT is number of wavelength bins
     # Second row is central pixel wavelength in angstroms
-    # Third row is rescaled flux from 1-100 for spectrum 1
-    # Fourth row is rescaled flux error for spectrum 1
+    # Third row is (rescaled) flux from 1-100 for spectrum 1
+    # Fourth row is (rescaled) flux error for spectrum 1
     to_save = [spectra['wave']]
-    spec_min = 999e99
-    spec_max = -999e99
-    for column in spectra.colnames[1:]:
-        if np.amax(spectra[column]) > spec_max:
-            spec_max = np.amax(spectra[column])
-        if np.amin(spectra[column]) < spec_min:
-            spec_min = np.amin(spectra[column])
+
+    if rescale:
+        spec_min = 999e99
+        spec_max = -999e99
+
+        for column in spectra.colnames[1:]:
+            if np.amax(spectra[column]) > spec_max:
+                spec_max = np.amax(spectra[column])
+            if np.amin(spectra[column]) < spec_min:
+                spec_min = np.amin(spectra[column])
 
     for column in spectra.colnames[5:]:
-        value = (np.array(spectra[column]) - spec_min) / (spec_max - spec_min)
-        value = (value * 9) + 1
-        error = np.array(spectra['error']) / (spec_max - spec_min)
-        error = (error * 9)
-        to_save.append(value)
-        to_save.append(error)
+        if rescale:
+            value = (np.array(spectra[column]) - spec_min) / (spec_max - spec_min)
+            value = (value * 9) + 1
+            error = np.array(spectra['error']) / (spec_max - spec_min)
+            error = (error * 9)
+            to_save.append(value)
+            to_save.append(error)
+        else:
+            to_save.append(spectra[column])
+            to_save.append(spectra['error'])
 
     np.savetxt(
         os.path.join(
@@ -153,7 +164,11 @@ def write_memecho_data(lightcurve: Table, spectra: Table, spectra_times: Table, 
     )
 
 
-def trailed_spectrogram(spectra: Table, lightcurve: Table, spectra_times: Table, filename: str):
+def trailed_spectrogram(
+        spectra: Table, lightcurve: Table, spectra_times: Table, filename: str,
+        line_wavelength: float = None,
+        wavelength_range: Optional[Tuple[float, float]] = None
+):
     """
     Generate a trailed spectrogram of both the time series of spectra and difference relative to the mean,
     with the continuum as an adjacent line plot.
@@ -163,10 +178,23 @@ def trailed_spectrogram(spectra: Table, lightcurve: Table, spectra_times: Table,
         spectra_times (Table): Times to plot the TS for.
         lightcurve (Table): The continuum lightcurve.
         filename (String): File to write to.
+        line_wavelength (float): The wavelength of the line being plotted.
+        wavelength_range ([float, float]): The wavelength range to plot.
 
     Outputs:
         {filename}.eps: Time series output.
     """
+    if not wavelength_range:
+        wavelength_range = (
+            spectra.meta["bounds"][0],
+            spectra.meta["bounds"][-1],
+        )
+    if line_wavelength:
+        if line_wavelength > wavelength_range[-1] or line_wavelength < wavelength_range[0]:
+            raise ValueError(
+                f"Line wavelength {line_wavelength} is outside of the wavelength range of the plot."
+            )
+
 
     # We want a pcolour plot for the time series, with an adjacent
     # fig, (ax_ts, ax_c) = plt.subplots(1, 2, gridspec_kw={'width_ratios': [3, 1]} , sharey=True)
@@ -213,9 +241,9 @@ def trailed_spectrogram(spectra: Table, lightcurve: Table, spectra_times: Table,
         ax.xaxis.set_tick_params(rotation=0, pad=1)
         ax.yaxis.set_tick_params(rotation=45, labelsize=8)
         ax.yaxis.tick_left()
-        ax.set_xlim([6300, 6850])
+        ax.set_xlim(wavelength_range)
 
-    ax_spec.set_xlim([6300, 6850])
+    ax_spec.set_xlim(wavelength_range)
     ax_spec.set_xlabel("λ (Å)")
     ax_spec.set_ylabel(r'$L/L_{\rm max}$')
     ax_spec.plot(spectra['wave'], spectra['value']/np.amax(spectra['value']))
@@ -230,17 +258,17 @@ def trailed_spectrogram(spectra: Table, lightcurve: Table, spectra_times: Table,
 
     ax_c2.set_xlabel(r"ΔC (%)")
 
-    tf_wave = 6562.8
-    ax_ts.axvline(tf_wave, color='red')
-    ax_ts2.axvline(tf_wave, color='red')
-    ax_spec.axvline(tf_wave, color='red')
+    # Add centre line
+    ax_ts.axvline(line_wavelength, color='red')
+    ax_ts2.axvline(line_wavelength, color='red')
+    ax_spec.axvline(line_wavelength, color='red')
 
     ax_vel = ax_spec.twiny()
     ax_vel.set_xlim(ax_spec.get_xlim())
     ax_vel.set_xticks([
-        doppler_shift_wave(tf_wave, -1e7),
-        tf_wave,
-        doppler_shift_wave(tf_wave, +1e7)
+        doppler_shift_wave(line_wavelength, -1e7),
+        line_wavelength,
+        doppler_shift_wave(line_wavelength, +1e7)
     ])
     ax_vel.set_xticklabels([
         r"10", r"0", r"10"
@@ -417,7 +445,7 @@ def rescaled_rfs(
                 keplerian=keplerian)
 
 
-def plot_spectra_rms(spectra: List[(Table, Table)], filenames: List[str]):
+def plot_spectra_rms(spectra: List[Tuple[Table, Table]], filenames: List[str]):
     """
     Given a list of timeseries of spectra (full and continuum subtracted), produce a trailed
     spectrogram of each, plus the RMS spectra.

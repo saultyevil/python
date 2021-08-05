@@ -243,7 +243,7 @@ calc_matom_matrix (xplasma, matom_matrix)
     if (phot_top[i].macro_info == 1 && geo.macro_simple == 0)   //part of macro atom
     {
       target_level = phot_top[i].uplev;
-      Q_matrix[nlevels_macro][target_level] += Qcont = mplasma->cooling_bf[i];
+      Q_matrix[nlevels_macro][target_level] += Qcont = mplasma->cooling_bf_col[i];
       Q_norm[nlevels_macro] += Qcont;
 
     }
@@ -910,56 +910,59 @@ f_kpkt_emit_accelerate (xplasma, freq_min, freq_max)
       }
       penorm_band += eprbs_band * bf_int_inrange / bf_int_full;
     }
+  }
 
-    for (i = 0; i < nlines; i++)
+  for (i = 0; i < nlines; i++)
+  {
+    if (line[i].macro_info == 1 && geo.macro_simple == 0)       //line is for a macro atom
     {
-      if (line[i].macro_info == 1 && geo.macro_simple == 0)     //line is for a macro atom
+      eprbs = 0.0;              //these are not deactivations in this approach any more but jumps to macro atom levels
+    }
+    else                        //line is not for a macro atom - use simple method
+    {
+      penorm += eprbs = mplasma->cooling_bb[i];
+      if ((line[i].freq > freq_min) && (line[i].freq < freq_max))       // correct range
       {
-        eprbs = 0.0;            //these are not deactivations in this approach any more but jumps to macro atom levels
-      }
-      else                      //line is not for a macro atom - use simple method
-      {
-        penorm += eprbs = mplasma->cooling_bb[i];
-        if ((line[i].freq > freq_min) && (line[i].freq < freq_max))     // correct range
-        {
-          penorm_band += eprbs_band = eprbs;
-        }
+        penorm_band += eprbs_band = eprbs;
       }
     }
+  }
 
 
 
-    /* consult issues #187, #492 regarding free-free */
-    penorm += eprbs = mplasma->cooling_ff + mplasma->cooling_ff_lofreq;
+  /* consult issues #187, #492 regarding free-free */
+  penorm += eprbs = mplasma->cooling_ff + mplasma->cooling_ff_lofreq;
 
-    total_ff_lofreq = total_free (one, xplasma->t_e, 0, ff_freq_min);
-    total_ff = total_free (one, xplasma->t_e, ff_freq_min, ff_freq_max);
+  total_ff_lofreq = total_free (one, xplasma->t_e, 0, ff_freq_min);
+  total_ff = total_free (one, xplasma->t_e, ff_freq_min, ff_freq_max);
 
-    /*
-     * Do not increment penorm_band when the total free-free luminosity is zero
-     */
+  /*
+   * Do not increment penorm_band when the total free-free luminosity is zero
+   */
 
-    if (freq_min > ff_freq_min)
-    {
-      if (total_ff > 0)
-        penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff * mplasma->cooling_ff;
-    }
-    else if (freq_max > ff_freq_min)
-    {
-      if (total_ff > 0)
-        penorm_band += total_free (one, xplasma->t_e, ff_freq_min, freq_max) / total_ff * mplasma->cooling_ff;
-      if (total_ff_lofreq > 0)
-        penorm_band += total_free (one, xplasma->t_e, freq_min, ff_freq_min) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
-    }
-    else
-    {
-      if (total_ff_lofreq > 0)
-        penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
-    }
+  if (freq_min > ff_freq_min)
+  {
+    if (total_ff > 0)
+      penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff * mplasma->cooling_ff;
+  }
+  else if (freq_max > ff_freq_min)
+  {
+    if (total_ff > 0)
+      penorm_band += total_free (one, xplasma->t_e, ff_freq_min, freq_max) / total_ff * mplasma->cooling_ff;
+    if (total_ff_lofreq > 0)
+      penorm_band += total_free (one, xplasma->t_e, freq_min, ff_freq_min) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
+  }
+  else
+  {
+    if (total_ff_lofreq > 0)
+      penorm_band += total_free (one, xplasma->t_e, freq_min, freq_max) / total_ff_lofreq * mplasma->cooling_ff_lofreq;
+  }
 
-    penorm += eprbs = mplasma->cooling_adiabatic;
+  penorm += eprbs = mplasma->cooling_adiabatic;
 
-    for (i = 0; i < nphot_total; i++)
+  for (i = 0; i < nphot_total; i++)
+  {
+    if (phot_top[i].macro_info == 0 || geo.macro_simple == 1)
     {
       penorm += eprbs = mplasma->cooling_bf_col[i];
     }
