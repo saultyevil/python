@@ -1027,6 +1027,15 @@ matom_deactivation_from_matrix (xplasma, uplvl)
     j++;
   }
 
+#if (STORE_B_MATRIX == FALSE)
+  int i;
+  for(i = 0; i < nrows; ++i)
+  {
+    free(matom_matrix[i]);
+  }
+  free(matom_matrix);
+#endif
+
   /* This if statement is added to prevent case where z is essentially 0. */
   if (j > 0)
   {
