@@ -466,13 +466,14 @@ fill_kpkt_rates (xplasma, escape, p)
   /* If the kpkt destruction rates for this cell are not known they are calculated here.  This happens
    * every time the wind is updated */
 
-  if (mplasma->kpkt_rates_known != 1)
+  if (mplasma->kpkt_rates_known != TRUE)
   {
     cooling_normalisation = 0.0;
     cooling_bftot = 0.0;
     cooling_bbtot = 0.0;
     cooling_ff = 0.0;
     cooling_bf_coltot = 0.0;
+    mplasma->cooling_bb_simple_tot = 0.0;
 
     /* Start of BF calculation */
     /* JM 1503 -- we used to loop over ntop_phot here, 
@@ -558,6 +559,7 @@ fill_kpkt_rates (xplasma, escape, p)
 
         cooling_bb[i] *= rad_rate / (rad_rate + (coll_rate * xplasma->ne));
         mplasma->cooling_bb[i] = cooling_bb[i];
+        mplasma->cooling_bb_simple_tot += cooling_bb[i];
       }
 
       if (cooling_bb[i] < 0)
@@ -636,7 +638,7 @@ fill_kpkt_rates (xplasma, escape, p)
     mplasma->cooling_bf_coltot = cooling_bf_coltot;
     mplasma->cooling_adiabatic = cooling_adiabatic;
     mplasma->cooling_normalisation = cooling_normalisation;
-    mplasma->kpkt_rates_known = 1;
+    mplasma->kpkt_rates_known = TRUE;
 
   }
 
@@ -999,22 +1001,41 @@ matom_deactivation_from_matrix (xplasma, uplvl)
      int uplvl;
 {
   double z, total;
-  int j;
+  int j, i;
   int nrows = nlevels_macro + 1;
-#if (STORE_B_MATRIX == FALSE)
-  /* we aren't storing the macro-atom matrix, so we need to allocate and calculate it */
-  double **matom_matrix = (double **) calloc (sizeof (double *), nrows);
-
-  for (j = 0; j < nrows; j++)
-  {
-    matom_matrix[j] = (double *) calloc (sizeof (double), nrows);
-  }
-  calc_matom_matrix (xplasma, matom_matrix);
-#else
   double **matom_matrix;
-  Error ("No capability to store B matrix yet!\n");
-  Exit (0);
-#endif
+  MacroPtr mplasma;
+
+  mplasma = &macromain[xplasma->nplasma];
+
+  if (mplasma->matrix_rates_known == FALSE)
+  {
+    if (mplasma->store_matom_matrix == FALSE)
+    {
+      /* we aren't storing the macro-atom matrix, so we need to allocate and calculate it */
+      matom_matrix = (double **) calloc (sizeof (double *), nrows);
+      for (i = 0; i < nrows; i++)
+      {
+        matom_matrix[i] = (double *) calloc (sizeof (double), nrows);
+      }
+    }
+    else
+    {
+      matom_matrix = mplasma->matom_matrix;
+    }
+
+    calc_matom_matrix (xplasma, matom_matrix);
+
+    /* if we are storing the matrix, flag that we know the rates now */
+    if (mplasma->store_matom_matrix == TRUE)
+    {
+      mplasma->matrix_rates_known = TRUE;
+    }
+  }
+  else if (mplasma->store_matom_matrix == TRUE)
+  {
+    matom_matrix = mplasma->matom_matrix;
+  }
 
   /* Now use the B matrix to calculate the outgoing state from activating state "uplvl" */
   /* we draw a random number and sample from the column in the matrix corresponding to uplvl */
@@ -1040,6 +1061,16 @@ matom_deactivation_from_matrix (xplasma, uplvl)
   if (j > 0)
   {
     j = j - 1;
+  }
+
+  if (mplasma->store_matom_matrix == FALSE)
+  {
+    /* need to free each calloc-ed row of the matrixes */
+    for (i = 0; i < nrows; i++)
+    {
+      free (matom_matrix[i]);
+    }
+    free (matom_matrix);
   }
 
   return (j);

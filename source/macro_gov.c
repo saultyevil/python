@@ -67,6 +67,14 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
   int n_jump = 0;
   int n_jump_tot = 0;
   int n_loop = 0;
+  int new_uplvl, uplvl;
+  PlasmaPtr xplasma;
+  MacroPtr mplasma;
+  WindPtr one;
+
+  one = &wmain[p->grid];
+  xplasma = &plasmamain[one->nplasma];
+  mplasma = &macromain[one->nplasma];
 
   /* before we do anything else we look to see if we are exciting 
      simple/fake two-level ions */
@@ -133,157 +141,155 @@ macro_gov (p, nres, matom_or_kpkt, which_out)
     escape = FALSE;
   }
 
-#if (MATOM_TRANSITION_MODE == MATRIX)
-  PlasmaPtr xplasma;
-  WindPtr one;
-  one = &wmain[p->grid];
-  int new_uplvl, uplvl;
-
-  xplasma = &plasmamain[one->nplasma];
-
-  if (matom_or_kpkt == MATOM)
+  if (mplasma->matom_transition_mode == MATOM_MATRIX)
   {
-    uplvl = 0;
-    if (*nres < NLINES)
+    if (matom_or_kpkt == MATOM)
     {
-      uplvl = lin_ptr[*nres]->nconfigu;
-    }
-    else if (*nres > NLINES)
-    {
-      uplvl = phot_top[*nres - NLINES - 1].uplev;
+      uplvl = 0;
+      if (*nres < NLINES)
+      {
+        uplvl = lin_ptr[*nres]->nconfigu;
+      }
+      else if (*nres > NLINES)
+      {
+        uplvl = phot_top[*nres - NLINES - 1].uplev;
+      }
+      else
+      {
+        Error ("matom: upper level not identified. nres = %d in photon %d of cycle %d/%d in thread %d\n",
+               *nres, p->np, geo.wcycle, geo.pcycle, rank_global);
+        escape = TRUE;
+        p->istat = P_ERROR_MATOM;
+        return (-1);
+      }
     }
     else
     {
-      Error ("matom: upper level not identified. nres = %d in photon %d of cycle %d/%d in thread %d\n",
-             *nres, p->np, geo.wcycle, geo.pcycle, rank_global);
-      escape = TRUE;
-      p->istat = P_ERROR_MATOM;
-      return (-1);
+      uplvl = nlevels_macro;
     }
-  }
-  else
-  {
-    uplvl = nlevels_macro;
+
+    new_uplvl = matom_deactivation_from_matrix (xplasma, uplvl);
+
+    if (new_uplvl == nlevels_macro)
+    {
+      /* XMACRO improve this so that kpkt only deals with k->r in certain modes */
+      kpkt (p, nres, &escape, KPKT_MODE_CONT_PLUS_ADIABATIC);
+
+      *which_out = KPKT;
+    }
+    /* XMACRO -- what do we do about frequency boundaries here? */
+    /* XMACRO -- change wmain to be one? */
+    else
+    {
+      emit_matom (wmain, p, nres, new_uplvl, 0, VERY_BIG);
+      *which_out = MATOM;
+    }
+
+    if (p->origin < 10)
+      p->origin += 10;
+
+    escape = TRUE;
+    return (0);
+
   }
 
-  new_uplvl = matom_deactivation_from_matrix (xplasma, uplvl);
-
-  if (new_uplvl == nlevels_macro)
+  /* using the old MATOM_MC_JUMPS scheme */
+  else if (mplasma->matom_transition_mode == MATOM_MC_JUMPS)
   {
-    /* XMACRO improve this so that kpkt only deals with k->r in certain modes */
+    /* Beginning of the main loop for processing a macro-atom */
     while (escape == FALSE)
     {
-      kpkt (p, nres, &escape, KPKT_MODE_ALL);
+      if (matom_or_kpkt == MATOM)       //excite a macro atom 
+      {
+
+        /* if it's a bb transition of a full macro atom  */
+        if (*nres > (-1) && *nres < NLINES && geo.macro_simple == FALSE && lin_ptr[*nres]->macro_info == TRUE)
+        {
+          n_jump = matom (p, nres, &escape);
+
+          if (escape == TRUE)
+          {
+            /* It escapes as a r-packet that was created by de-activation of a macro atom.
+             */
+            *which_out = MATOM;
+
+            /* Update the the photon origin to indicate the packet has been processed
+               by a macro atom */
+            if (p->origin < 10)
+              p->origin += 10;
+            return (0);
+          }
+        }
+
+        /* if it's bf transition of a full macro atom. */
+        else if (*nres > NLINES && phot_top[*nres - NLINES - 1].macro_info == TRUE && geo.macro_simple == FALSE)
+        {
+          n_jump = matom (p, nres, &escape);
+
+          if (escape == TRUE)
+          {
+            /* It  escapes as a r-packet that was created by de-activation of a macro atom.
+             */
+            *which_out = MATOM;
+            /* Update the the photon origin to indicate the packet has been processed
+               by a macro atom */
+            if (p->origin < 10)
+              p->origin += 10;
+
+            //If reverb is on, and this is the last ionisation cycle, then track the photon path
+            if (geo.reverb == REV_MATOM && geo.ioniz_or_extract == CYCLE_IONIZ && geo.fraction_converged > geo.reverb_fraction_converged)
+            {
+              line_paths_add_phot (&(wmain[p->grid]), p, nres);
+            }
+
+            return (0);
+          }
+        }
+
+        /* If it did not escape then it must have had a
+           de-activation by collision processes, and so we label it a kpkt.  
+         */
+
+        matom_or_kpkt = KPKT;
+      }
+
+
+      /* This the end of the section of the loop that deals with matom excitations. next domes the
+         section of the loop that deals with kpts */
+      else if (matom_or_kpkt == KPKT)
+      {
+        kpkt (p, nres, &escape, KPKT_MODE_ALL); // 1 implies include the possibility of deactivation due to non-thermal processes
+
+        /* if it did not escape then the k-packet must have been
+           destroyed by collisionally exciting a macro atom so...
+         */
+        matom_or_kpkt = MATOM;
+      }
+      else
+      {
+        Error ("macro_gov: Unknown choice for next action. Abort.\n");
+        Exit (0);
+      }
+
+
+      /*XXXX test */
+      if (n_jump > -1)
+      {
+        //XXXX This is a test that fails many times for the agn_macro model.  Just set to n_mump it is the same as in matom
+        n_jump_tot += n_jump;
+        if (n_jump > MAXJUMPS)
+        {
+          Error ("macro_gov: Exceed MAXJUMPS (last %d tot %d) in n_loops %d for phot %d in cell %d\n", n_jump, n_jump_tot, n_loop, p->np,
+                 p->grid);
+          escape = TRUE;
+          p->istat = P_ERROR_MATOM;
+        }
+      }
+      n_loop++;
     }
 
     *which_out = KPKT;
   }
-  /* XMACRO -- what do we do about frequency boundaries here? */
-  /* XMACRO -- change wmain to be one? */
-  else
-  {
-    emit_matom (wmain, p, nres, new_uplvl, 0, VERY_BIG);
-    *which_out = MATOM;
-  }
-
-  escape = TRUE;
-  return (0);
-
-#else
-  /* Beginning of the main loop for processing a macro-atom */
-  while (escape == FALSE)
-  {
-    if (matom_or_kpkt == MATOM) //excite a macro atom 
-    {
-
-      /* if it's a bb transition of a full macro atom  */
-      if (*nres > (-1) && *nres < NLINES && geo.macro_simple == FALSE && lin_ptr[*nres]->macro_info == TRUE)
-      {
-        n_jump = matom (p, nres, &escape);
-
-        if (escape == TRUE)
-        {
-          /* It escapes as a r-packet that was created by de-activation of a macro atom.
-           */
-          *which_out = MATOM;
-
-          /* Update the the photon origin to indicate the packet has been processed
-             by a macro atom */
-          if (p->origin < 10)
-            p->origin += 10;
-          return (0);
-        }
-      }
-
-      /* if it's bf transition of a full macro atom. */
-      else if (*nres > NLINES && phot_top[*nres - NLINES - 1].macro_info == TRUE && geo.macro_simple == FALSE)
-      {
-        n_jump = matom (p, nres, &escape);
-
-        if (escape == TRUE)
-        {
-          /* It  escapes as a r-packet that was created by de-activation of a macro atom.
-           */
-          *which_out = MATOM;
-          /* Update the the photon origin to indicate the packet has been processed
-             by a macro atom */
-          if (p->origin < 10)
-            p->origin += 10;
-
-          //If reverb is on, and this is the last ionisation cycle, then track the photon path
-          if (geo.reverb == REV_MATOM && geo.ioniz_or_extract == CYCLE_IONIZ && geo.fraction_converged > geo.reverb_fraction_converged)
-          {
-            line_paths_add_phot (&(wmain[p->grid]), p, nres);
-          }
-
-          return (0);
-        }
-      }
-
-      /* If it did not escape then it must have had a
-         de-activation by collision processes, and so we label it a kpkt.  
-       */
-
-      matom_or_kpkt = KPKT;
-    }
-
-
-    /* This the end of the section of the loop that deals with matom excitations. next domes the
-       section of the loop that deals with kpts */
-    else if (matom_or_kpkt == KPKT)
-    {
-      kpkt (p, nres, &escape, KPKT_MODE_ALL);   // 1 implies include the possibility of deactivation due to non-thermal processes
-
-      /* if it did not escape then the k-packet must have been
-         destroyed by collisionally exciting a macro atom so...
-       */
-      matom_or_kpkt = MATOM;
-    }
-    else
-    {
-      Error ("macro_gov: Unknown choice for next action. Abort.\n");
-      Exit (0);
-    }
-
-
-    /*XXXX test */
-    if (n_jump > -1)
-    {
-      //XXXX This is a test that fails many times for the agn_macro model.  Just set to n_mump it is the same as in matom
-      n_jump_tot += n_jump;
-      if (n_jump > MAXJUMPS)
-      {
-        Error ("macro_gov: Exceed MAXJUMPS (last %d tot %d) in n_loops %d for phot %d in cell %d\n", n_jump, n_jump_tot, n_loop, p->np,
-               p->grid);
-        escape = TRUE;
-        p->istat = P_ERROR_MATOM;
-      }
-    }
-    n_loop++;
-  }
-
-  *which_out = KPKT;
-#endif
 
   /* End of main matom processing loop that began with while (escape==FALSE)
 

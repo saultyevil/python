@@ -530,6 +530,7 @@ calloc_estimators (nelem)
     Log
       ("Allocated %10.1f Mb for MA estimators \n",
        1.e-6 * (nelem + 1) * (2. * nlevels_macro + 2. * size_alpha_est + 8. * size_gamma_est + 2. * size_Jbar_est) * sizeof (double));
+
   }
   else
   {
@@ -671,5 +672,65 @@ calloc_dyn_plasma (nelem)
     ("Allocated %10d bytes for each of %5d elements variable length plasma arrays totaling %10.1f Mb \n",
      sizeof (double) * nions * 14, (nelem + 1), 1.e-6 * (nelem + 1) * sizeof (double) * (nions * 14 + nlte_levels + nphot_total * 2));
 
+  return (0);
+}
+
+
+
+/**********************************************************/
+/** 
+ * @brief      Dynamically allocate the macro-atom matrixes
+ *
+ * @param [in] int  nelem   The number of elements in macromain
+ * @return     Returns 0, unless the desired memory cannot be 
+ * allocated in which the routine exits after an error message
+ *
+ * @details
+ *
+ * ### Notes ###
+ *
+ **********************************************************/
+
+int
+calloc_matom_matrix (nelem)
+     int nelem;
+{
+  int nrows = nlevels_macro + 1;
+  int j, n;
+  n = j = 0;
+  int nmatrices_allocated = 0;
+  if (nlevels_macro == 0 && geo.nmacro == 0)
+  {
+    geo.nmacro = 0;
+    Log_silent ("Allocated no space for MA matrix since nlevels_macro==0 and geo.nmacro==0\n");
+    return (0);
+  }
+
+  for (n = 0; n < nelem; n++)
+  {
+    if (macromain[n].store_matom_matrix == TRUE)
+    {
+      /* allocate space for the macro-atom matrix */
+      if ((macromain[n].matom_matrix = calloc (sizeof (double *), nrows)) == NULL)
+      {
+        Error ("calloc_estimators: Error in allocating memory for MA matrix\n");
+        Exit (0);
+      }
+      for (j = 0; j < nrows; j++)
+      {
+        if ((macromain[n].matom_matrix[j] = calloc (sizeof (double), nrows)) == NULL)
+        {
+          Error ("calloc_estimators: Error in allocating memory for MA matrix entry %d\n", j);
+          Exit (0);
+        }
+      }
+      nmatrices_allocated += 1;
+    }
+  }
+
+  if (nlevels_macro > 0 && nmatrices_allocated > 0)
+  {
+    Log ("Allocated %10.4f Mb for MA matrix \n", 1.e-6 * (nmatrices_allocated + 1) * (nrows * nrows) * sizeof (double));
+  }
   return (0);
 }

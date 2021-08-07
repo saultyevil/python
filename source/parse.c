@@ -167,6 +167,25 @@ parse_command_line (argc, argv)
         Log ("Using only old approach with linear Doppler shifts, etc. and not considering co-moving frame effects.\n");
         j = i;
       }
+      else if (strcmp (argv[i], "-no-matrix-storage") == 0)
+      {
+        modes.store_matom_matrix = FALSE;
+        Log ("Not storing the macro-atom matrix (on-the-fly method) if Matom.ransition_mode is matrix.\n");
+        j = i;
+      }
+
+      else if (strcmp (argv[i], "--version") == 0)
+      {
+        /* give information about the pyhon version, such as commit hash */
+        Log ("Python Version %s \n", VERSION);  //54f -- ksl -- Now read from version.h
+        Log ("Built from git commit hash %s\n", GIT_COMMIT_HASH);
+        /* warn the user if there are uncommited changes */
+        int git_diff_status = GIT_DIFF_STATUS;
+        if (git_diff_status > 0)
+          Log ("This version was compiled with %i files with uncommitted changes.\n", git_diff_status);
+        exit (1);
+      }
+
       else if (strcmp (argv[i], "-xtest") == 0)
       {
         run_xtest = TRUE;

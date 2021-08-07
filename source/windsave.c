@@ -274,6 +274,7 @@ wind_read (filename)
     calloc_macro (NPLASMA);
     n += fread (macromain, sizeof (macro_dummy), NPLASMA, fptr);
     calloc_estimators (NPLASMA);
+    calloc_matom_matrix (NPLASMA);
 
     for (m = 0; m < NPLASMA; m++)
     {
@@ -292,9 +293,12 @@ wind_read (filename)
       n += fread (macromain[m].matom_emiss, sizeof (double), nlevels_macro, fptr);
       n += fread (macromain[m].matom_abs, sizeof (double), nlevels_macro, fptr);
 
-      /* Force recalculation of kpkt_rates */
+      /* XMACRO need to read in matom_matrix here? */
 
-      macromain[m].kpkt_rates_known = 0;
+      /* Force recalculation of kpkt_rates and matrix rates */
+
+      macromain[m].kpkt_rates_known = FALSE;
+      macromain[m].matrix_rates_known = FALSE;
     }
 
   }

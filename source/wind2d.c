@@ -309,6 +309,15 @@ define_wind ()
   {
     calloc_macro (NPLASMA);
     calloc_estimators (NPLASMA);
+
+    /* at present the mode is stored per cell, but set to a global value.
+       this allows for a flexible scheme in future */
+    for (n = 0; n < NPLASMA; n++)
+    {
+      macromain[n].store_matom_matrix = modes.store_matom_matrix;
+      macromain[n].matom_transition_mode = geo.matom_transition_mode;
+    }
+    calloc_matom_matrix (NPLASMA);
   }
 
 

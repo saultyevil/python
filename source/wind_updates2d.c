@@ -180,8 +180,11 @@ WindPtr (w);
 
     if (geo.rt_mode == RT_MODE_MACRO && geo.macro_simple == FALSE)      //test for macro atoms
     {
-      normalise_macro_estimators(nwind);
-      macromain[n].kpkt_rates_known = -1;
+      normalise_macro_estimators (nwind);
+
+      /* force recalculation of kpacket rates and matrices, if applicable */
+      macromain[n].kpkt_rates_known = FALSE;
+      macromain[n].matrix_rates_known = FALSE;
     }
 
     /* Store some information so one can determine how much the temps are changing */
@@ -1133,7 +1136,10 @@ wind_rad_init ()
 
 
     if (geo.rt_mode == RT_MODE_MACRO)
-      macromain[n].kpkt_rates_known = -1;
+    {
+      macromain[n].kpkt_rates_known = FALSE;
+      macromain[n].matrix_rates_known = FALSE;
+    }
 
 /* Initialise  the frequency banded radiation estimators used for estimating the coarse spectra in each cell*/
 

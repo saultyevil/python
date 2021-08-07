@@ -464,12 +464,13 @@ make_spectra (restart_stat)
 
   kbf_need (freqmin, freqmax);
 
-  /* force recalculation of kpacket rates */
+  /* force recalculation of kpacket rates and matrices, if applicable */
   if (geo.rt_mode == RT_MODE_MACRO)
   {
     for (n = 0; n < NPLASMA; n++)
     {
-      macromain[n].kpkt_rates_known = -1;
+      macromain[n].kpkt_rates_known = FALSE;
+      macromain[n].matrix_rates_known = FALSE;
     }
   }
 

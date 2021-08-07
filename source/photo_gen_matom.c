@@ -199,7 +199,7 @@ photo_gen_kpkt (p, weight, photstart, nphot)
 
       if (esc_ptr == 0 && kpkt_mode == KPKT_MODE_CONTINUUM)
       {
-        test = 0.0;
+        Error ("Didn't escape from kpkt despite being in continuum mode\n");
       }
       else
       {

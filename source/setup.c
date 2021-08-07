@@ -105,6 +105,7 @@ init_geo ()
 
   geo.ioniz_mode = IONMODE_ML93;        /* default is on the spot and find the best t */
   geo.line_mode = LINE_MODE_ESC_PROB;   /* default is escape probabilites */
+  geo.matom_transition_mode = MATOM_MC_JUMPS;   /* default for macro-atom transition mode is jumping not matrix */
 
   geo.star_radiation = TRUE;    /* 1 implies star will radiate */
   geo.disk_radiation = TRUE;    /* 1 implies disk will radiate */
@@ -317,6 +318,8 @@ init_advanced_modes ()
 
 
   modes.keep_photoabs = 1;      // keep photoabsorption in final spectrum
+
+  modes.store_matom_matrix = TRUE;      /* default is to store the macro-atom matrix */
 
   return (0);
 }
