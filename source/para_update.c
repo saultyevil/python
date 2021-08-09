@@ -702,3 +702,131 @@ communicate_matom_estimators_para ()
 
   return (0);
 }
+
+/**********************************************************/
+/**
+ * @brief helper routine for splitting up tasks in MPI
+ * @param   [in]      int   rank       processor rank (typically set from rank_global)
+ * @param   [in]      int   ntotal     total number of tasks, e.g. NPLASMA
+ * @param   [in]       int   nproc      total number of MPI processors
+ * @param   [in,out]  int   *my_nmax   pointer to integer value of first task
+ * @param   [in,out]  int   *my_nmax   pointer to integer value of final task
+ * @return            int   ndo        number of tasks this thread is working on 
+
+ * @detailsFor a process with ntotal tasks, 
+ * this routine calculates which thread will be given each task.
+ * typically ntotal is NPLASMA and the thread is splitting up wind cells.
+ * The routine deals with remainders by distributing the remainder over the 
+ * threads if the cells do not divide evenly by thread
+ **********************************************************/
+
+int
+get_parallel_nrange (rank, ntotal, nproc, my_nmin, my_nmax)
+     int rank;
+     int ntotal;
+     int nproc;
+     int *my_nmin;
+     int *my_nmax;
+{
+  /* divide the cells between the threads */
+  int ndo;
+  int num_mpi_cells = floor (ntotal / nproc);
+
+  /* the remainder from the above division */
+  int num_mpi_extra = ntotal - (nproc * num_mpi_cells);
+
+  /* this section distributes the remainder over the threads if the cells
+     do not divide evenly by thread */
+  if (rank < num_mpi_extra)
+  {
+    *my_nmin = rank_global * (num_mpi_cells + 1);
+    *my_nmax = (rank_global + 1) * (num_mpi_cells + 1);
+  }
+  else
+  {
+    *my_nmin = num_mpi_extra * (num_mpi_cells + 1) + (rank - num_mpi_extra) * (num_mpi_cells);
+    *my_nmax = num_mpi_extra * (num_mpi_cells + 1) + (rank - num_mpi_extra + 1) * (num_mpi_cells);
+  }
+  ndo = *my_nmax - *my_nmin;
+
+  return ndo;
+}
+
+
+/**********************************************************/
+/**
+ * @brief communicates the macro-atom B matrices between threads
+ *
+ *
+ * @details communicates the macro-atom B matrices between threads 
+ * using MPI_Reduce. Only does anything if MPI_ON flag is on, 
+ * and should only be called if geo.rt_mode == RT_MODE_MACRO 
+ * and nlevels_macro > 0
+ *
+ **********************************************************/
+
+int
+communicate_matom_matrices ()
+{
+#ifdef MPI_ON
+  int size_of_commbuffer, nrows, n_mpi, n_mpi2, num_comm;
+  int my_nmax, my_nmin, ndo, n, position, i;
+  char *commbuffer;
+  ndo = get_parallel_nrange (rank_global, NPLASMA, np_mpi_global, &my_nmin, &my_nmax);
+  Log_parallel ("communicate_matom_matrices: communicting matom matrices.", rank_global, my_nmin, my_nmax);
+
+  nrows = nlevels_macro + 1;
+  size_of_commbuffer = 8 * ((nrows * nrows) + 2) * (floor (NPLASMA / np_mpi_global) + 1);
+  commbuffer = (char *) malloc (size_of_commbuffer * sizeof (char));
+
+  for (n_mpi = 0; n_mpi < np_mpi_global; n_mpi++)
+  {
+    position = 0;
+
+    if (rank_global == n_mpi)
+    {
+      MPI_Pack (&ndo, 1, MPI_INT, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+      for (n = my_nmin; n < my_nmax; n++)
+      {
+        MPI_Pack (&n, 1, MPI_INT, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+
+        /* we only communicate the matrix if it is being stored in this cell */
+        if (macromain[n].store_matom_matrix == TRUE)
+        {
+          for (i = 0; i < nrows; i++)
+          {
+            MPI_Pack (macromain[n].matom_matrix[i], nrows, MPI_DOUBLE, commbuffer, size_of_commbuffer, &position, MPI_COMM_WORLD);
+          }
+        }
+      }
+    }
+    MPI_Barrier (MPI_COMM_WORLD);
+    MPI_Bcast (commbuffer, size_of_commbuffer, MPI_PACKED, n_mpi, MPI_COMM_WORLD);
+    MPI_Barrier (MPI_COMM_WORLD);
+    Log_silent ("communicate_matom_matrices: MPI task %d survived broadcasting matom_matrix update information.\n", rank_global);
+
+    position = 0;
+
+    if (rank_global != n_mpi)
+    {
+      MPI_Unpack (commbuffer, size_of_commbuffer, &position, &num_comm, 1, MPI_INT, MPI_COMM_WORLD);
+      for (n_mpi2 = 0; n_mpi2 < num_comm; n_mpi2++)
+      {
+        MPI_Unpack (commbuffer, size_of_commbuffer, &position, &n, 1, MPI_INT, MPI_COMM_WORLD);
+
+        /* we only communicate the matrix if it is being stored in this cell */
+        if (macromain[n].store_matom_matrix == TRUE)
+        {
+          for (i = 0; i < nrows; i++)
+          {
+            MPI_Unpack (commbuffer, size_of_commbuffer, &position, macromain[n].matom_matrix[i], nrows, MPI_DOUBLE, MPI_COMM_WORLD);
+          }
+        }
+      }
+    }
+  }
+
+  free (commbuffer);
+#endif
+  return (0);
+}

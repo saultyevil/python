@@ -1075,3 +1075,60 @@ matom_deactivation_from_matrix (xplasma, uplvl)
 
   return (j);
 }
+
+/**********************************************************/
+/**
+ * @brief calculate all the macro-atom matrices in advance 
+ * @return  0
+ * 
+ * @details calculate all the macro-atom B matrices in advance 
+ * of the ionization cycles, and communicate them between 
+ * parallel threads if necessary. Populates matom_matrix in 
+ * macromain.
+ **********************************************************/
+
+int
+calc_all_matom_matrices ()
+{
+  int ndo, my_nmin, my_nmax, n;
+  struct timeval timer_t0;
+  char message[LINELENGTH];
+  MacroPtr mplasma;
+  PlasmaPtr xplasma;
+#ifdef MPI_ON
+  ndo = get_parallel_nrange (rank_global, NPLASMA, np_mpi_global, &my_nmin, &my_nmax);
+  Log_parallel ("calc_all_matom_matrices: thread %d calculating matrix for cells %d to %d %d \n", rank_global, my_nmin, my_nmax, ndo);
+#else
+  my_nmin = 0;
+  my_nmax = NPLASMA;
+  ndo = NPLASMA;
+#endif
+
+  timer_t0 = init_timer_t0 ();
+
+  for (n = my_nmin; n < my_nmax; n++)
+  {
+    xplasma = &plasmamain[n];
+    mplasma = &macromain[n];
+
+    if (mplasma->store_matom_matrix == TRUE)
+    {
+      calc_matom_matrix (xplasma, mplasma->matom_matrix);
+    }
+  }
+
+  /* print the time taken for this thread to complete */
+  sprintf (message, "calc_all_matom_matrices: thread %d calculated %d matrices in", rank_global, ndo);
+  print_timer_duration (message, timer_t0);
+
+  /* this deals with communicating the matrices between threads (does nothing in serial mode) */
+  communicate_matom_matrices ();
+
+  /* flag the matrix rates as known */
+  for (n = 0; n < NPLASMA; n++)
+  {
+    macromain[n].matrix_rates_known = TRUE;
+  }
+
+  return (0);
+}

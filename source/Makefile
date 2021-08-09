@@ -240,7 +240,7 @@ D:
 	@echo 'Debugging Mode'
 
 py_wind_objects = py_wind.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
-		emission.o recomb.o wind_util.o  \
+		emission.o recomb.o wind_util.o para_update.o \
 		cdf.o random.o recipes.o saha.o \
 		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
 		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
@@ -267,7 +267,7 @@ py_wind: startup $(py_wind_objects)
 
 table_objects = windsave2table.o windsave2table_sub.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
 		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o \
+		cdf.o random.o recipes.o saha.o para_update.o\
 		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
 		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
 		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o spectra.o density.o \
@@ -282,7 +282,7 @@ table_objects = windsave2table.o windsave2table_sub.o atomicdata.o atomicdata_in
 
 rhf_objects = rad_hydro_files.o atomicdata.o atomicdata_init.o atomicdata_sub.o py_wind_sub.o windsave.o py_wind_ion.o \
 		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o \
+		cdf.o random.o recipes.o saha.o para_update.o\
 		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
 		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
 		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o spectra.o density.o \
@@ -317,7 +317,7 @@ rad_hydro_files: $(rhf_objects)
 
 modify_wind_objects = modify_wind.o windsave.o  windsave2table_sub.o\
 		emission.o recomb.o wind_util.o  \
-		cdf.o random.o recipes.o saha.o \
+		cdf.o random.o recipes.o saha.o para_update.o\
 		stellar_wind.o homologous.o sv.o hydro_import.o corona.o knigge.o  disk.o\
 		lines.o vvector.o wind2d.o wind.o  ionization.o  py_wind_write.o levels.o \
 		radiation.o estimators_simple.o gradv.o phot_util.o anisowind.o resonate.o density.o \

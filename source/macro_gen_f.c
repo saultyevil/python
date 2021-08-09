@@ -65,7 +65,7 @@ get_matom_f (mode)
   else                          // we need to compute the emissivities
   {
 #ifdef MPI_ON
-    int num_mpi_cells, num_mpi_extra, position, ndo, n_mpi, num_comm, n_mpi2;
+    int position, ndo, n_mpi, num_comm, n_mpi2;
     int size_of_commbuffer;
     char *commbuffer;
 
@@ -125,22 +125,7 @@ get_matom_f (mode)
 
 #ifdef MPI_ON
 
-    num_mpi_cells = floor (NPLASMA / np_mpi_global);    // divide the cells between the threads
-    num_mpi_extra = NPLASMA - (np_mpi_global * num_mpi_cells);  // the remainder from the above division
-
-    /* this next loop splits the cells up between the threads. All threads with 
-       rank_global<num_mpi_extra deal with one extra cell to account for the remainder */
-    if (rank_global < num_mpi_extra)
-    {
-      my_nmin = rank_global * (num_mpi_cells + 1);
-      my_nmax = (rank_global + 1) * (num_mpi_cells + 1);
-    }
-    else
-    {
-      my_nmin = num_mpi_extra * (num_mpi_cells + 1) + (rank_global - num_mpi_extra) * (num_mpi_cells);
-      my_nmax = num_mpi_extra * (num_mpi_cells + 1) + (rank_global - num_mpi_extra + 1) * (num_mpi_cells);
-    }
-    ndo = my_nmax - my_nmin;
+    ndo = get_parallel_nrange (rank_global, NPLASMA, np_mpi_global, &my_nmin, &my_nmax);
 
     Log_parallel ("Thread %d is calculating macro atom emissivities for macro atoms %d to %d\n", rank_global, my_nmin, my_nmax);
 
@@ -492,7 +477,7 @@ get_matom_f_accelerate (mode)
   else                          // we need to compute the emissivities
   {
 #ifdef MPI_ON
-    int num_mpi_cells, num_mpi_extra, position, ndo, n_mpi, num_comm, n_mpi2;
+    int position, ndo, n_mpi, num_comm, n_mpi2;
     int size_of_commbuffer;
     char *commbuffer;
 
@@ -555,22 +540,7 @@ get_matom_f_accelerate (mode)
 
 #ifdef MPI_ON
 
-    num_mpi_cells = floor (NPLASMA / np_mpi_global);    // divide the cells between the threads
-    num_mpi_extra = NPLASMA - (np_mpi_global * num_mpi_cells);  // the remainder from the above division
-
-    /* this next loop splits the cells up between the threads. All threads with 
-       rank_global<num_mpi_extra deal with one extra cell to account for the remainder */
-    if (rank_global < num_mpi_extra)
-    {
-      my_nmin = rank_global * (num_mpi_cells + 1);
-      my_nmax = (rank_global + 1) * (num_mpi_cells + 1);
-    }
-    else
-    {
-      my_nmin = num_mpi_extra * (num_mpi_cells + 1) + (rank_global - num_mpi_extra) * (num_mpi_cells);
-      my_nmax = num_mpi_extra * (num_mpi_cells + 1) + (rank_global - num_mpi_extra + 1) * (num_mpi_cells);
-    }
-    ndo = my_nmax - my_nmin;
+    ndo = get_parallel_nrange (rank_global, NPLASMA, np_mpi_global, &my_nmin, &my_nmax);
 
     Log_parallel ("Thread %d is calculating macro atom emissivities for macro atoms %d to %d\n", rank_global, my_nmin, my_nmax);
 
