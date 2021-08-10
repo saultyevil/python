@@ -1267,7 +1267,7 @@ emit_matom (w, p, nres, upper, freq_min, freq_max)
 
 
   double xfreq;
-  xfreq = 0;
+  xfreq = -1; /* need to be below 0 to allow for case when freq_min = 0 */
   while (xfreq < freq_min || xfreq > freq_max)
   {
     threshold = random_number (0.0, 1.0);
