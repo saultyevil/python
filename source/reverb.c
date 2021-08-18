@@ -23,7 +23,7 @@ PhotPtr delay_dump_bank;
 
 
 /**********************************************************/
-/** 
+/**
  * @brief	Calculates the delay to the observer plane
  *
  * @param [in] pp			Pointer to test photon
@@ -50,7 +50,7 @@ delay_to_observer (PhotPtr pp)
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief	Prepares delay dump output file
  *
  * @param [in] filename		File root for run
@@ -90,25 +90,25 @@ delay_dump_prep (int restart_stat)
   for (i = 0; i < delay_dump_bank_size; i++)
     delay_dump_spec[i] = 0;
 
-  if (restart_stat == TRUE)
-  {                             //Check whether the output file already has a header
+  if (restart_stat == 1)
+  {                             //TODO: Check whether the output file already has a header
     Log ("delay_dump_prep: Resume run, skipping writeout\n");
     return (0);
   }
-
 
   if ((fptr = fopen (delay_dump_file, "w")) != NULL)
   {                             //If this isn't a continue run, prep the output file
     if (rank_global > 0)
     {
-      fprintf (fptr, "# Delay dump file for slave process %d\n", rank_global);
+      fprintf (fptr, "# Delay dump file for slave process %d of %d\n", rank_global, np_mpi_global);
     }
     else
     {                           // Construct and write a header string for the output file
       fprintf (fptr, "# Python Version %s\n", VERSION);
       get_time (s_time);
-      fprintf (fptr, "# Date	%s\n#  \n", s_time);
-      fprintf (fptr, "# \n#    Freq.     Lambda     Weight      Last X      Last Y      Last Z Scat. RScat      Delay Spec. Orig.  Res.\n");
+      fprintf (fptr, "# Date	%s\n# %d MPI processes\n", s_time, np_mpi_global);
+      fprintf (fptr, "#\n# %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s %-12s\n", "Np", "Freq.", "Lambda",
+        "Weight", "LastX", "LastY", "LastZ", "Scat.", "RScat.", "Delay", "Spec.", "Orig.", "Res.", "LineRes.");
     }
     fclose (fptr);
     Log ("delay_dump_prep: Thread %d successfully prepared file '%s' for writing\n", rank_global, delay_dump_file);
@@ -116,13 +116,13 @@ delay_dump_prep (int restart_stat)
   else
   {
     Error ("delay_dump_prep: Thread %d failed to open file '%s' due to error %d: %s\n", rank_global, delay_dump_file, errno,
-           strerror (errno));
+      strerror (errno));
   }
   return (0);
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief	Finishes dumping tracked photons to file
  *
  * @return 					0
@@ -146,13 +146,13 @@ delay_dump_finish (void)
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief	Prepares delay dump output file
  *
  * @param [in] i_ranks		Number of parallel processes
  * @return 					0
  *
- * Collects all the delay dump files together at the end. 
+ * Collects all the delay dump files together at the end.
  * Called by the master thread. Uses 'cat' for simplicity.
  *
  * ###Notes###
@@ -164,19 +164,19 @@ delay_dump_combine (int i_ranks)
   FILE *fopen ();               //, *f_base, *f_cat;
   char c_call[LINELENGTH];      //, c_cat[LINELENGTH], c_char;
   //int i;
-/*
-	f_base = fopen(delay_dump_file, 'a');
-	for(i=1;i<iRanks;i++)
-	{
-		sprintf(c_cat, "%s%d", c_cat, i);
-		if((f_cat = fopen(c_cat, 'r')) == NULL)
-			Error("delay_dump_combine: Missing file %s%d", c_cat,i);
-		else
-			while((c_char = fgetc(f_cat)) != EOF) fputc(c_char, f_base);
-		fclose(f_cat);
-	}
-	fclose(f_base);
-*/
+  /*
+    f_base = fopen(delay_dump_file, 'a');
+    for(i=1;i<iRanks;i++)
+    {
+      sprintf(c_cat, "%s%d", c_cat, i);
+      if((f_cat = fopen(c_cat, 'r')) == NULL)
+        Error("delay_dump_combine: Missing file %s%d", c_cat,i);
+      else
+        while((c_char = fgetc(f_cat)) != EOF) fputc(c_char, f_base);
+      fclose(f_cat);
+    }
+    fclose(f_base);
+  */
   //Yes this is done as a system call and won 't work on Windows machines. Lazy solution!
   sprintf (c_call, "cat %s[0-9]* >> %s", delay_dump_file, delay_dump_file);
   if (system (c_call) < 0)
@@ -195,7 +195,7 @@ delay_dump_combine (int i_ranks)
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief	Dumps tracked photons to file
  *
  * @param [in] np			Pointer to photon array tp dump
@@ -205,7 +205,7 @@ delay_dump_combine (int i_ranks)
  *
  * Sifts through the photons in the delay_dump file, checking
  * if they've scattered or were generated in the wind and so
- * contribute to the delay map. Uses the same filters as 
+ * contribute to the delay map. Uses the same filters as
  * the spectra_create() function for scatters & angles.
  *
  * ###Notes###
@@ -241,19 +241,17 @@ delay_dump (PhotPtr p, int np)
      * more scatters
      */
     i = delay_dump_spec[nphot];
-    if (((mscat = xxspec[i].nscat) > MAXSCAT ||
-         p[nphot].nscat == mscat ||
-         (mscat < 0 && p[nphot].nscat >= (-mscat))) && ((mtopbot = xxspec[i].top_bot) == 0 || (mtopbot * p[nphot].x[2]) > 0))
+    // if (((mscat = xxspec[i].nscat) > 999 ||
+    //      p[nphot].nscat == mscat ||
+    //      (mscat < 0 && p[nphot].nscat >= (-mscat))) && ((mtopbot = xxspec[i].top_bot) == 0 || (mtopbot * p[nphot].x[2]) > 0))
     {
       delay = (delay_to_observer (&p[nphot]) - geo.rmax) / VLIGHT;
       if (delay < 0)
         subzero++;
 
-      fprintf (fptr,
-               "%10.5g %12.7g %10.5g %+10.5g %+10.5g %+10.5g %3d     %3d     %10.5g %5d %5d %5d\n",
-               p[nphot].freq, VLIGHT * 1e8 / p[nphot].freq, p[nphot].w,
-               p[nphot].x[0], p[nphot].x[1], p[nphot].x[2],
-               p[nphot].nscat, p[nphot].nrscat, delay, i - MSPEC, p[nphot].origin, p[nphot].nres);
+      fprintf (fptr, "%-12d %-12.5g %-12.7g %-12.5g %-12.5g %-12.5g %-12.5g %-12d %-12d %-12.5g %-12d %-12d %-12d %-12d\n",
+        p[nphot].np, p[nphot].freq, VLIGHT * 1e8 / p[nphot].freq, p[nphot].w, p[nphot].x[0], p[nphot].x[1], p[nphot].x[2],
+        p[nphot].nscat, p[nphot].nrscat, delay, i - MSPEC, p[nphot].origin, p[nphot].nres, p[nphot].line_nres);
     }
   }
 
@@ -266,14 +264,14 @@ delay_dump (PhotPtr p, int np)
 }
 
 /**********************************************************/
-/** 
+/**
  * @brief	Preps a single photon to be dumped
  *
  * @param [in] pp			Pointer to extracted photon
  * @param [in] i_spec		Spectrum p extracted to
  * @return 					0
  *
- * Takes a photon and copies it to the staging arrays for 
+ * Takes a photon and copies it to the staging arrays for
  * delay dumping, to be output to file later.
  *
  * ###Notes###
@@ -284,7 +282,12 @@ delay_dump_single (PhotPtr pp, int i_spec)
 {
   if (geo.reverb_filter_lines == -1 && pp->nres == -1)
   {
-    //If we're filtering out continuum photons and this is a continuum photon, throw it away.
+    //If we're filtering out all continuum photons and this is a continuum photon, throw it away.
+    return (1);
+  }
+  else if (geo.reverb_filter_lines == -2 && pp->nres == -1 && pp->line_nres == -999)
+  {
+    //If we're filtering out continuum photons and their children and this is a purely continuum photon, throw it away.
     return (1);
   }
   else if (geo.reverb_filter_lines > 0)
@@ -292,19 +295,19 @@ delay_dump_single (PhotPtr pp, int i_spec)
     //If we're filtering to *only* photons of given lines, is this one of them? If not, throw away
     int i, bFound = 0;
     for (i = 0; i < geo.reverb_filter_lines; i++)
-      if (pp->nres == geo.reverb_filter_line[i])
+      if (pp->nres == geo.reverb_filter_line[i] || pp->line_nres == geo.reverb_filter_line[i])
         bFound = 1;
-    if (!bFound)
-      return (1);
+      if (!bFound)
+        return (1);
   }
 
   stuff_phot (pp, &delay_dump_bank[delay_dump_bank_curr]);      //Bank single photon in temp array
   delay_dump_spec[delay_dump_bank_curr] = i_spec;       //Record photon spectrum too
   if (delay_dump_bank_curr == delay_dump_bank_size - 1) //If temp array is full
-  {
+    {
     delay_dump (delay_dump_bank, delay_dump_bank_size);
     delay_dump_bank_curr = 0;   //Dump to file, zero array position
-  }
+    }
   else
   {
     delay_dump_bank_curr++;
