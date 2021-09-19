@@ -342,15 +342,15 @@ print_help (void)
     "can also find the surface of the electron scattering photosphere using the -p\n"
     "option.\n\n"
     "Please see below for a list of all flags.\n\n"
-    "-h             Print this help message and exit.\n"
-    "-d ndom        Set the domain to launch photons from.\n"
-    "-p tau_stop    Integrate from outwards to find the electron scattering photosphere.\n"
+    "-h             Print this help message and exit\n"
+    "-d ndom        Set the domain to launch photons from\n"
+    "-p tau_stop    Integrate from outwards to find the electron scattering photosphere\n"
     "-cion nion     Extract the column density for an ion of number nion\n"
     "-freq_min min  The lower frequency boundary for optical depth spectra\n"
     "-freq_max max  The upper frequency boundary for optical depth spectra\n"
     "-classic       Use linear frequency transforms, to be used when Python was run\n"
-    "               in classic mode.\n"
-    "-smax frac     Set the maximum fraction a photon can move in terms of cell distances\n"
+    "               in classic mode\n"
+    "--smax frac    Set the maximum fraction a photon can move in terms of cell distances\n"
     "--version      Print the version information and exit.\n"
     "--no-es        Do not include opacity contributions from electron scattering\n";
 
@@ -452,7 +452,7 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
-    else if (!strcmp (argv[i], "-smax"))
+    else if (!strcmp (argv[i], "--smax"))
     {
       char *check;
       SMAX_FRAC = strtod (argv[i + 1], &check);
