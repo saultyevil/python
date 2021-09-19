@@ -10,10 +10,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 #include "atomic.h"
 #include "python.h"
-#include "py_optical_depth.h"
+#include "py_optd.h"
 
 /* ************************************************************************* */
 /**
@@ -154,11 +155,11 @@ write_optical_depth_spectrum (SightLines_t * inclinations, int n_inclinations, d
   }
   fprintf (fp, "\n");
 
-  c_frequency = freq_min;
+  c_frequency = log10 (freq_min);
   for (i = 0; i < N_FREQ_BINS; i++)
   {
-    c_wavelength = VLIGHT / c_frequency / ANGSTROM;
-    fprintf (fp, "%-15e %-15e ", c_frequency, c_wavelength);
+    c_wavelength = VLIGHT / pow (10, c_frequency) / ANGSTROM;
+    fprintf (fp, "%-15e %-15e ", pow (10, c_frequency), c_wavelength);
 
     for (j = 0; j < n_inclinations; j++)
     {

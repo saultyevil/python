@@ -16,7 +16,7 @@
 
 #include "atomic.h"
 #include "python.h"
-#include "py_optical_depth.h"
+#include "py_optd.h"
 
 /* ************************************************************************* */
 /**

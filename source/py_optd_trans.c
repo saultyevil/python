@@ -15,7 +15,7 @@
 
 #include "atomic.h"
 #include "python.h"
-#include "py_optical_depth.h"
+#include "py_optd.h"
 
 static const double MAXDIFF = VCHECK / VLIGHT;  // For linear velocity requirement for photon transport
 
@@ -78,7 +78,7 @@ integrate_tau_across_cell (PhotPtr photon, double *c_column_density, double *c_o
     density = c_plasma_cell->density[COLUMN_MODE_ION_NUMBER];
   }
 
-  smax = smax_in_cell (photon);
+  smax = smax_in_cell (photon) * SMAX_FRAC;
   if (smax < 0)
   {
     errormsg ("smax %e < 0 in cell %d\n", smax, photon->grid);
@@ -146,7 +146,10 @@ integrate_tau_across_cell (PhotPtr photon, double *c_column_density, double *c_o
     }
   }
 
-  kappa_total += klein_nishina (mean_freq) * c_plasma_cell->ne * zdom[n_domain].fill;
+  if(MODE != RUN_MODE_NO_ES_OPACITY)
+  {
+    kappa_total += klein_nishina (mean_freq) * c_plasma_cell->ne * zdom[n_domain].fill;
+  }
 
   /*
    * Increment the optical depth and column density variables and move the

@@ -133,8 +133,8 @@ set(RAD_HYDRO_SOURCE
         )
 
 set(OPTICAL_DEPTH_SOURCE
-        source/py_optical_depth.c source/py_optical_depth_transport.c
-        source/py_optical_depth_util.c source/py_optical_depth_output.c)
+        source/py_optd.c source/py_optd_trans.c
+        source/py_optd_util.c source/py_optd_output.c)
 
 # Create the executables for each program, and link the required libraries
 
@@ -151,8 +151,8 @@ add_executable(rad_hydro_files ${PYTHON_SOURCE} ${RAD_HYDRO_SOURCE})
 target_link_libraries(rad_hydro_files gsl gslcblas m)
 
 # py_optical_depth
-add_executable(py_optical_depth ${PYTHON_SOURCE} ${OPTICAL_DEPTH_SOURCE})
-target_link_libraries(py_optical_depth gsl gslcblas m)
+add_executable(py_optd ${PYTHON_SOURCE} ${OPTICAL_DEPTH_SOURCE})
+target_link_libraries(py_optd gsl gslcblas m)
 
 # Python
 add_executable(python source/python.c ${PYTHON_SOURCE})
