@@ -263,7 +263,7 @@ initialize_inclination_angles (int *n_angles)
 {
   SightLines_t *inclinations;
 
-  if (MODE == RUN_MODE_TAU_INTEGRATE)
+  if (RUN_MODE == RUN_MODE_TAU_INTEGRATE)
   {
     if (zdom[N_DOMAIN].coord_type == SPHERICAL)
     {
@@ -334,7 +334,7 @@ create_photon (PhotPtr p_out, double freq, double *lmn)
   p_out->x[0] = p_out->x[1] = p_out->x[2] = 0.0;
   stuff_v (lmn, p_out->lmn);
 
-  if (MODE == RUN_MODE_TAU_INTEGRATE)
+  if (RUN_MODE == RUN_MODE_TAU_INTEGRATE)
   {
     move_phot (p_out, geo.rstar + DFUDGE);
   }

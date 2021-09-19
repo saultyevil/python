@@ -130,7 +130,7 @@ integrate_tau_across_cell (PhotPtr photon, double *c_column_density, double *c_o
 
   kappa_total = 0;
 
-  if (MODE != RUN_MODE_ES_PHOTOSPHERE)
+  if (RUN_MODE != RUN_MODE_ES_PHOTOSPHERE)
   {
     if (geo.rt_mode == RT_MODE_2LEVEL)
     {
@@ -146,7 +146,7 @@ integrate_tau_across_cell (PhotPtr photon, double *c_column_density, double *c_o
     }
   }
 
-  if(MODE != RUN_MODE_NO_ES_OPACITY)
+  if(RUN_MODE != RUN_MODE_NO_ES_OPACITY)
   {
     kappa_total += klein_nishina (mean_freq) * c_plasma_cell->ne * zdom[n_domain].fill;
   }
@@ -229,7 +229,7 @@ integrate_tau_across_wind (PhotPtr photon, double *c_column_density, double *c_o
 
     p_istat = walls (&p_extract, photon, norm);
 
-    if (MODE == RUN_MODE_ES_PHOTOSPHERE)
+    if (RUN_MODE == RUN_MODE_ES_PHOTOSPHERE)
     {
       if (*c_optical_depth >= TAU_DEPTH)
       {
@@ -243,7 +243,7 @@ integrate_tau_across_wind (PhotPtr photon, double *c_column_density, double *c_o
    * star or disc, since we are aiming for the origin of the system
    */
 
-  if (MODE == RUN_MODE_TAU_INTEGRATE)
+  if (RUN_MODE == RUN_MODE_TAU_INTEGRATE)
   {
     if (p_istat == P_HIT_STAR || p_istat == P_HIT_DISK)
     {

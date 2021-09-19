@@ -405,17 +405,17 @@ get_arguments (int argc, char *argv[])
   n_read = 0;
   for (i = 1; i < argc; ++i)
   {
-    if (!strcmp (argv[i], "-h"))  //NOTE: print help text
+    if (!strcmp (argv[i], "-h"))        //NOTE: print help text
     {
       print_help ();
       exit (EXIT_SUCCESS);
     }
-    else if (!strcmp (argv[i], "-classic"))  //NOTE: use linear frequency transforms
+    else if (!strcmp (argv[i], "-classic"))     //NOTE: use linear frequency transforms
     {
       rel_mode = REL_MODE_LINEAR;
       n_read = i;
     }
-    else if (!strcmp (argv[i], "--version"))  //NOTE: print version number
+    else if (!strcmp (argv[i], "--version"))    //NOTE: print version number
     {
       printf ("Python version %s\n", VERSION);
       printf ("Built from git commit %s\n", GIT_COMMIT_HASH);
@@ -423,7 +423,7 @@ get_arguments (int argc, char *argv[])
         printf ("This version was compiled with %d files with uncommited changes\n", GIT_DIFF_STATUS);
       exit (EXIT_SUCCESS);
     }
-    else if (!strcmp (argv[i], "-cion"))  //NOTE: extract column density for specific ion, rather than H
+    else if (!strcmp (argv[i], "-cion"))        //NOTE: extract column density for specific ion, rather than H
     {
       char *check;
       COLUMN_MODE = COLUMN_MODE_ION;
@@ -440,9 +440,9 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
-    else if (!strcmp (argv[i], "-p"))  //NOTE: run in photosphere mode
+    else if (!strcmp (argv[i], "-p"))   //NOTE: run in photosphere mode
     {
-      MODE = RUN_MODE_ES_PHOTOSPHERE;
+      RUN_MODE = RUN_MODE_ES_PHOTOSPHERE;
       char *check;
       TAU_DEPTH = strtod (argv[i + 1], &check);
       if (*check != '\0')
@@ -452,7 +452,7 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
-    else if (!strcmp (argv[i], "-d"))  //NOTE: change the lanching domain for photons
+    else if (!strcmp (argv[i], "-d"))   //NOTE: change the lanching domain for photons
     {
       char *check;
       N_DOMAIN = (int) strtol (argv[i + 1], &check, 10);
@@ -463,7 +463,7 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
-    else if (!strcmp (argv[i], "-freq_min"))  //NOTE: lower frequency boundary for optical depth spectrum
+    else if (!strcmp (argv[i], "-freq_min"))    //NOTE: lower frequency boundary for optical depth spectrum
     {
       char *check;
       arguments.u_freq_min = strtod (argv[i + 1], &check);
@@ -474,7 +474,7 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
-    else if (!strcmp (argv[i], "-freq_max"))  //NOTE: upper frequency boundary for optical depth spectrum
+    else if (!strcmp (argv[i], "-freq_max"))    //NOTE: upper frequency boundary for optical depth spectrum
     {
       char *check;
       arguments.u_freq_max = strtod (argv[i + 1], &check);
@@ -485,9 +485,9 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
-    else if(!strcmp(argv[i], "--no-es"))
+    else if (!strcmp (argv[i], "--no-es"))
     {
-      MODE = RUN_MODE_NO_ES_OPACITY;
+      RUN_MODE = RUN_MODE_NO_ES_OPACITY;
       n_read = i++;
     }
     else if (!strncmp (argv[i], "-", 1))
@@ -544,7 +544,7 @@ main (int argc, char *argv[])
   SMAX_FRAC = 0.05;
   DENSITY_PHOT_MIN = 1.e-10;
   COLUMN_MODE = COLUMN_MODE_RHO;
-  MODE = RUN_MODE_TAU_INTEGRATE;
+  RUN_MODE = RUN_MODE_TAU_INTEGRATE;
   N_DOMAIN = 0;
 
   struct CommandlineArguments arguments;
@@ -593,7 +593,7 @@ main (int argc, char *argv[])
    */
 
   printf ("\n");
-  if (MODE != RUN_MODE_ES_PHOTOSPHERE)
+  if (RUN_MODE != RUN_MODE_ES_PHOTOSPHERE)
   {
     if (COLUMN_MODE == COLUMN_MODE_ION)
     {
@@ -621,18 +621,18 @@ main (int argc, char *argv[])
    * to atomic data, which we should not need to worry about for this program
    */
 
-  if (MODE == RUN_MODE_TAU_INTEGRATE)
+  if (RUN_MODE == RUN_MODE_TAU_INTEGRATE || RUN_MODE == RUN_MODE_NO_ES_OPACITY)
   {
     evaluate_photoionization_edges ();
     create_optical_depth_spectrum (arguments.u_freq_min, arguments.u_freq_max);
   }
-  else if (MODE == RUN_MODE_ES_PHOTOSPHERE)
+  else if (RUN_MODE == RUN_MODE_ES_PHOTOSPHERE)
   {
     find_photosphere ();
   }
   else
   {
-    errormsg ("Mode %d is an unknown run mode, not sure how you got here so exiting the program\n", MODE);
+    errormsg ("Mode %d is an unknown run mode, not sure how you got here so exiting the program\n", RUN_MODE);
     exit (EXIT_FAILURE);
   }
 
