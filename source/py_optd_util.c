@@ -263,18 +263,7 @@ initialize_inclination_angles (int *n_angles)
 {
   SightLines_t *inclinations;
 
-  if (RUN_MODE == RUN_MODE_TAU_INTEGRATE)
-  {
-    if (zdom[N_DOMAIN].coord_type == SPHERICAL)
-    {
-      inclinations = outward_initialize_1d_model_angles (n_angles);
-    }
-    else
-    {
-      inclinations = outward_initialize_2d_model_angles (n_angles);
-    }
-  }
-  else
+  if (RUN_MODE == RUN_MODE_ES_PHOTOSPHERE)
   {
     if (zdom[N_DOMAIN].coord_type == SPHERICAL)
     {
@@ -283,6 +272,17 @@ initialize_inclination_angles (int *n_angles)
     else
     {
       inclinations = photosphere_2d_initialize_angles (n_angles);
+    }
+  }
+  else
+  {
+    if (zdom[N_DOMAIN].coord_type == SPHERICAL)
+    {
+      inclinations = outward_initialize_1d_model_angles (n_angles);
+    }
+    else
+    {
+      inclinations = outward_initialize_2d_model_angles (n_angles);
     }
   }
 
@@ -334,17 +334,18 @@ create_photon (PhotPtr p_out, double freq, double *lmn)
   p_out->x[0] = p_out->x[1] = p_out->x[2] = 0.0;
   stuff_v (lmn, p_out->lmn);
 
-  if (RUN_MODE == RUN_MODE_TAU_INTEGRATE)
-  {
-    move_phot (p_out, geo.rstar + DFUDGE);
-  }
-  else
+  if (RUN_MODE == RUN_MODE_ES_PHOTOSPHERE)
   {
     move_phot (p_out, zdom[N_DOMAIN].rmax - DFUDGE);
     for (i = 0; i < 3; ++i)
     {
       p_out->lmn[i] *= -1.0;    // Make the photon point inwards
     }
+
+  }
+  else
+  {
+    move_phot (p_out, geo.rstar + DFUDGE);
   }
 
   return EXIT_SUCCESS;

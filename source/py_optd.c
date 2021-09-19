@@ -129,7 +129,6 @@ create_optical_depth_spectrum (double u_freq_min, double u_freq_max)
     }
   }
 
-
   d_freq = (log10 (freq_max) - log10 (freq_min)) / N_FREQ_BINS;
   kbf_need (freq_min, freq_max);
 
@@ -351,6 +350,7 @@ print_help (void)
     "-freq_max max  The upper frequency boundary for optical depth spectra\n"
     "-classic       Use linear frequency transforms, to be used when Python was run\n"
     "               in classic mode.\n"
+    "-smax frac     Set the maximum fraction a photon can move in terms of cell distances\n"
     "--version      Print the version information and exit.\n"
     "--no-es        Do not include opacity contributions from electron scattering\n";
 
@@ -452,6 +452,17 @@ get_arguments (int argc, char *argv[])
       }
       n_read = i++;
     }
+    else if (!strcmp (argv[i], "-smax"))
+    {
+      char *check;
+      SMAX_FRAC = strtod (argv[i + 1], &check);
+      if (*check != '\0')
+      {
+        printf ("Unable to convert argument for -smax into a double");
+        exit (EXIT_FAILURE);
+      }
+      n_read = i++;
+    }
     else if (!strcmp (argv[i], "-d"))   //NOTE: change the lanching domain for photons
     {
       char *check;
@@ -541,7 +552,7 @@ main (int argc, char *argv[])
   init_rand ((int) time (NULL));
 
   rel_mode = REL_MODE_FULL;     // this is updated in get_arguments if required
-  SMAX_FRAC = 0.05;
+  SMAX_FRAC = 1.0;
   DENSITY_PHOT_MIN = 1.e-10;
   COLUMN_MODE = COLUMN_MODE_RHO;
   RUN_MODE = RUN_MODE_TAU_INTEGRATE;
