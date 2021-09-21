@@ -1244,6 +1244,7 @@ int nspectra;                   /* After create_spectrum, the number of elements
                                  * weight after transmission through the wind */
 
 int nscat[MAXSCAT + 1], nres[MAXSCAT + 1], nstat[NSTAT];
+#define MAXSCAT_DIAG_OUTPUT 100
 
 typedef struct spectrum
 {
