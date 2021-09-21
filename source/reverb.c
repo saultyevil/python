@@ -296,7 +296,7 @@ delay_dump_single (PhotPtr pp, int i_spec)
     //If we're filtering to *only* photons of given lines, is this one of them? If not, throw away
     int i, bFound = 0;
     for (i = 0; i < geo.reverb_filter_lines; i++)
-      if (pp->nres == geo.reverb_filter_line[i] || pp->line_nres == geo.reverb_filter_line[i])
+      if (pp->nres == geo.reverb_filter_line[i])
         bFound = 1;
     if (!bFound)
       return (1);
