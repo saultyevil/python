@@ -241,6 +241,7 @@ delay_dump (PhotPtr p, int np)
      * more scatters
      */
     i = delay_dump_spec[nphot];
+    // todo: this needs to be updated, and probably needs to be updated elsewhere.... a bit of a task, I think.
     // if (((mscat = xxspec[i].nscat) > 999 ||
     //      p[nphot].nscat == mscat ||
     //      (mscat < 0 && p[nphot].nscat >= (-mscat))) && ((mtopbot = xxspec[i].top_bot) == 0 || (mtopbot * p[nphot].x[2]) > 0))
@@ -287,7 +288,7 @@ delay_dump_single (PhotPtr pp, int i_spec)
   }
   else if (geo.reverb_filter_lines == -2 && pp->nres == -1 && pp->line_nres == NO_PARENT_LINE)
   {
-    //If we're filtering out continuum photons and their children and this is a pure continuum photon, throw it away.
+    //If we're filtering out continuum photons and their children and this is a pure continuum photon, so throw it away.
     return (1);
   }
   else if (geo.reverb_filter_lines > 0)
@@ -297,8 +298,8 @@ delay_dump_single (PhotPtr pp, int i_spec)
     for (i = 0; i < geo.reverb_filter_lines; i++)
       if (pp->nres == geo.reverb_filter_line[i] || pp->line_nres == geo.reverb_filter_line[i])
         bFound = 1;
-      if (!bFound)
-        return (1);
+    if (!bFound)
+      return (1);
   }
 
   stuff_phot (pp, &delay_dump_bank[delay_dump_bank_curr]);      //Bank single photon in temp array
