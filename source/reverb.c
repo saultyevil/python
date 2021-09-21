@@ -285,9 +285,9 @@ delay_dump_single (PhotPtr pp, int i_spec)
     //If we're filtering out all continuum photons and this is a continuum photon, throw it away.
     return (1);
   }
-  else if (geo.reverb_filter_lines == -2 && pp->nres == -1 && pp->line_nres == -999)
+  else if (geo.reverb_filter_lines == -2 && pp->nres == -1 && pp->line_nres == NO_PARENT_LINE)
   {
-    //If we're filtering out continuum photons and their children and this is a purely continuum photon, throw it away.
+    //If we're filtering out continuum photons and their children and this is a pure continuum photon, throw it away.
     return (1);
   }
   else if (geo.reverb_filter_lines > 0)

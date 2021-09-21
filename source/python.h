@@ -68,6 +68,8 @@ double DENSITY_PHOT_MIN;        /* This constant is a minimum density for the pu
 /* The next term globally defines a minimum value for the dilution faction */
 #define DILUTION_FACTOR_MINIMUM 1e-10
 
+#define NO_PARENT_LINE (-999)
+
 /* End of "care factor" definition */
 
 
