@@ -89,6 +89,8 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
   const int nreport = NPHOT / 10;
   timer_t0 = init_timer_t0 ();
 
+  dE_es_scatter = 0.0;  // todo: debug remove
+
   Log ("\n");
 
   for (nphot = 0; nphot < NPHOT; nphot++)
@@ -128,6 +130,8 @@ trans_phot (WindPtr w, PhotPtr p, int iextract)
   Log ("\n");
 
   print_timer_duration ("!!python: photon transport completed in", timer_t0);
+
+  Log("\ndE due to electron scattering: %e\n\n", dE_es_scatter);
 
   /* Sometimes photons resonance scatter near the edge of the wind and get pushed
    * out of the wind by reposition()

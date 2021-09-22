@@ -38,6 +38,8 @@ int NPLASMA;                    //The number of cells with non-zero volume or th
  * simply collected here
  */
 
+double dE_es_scatter; // todo: debug remove
+
 double DFUDGE;
 #define XFUDGE   1e-5           // The scale factor used in setting up cell x cell dfudge
 

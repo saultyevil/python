@@ -886,6 +886,10 @@ scatter (p, nres, nnscat)
     return (-1);
   }
 
+  // if(*nres == -1) // todo: debug remove
+  // {
+  double es_w_before = p->w;
+  // }
 
   if (observer_to_local_frame (p, p))
   {
@@ -1151,6 +1155,12 @@ scatter (p, nres, nnscat)
   /* Finally put everything back in the observer frame */
 
   local_to_observer_frame (p, p);
+
+  if(*nres == -1) // todo: debug remove
+  {
+    double es_w_after = p->w;
+    dE_es_scatter += es_w_before - es_w_after;
+  }
 
   /* If we are in macro-atom mode, add the photon to the created wind spectrum.  For simple
      atoms the wind spectrum is constructed in sectra.c */
