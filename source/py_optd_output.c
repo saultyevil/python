@@ -29,7 +29,7 @@
  * ************************************************************************** */
 
 void
-write_generic_file_header (FILE *fp)
+write_generic_file_header (FILE * fp)
 {
   char time_string[LINELENGTH];
 
@@ -60,7 +60,7 @@ write_generic_file_header (FILE *fp)
  * ************************************************************************** */
 
 void
-print_optical_depths (SightLines_t *inclinations, int n_inclinations, Edges_t edges[], int n_edges, double *optical_depth,
+print_optical_depths (SightLines_t * inclinations, int n_inclinations, Edges_t edges[], int n_edges, double *optical_depth,
                       double *column_density)
 {
   int i, j;
@@ -89,7 +89,7 @@ print_optical_depths (SightLines_t *inclinations, int n_inclinations, Edges_t ed
       len = snprintf (str, LINELENGTH, "tau_%-9s: %3.2e  ", edges[j].name, optical_depth[i * n_edges + j]);
       if (len < 0)
       {
-        errormsg ("error when trying to write to string for output\n");
+        print_error ("error when trying to write to string for output\n");
         exit (EXIT_FAILURE);
       }
 
@@ -126,7 +126,7 @@ print_optical_depths (SightLines_t *inclinations, int n_inclinations, Edges_t ed
  * ************************************************************************** */
 
 void
-write_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq)
+write_optical_depth_spectrum (SightLines_t * inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq)
 {
   int i, j;
   double c_wavelength, c_frequency;
@@ -136,14 +136,14 @@ write_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, do
   int len = snprintf (filename, LINELENGTH, "%s.spec_tau", files.root);
   if (len < 0)
   {
-    errormsg ("error when creating filename string\n");
+    print_error ("error when creating filename string\n");
     exit (EXIT_FAILURE);
   }
 
   fp = fopen (filename, "w");
   if (fp == NULL)
   {
-    errormsg ("unable to open %s in write mode\n", filename);
+    print_error ("unable to open %s in write mode\n", filename);
     exit (EXIT_FAILURE);
   }
 
@@ -172,7 +172,7 @@ write_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, do
 
   if (fclose (fp))
   {
-    errormsg ("unable to close %s, output may be unfinished!\n", filename);
+    print_error ("unable to close %s, output may be unfinished!\n", filename);
   }
 }
 
@@ -192,7 +192,7 @@ write_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, do
  * ************************************************************************** */
 
 void
-write_photosphere_location_to_file (Positions_t *positions, int n_angles)
+write_photosphere_location_to_file (Positions_t * positions, int n_angles)
 {
   int i;
   double pos1d[3];
@@ -202,14 +202,14 @@ write_photosphere_location_to_file (Positions_t *positions, int n_angles)
   int len = snprintf (filename, LINELENGTH, "%s.photosphere", files.root);
   if (len < 0)
   {
-    errormsg ("error when creating filename string\n");
+    print_error ("error when creating filename string\n");
     exit (EXIT_FAILURE);
   }
 
   fp = fopen (filename, "w");
   if (fp == NULL)
   {
-    errormsg ("unable to open %s in write mode\n", filename);
+    print_error ("unable to open %s in write mode\n", filename);
     exit (EXIT_FAILURE);
   }
 
@@ -242,6 +242,6 @@ write_photosphere_location_to_file (Positions_t *positions, int n_angles)
 
   if (fclose (fp))
   {
-    errormsg ("unable to close %s, output may be unfinished!\n", filename);
+    print_error ("unable to close %s, output may be unfinished!\n", filename);
   }
 }

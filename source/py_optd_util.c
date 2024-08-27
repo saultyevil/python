@@ -74,7 +74,7 @@ outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
     inclinations = calloc (n_input, sizeof *inclinations);
     if (inclinations == NULL)
     {
-      errormsg ("cannot allocate %lu bytes for observers array\n", n_input * sizeof *inclinations);
+      print_error ("cannot allocate %lu bytes for observers array\n", n_input * sizeof *inclinations);
       exit (EXIT_FAILURE);
     }
 
@@ -83,7 +83,7 @@ outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
       len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", input_inclinations[i], default_phase);
       if (len < 0)
       {
-        errormsg ("there was an error writing the name to the sight lines array\n");
+        print_error ("there was an error writing the name to the sight lines array\n");
         exit (EXIT_FAILURE);
       }
 
@@ -99,7 +99,7 @@ outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
     inclinations = calloc (geo.nangles, sizeof *inclinations);
     if (inclinations == NULL)
     {
-      errormsg ("cannot allocate %lu bytes for observers array\n", geo.nangles * sizeof *inclinations);
+      print_error ("cannot allocate %lu bytes for observers array\n", geo.nangles * sizeof *inclinations);
       exit (EXIT_FAILURE);
     }
 
@@ -118,7 +118,7 @@ outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
     inclinations = calloc (n_default_angles, sizeof *inclinations);
     if (inclinations == NULL)
     {
-      errormsg ("cannot allocate %lu bytes for observers array\n", n_default_angles * sizeof *inclinations);
+      print_error ("cannot allocate %lu bytes for observers array\n", n_default_angles * sizeof *inclinations);
       exit (EXIT_FAILURE);
     }
 
@@ -127,7 +127,7 @@ outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
       len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", default_angles[i], default_phase);
       if (len < 0)
       {
-        errormsg ("there was an error writing the name to the sight lines array\n");
+        print_error ("there was an error writing the name to the sight lines array\n");
         exit (EXIT_FAILURE);
       }
 
@@ -171,14 +171,14 @@ outward_initialize_1d_model_angles (int *n_angles)
 
   if (inclinations == NULL)
   {
-    errormsg ("unable to allocate %ld bytes for observers array\n", sizeof *inclinations);
+    print_error ("unable to allocate %ld bytes for observers array\n", sizeof *inclinations);
     exit (EXIT_FAILURE);
   }
 
   len = snprintf (inclinations[0].name, NAMELEN, "A%02.0fP%04.2f", default_angle, default_phase);
   if (len < 0)
   {
-    errormsg ("there was an error writing the name to the sight lines array\n");
+    print_error ("there was an error writing the name to the sight lines array\n");
     exit (EXIT_FAILURE);
   }
 
@@ -226,7 +226,7 @@ photosphere_2d_initialize_angles (int *n_angles)
 
   if (inclinations == NULL)
   {
-    errormsg ("unable to allocate memory for sight lines array\n");
+    print_error ("unable to allocate memory for sight lines array\n");
     exit (EXIT_FAILURE);
   }
 
@@ -275,7 +275,7 @@ photosphere_1d_initialize_angles (int *n_angles)
 
   if (inclinations == NULL)
   {
-    errormsg ("unable to allocate memory for sight lines array\n");
+    print_error ("unable to allocate memory for sight lines array\n");
     exit (EXIT_FAILURE);
   }
 
@@ -303,7 +303,7 @@ initialize_inclination_angles (int *n_angles, double *input_inclinations)
 {
   SightLines_t *inclinations;
 
-  if (RUN_MODE == RUN_MODE_ES_PHOTOSPHERE)
+  if (RUN_MODE == MODE_SURFACE)
   {
     if (zdom[N_DOMAIN].coord_type == SPHERICAL)
     {
@@ -355,38 +355,45 @@ initialize_inclination_angles (int *n_angles, double *input_inclinations)
  * ************************************************************************** */
 
 int
-create_photon (PhotPtr p_out, double freq, double *lmn)
+create_photon (PhotPtr photon, double freq, double *lmn)
 {
   int i;
 
   if (freq < 0)
   {
-    errormsg ("photon can't be created with negative frequency\n");
+    print_error ("photon can't be created with negative frequency\n");
     return EXIT_FAILURE;
   }
 
-  p_out->freq = p_out->freq_orig = freq;
-  p_out->origin = p_out->origin_orig = PTYPE_DISK;
-  p_out->istat = P_INWIND;
-  p_out->w = p_out->w_orig = geo.f_tot;
-  p_out->tau = 0.0;
-  p_out->frame = F_OBSERVER;
-  p_out->x[0] = p_out->x[1] = p_out->x[2] = 0.0;
-  stuff_v (lmn, p_out->lmn);
+  photon->freq = photon->freq_orig = freq;
+  photon->origin = photon->origin_orig = PTYPE_DISK;
+  photon->istat = P_INWIND;
+  photon->w = photon->w_orig = geo.f_tot;
+  photon->tau = 0.0;
+  photon->frame = F_OBSERVER;
+  photon->x[0] = photon->x[1] = photon->x[2] = 0.0;
+  stuff_v (lmn, photon->lmn);
 
-  if (RUN_MODE == RUN_MODE_ES_PHOTOSPHERE)
+  switch (RUN_MODE)
   {
-    move_phot (p_out, zdom[N_DOMAIN].rmax - DFUDGE);
+
+  case MODE_SURFACE:
+    move_phot (photon, zdom[N_DOMAIN].rmax - DFUDGE);
     for (i = 0; i < 3; ++i)
     {
-      p_out->lmn[i] *= -1.0;    // Make the photon point inwards
+      photon->lmn[i] *= -1.0;   // Make the photon point inwards
     }
+    break;
+  case MODE_CELL_SPECTRUM:     // TODO: not yet implemented
+    photon->x[0] = 56000000000000;
+    photon->x[2] = 11300000000000;
+    break;
+  default:
+    move_phot (photon, geo.rstar + DFUDGE);
+    break;
+  }
 
-  }
-  else
-  {
-    move_phot (p_out, geo.rstar + DFUDGE);
-  }
+  photon->grid = where_in_grid (N_DOMAIN, photon->x);
 
   return EXIT_SUCCESS;
 }

@@ -18,7 +18,7 @@
 // Error message macro, adds the file name and line to the start of the error
 // message
 
-#define errormsg(fmt, ...)                           \
+#define print_error(fmt, ...)                           \
 {                                                    \
   fprintf(stderr, "(%s:%i): ", __FILE__, __LINE__);  \
   fprintf(stderr, fmt, ##__VA_ARGS__);               \
@@ -78,14 +78,24 @@ extern int N_DOMAIN;
 
 typedef enum RunModeEnum
 {
-  RUN_MODE_TAU_INTEGRATE = 0,
-  RUN_MODE_ES_PHOTOSPHERE = 1,
-  RUN_MODE_NO_ES_OPACITY = 2,
+  MODE_PHOTOION,
+  MODE_SPECTRUM,
+  MODE_CELL_SPECTRUM,
+  MODE_SURFACE,
+  MODE_IGNORE_ELECTRON_SCATTERING,
 } RunMode_t;
 
 extern RunMode_t RUN_MODE;
 
 extern double TAU_DEPTH;
+
+struct CommandlineArguments
+{
+  double freq_min;
+  double freq_max;
+  double n_freq;
+  double inclinations[MAX_CUSTOM_ANGLES];
+};
 
 // External functions from other files
 
@@ -96,3 +106,5 @@ void print_optical_depths (SightLines_t * inclinations, int n_inclinations, Edge
                            double *column_density);
 void write_optical_depth_spectrum (SightLines_t * inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq);
 void write_photosphere_location_to_file (Positions_t * positions, int n_angles);
+struct CommandlineArguments get_arguments (int argc, char *argv[]);
+int optical_depth_across_cell (PhotPtr photon_in, double *optical_depth_out);
