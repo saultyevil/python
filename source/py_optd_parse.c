@@ -6,6 +6,7 @@
  *
  * ************************************************************************** */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,12 +28,61 @@ static void
 print_help (void)
 {
   char *help = "A utility program to analyse the optical depth in a Python model.\n\n"
-    "usage: py_optical_depth mode [mode-args] root\n\n" "Here is some more text, TODO this need to be finished\n";
+    "usage: py_otpd pi|wind|cell|surface [arguments] root\n";
   printf ("%s", help);
 }
 
 /* ************************************************************************* */
 /**
+ * @brief Parse arguments for mode 'pi'
+ *
+ * @param[in]  argc  The number of arguments provided
+ * @param[in]  argv  The command line arguments
+ *
+ * @return num_args_processed  The number of arguments processed
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+static int
+parse_args_for_mode_pi (int argc, char *argv[])
+{
+  char *ret;
+  int num_args_processed = 0;
+
+  // If --ion is used, then we extract an ion's column density rather than
+  // the hydrogen column density
+  if (strcmp (argv[2], "-ion") == 0)
+  {
+    if (argc < 4)
+    {
+      printf ("Invalid number of arguments for mode 'pi -ion'\n");
+      print_help ();
+      exit (EXIT_FAILURE);
+    }
+    CONFIG.column_density_mode = COLUMN_MODE_ION;
+    CONFIG.column_density_ion_number = (int) strtol (argv[3], &ret, 10);
+    if (*ret != '\0')
+    {
+      printf ("Unable to convert argument provided for -ion into an integer\n");
+      exit (EXIT_FAILURE);
+    }
+    if (CONFIG.column_density_ion_number < 0)
+    {
+      printf ("Invalid choice for -ion!\n");
+      print_help ();
+      exit (EXIT_FAILURE);
+    }
+
+    num_args_processed = 2;
+  }
+
+  return num_args_processed;
+}
+
+/* ************************************************************************* */
+/**
  * @brief
  *
  * @param[in]  argc  The number of arguments provided
@@ -43,46 +93,41 @@ print_help (void)
  * ************************************************************************** */
 
 static int
-parse_spectrum_args (int argc, char *argv[], struct CommandlineArguments *arguments)
+parse_args_for_mode_wind (int argc, char *argv[])
 {
   int num_args_processed = 0;
 
   for (int i = 2; i < argc; ++i)
   {
-    if (!strcmp (argv[i], "--inc"))
+    if (!strcmp (argv[i], "-i"))
     {
-      char *stdtod_check;
-      int num_angles = 0;
+      char *end_ptr;
 
-      for (int j = 1; j < MAX_CUSTOM_ANGLES + 2; j++)
+      CONFIG.n_inclinations = 0;
+      for (int j = 1; j < MAX_CUSTOM_ANGLES + 1; ++j)
       {
-        double inclination = strtod (argv[i + j], &stdtod_check);
+        float inclination = (float) strtod (argv[i + j], &end_ptr);
         if (inclination < 0 || inclination > 90)
         {
-          printf ("Invalid inclination angle of %f. Has to be 0 < inclination < 90\n", inclination);
+          printf ("Invalid inclination %f°! Has to be 0° <= inclination <= 90°\n", inclination);
           exit (EXIT_FAILURE);
         }
-        if (j > MAX_CUSTOM_ANGLES)
-        {
-          printf ("Maximum number of inclination angles provided: only %d are allowed\n", MAX_CUSTOM_ANGLES);
-          exit (EXIT_FAILURE);
-        }
-        if (strcmp (argv[i + j], stdtod_check) == 0)    // conversion error indicates no more numbers
+        if (strcmp (argv[i + j], end_ptr) == 0) // conversion error indicates no more numbers
         {
           break;
         }
-        arguments->inclinations[j - 1] = inclination;
-        num_angles += 1;
+        CONFIG.inclinations[j - 1] = inclination;
+        CONFIG.n_inclinations += 1;
       }
 
-      if (num_angles == 0)
+      if (CONFIG.n_inclinations == 0)
       {
-        printf ("Invalid input: no inclination were provided for --inc option\n");
+        printf ("Invalid input: no inclination were provided for --i option\n");
         exit (EXIT_FAILURE);
       }
 
-      num_args_processed = num_angles + 1;
-      i += num_args_processed;
+      num_args_processed += 1 + CONFIG.n_inclinations;
+      i += num_args_processed;  // avoid trying to reprocess the inclination angles
     }
   }
 
@@ -101,9 +146,12 @@ parse_spectrum_args (int argc, char *argv[], struct CommandlineArguments *argume
  * ************************************************************************** */
 
 static int
-parse_cell_spectrum_args (int argc, char *argv[], struct CommandlineArguments *arguments)
+parse_args_for_mode_cell (int argc, char *argv[])
 {
   int num_args_processed = 0;
+
+  (void) argc;
+  (void) argv;
 
   return num_args_processed;
 }
@@ -120,27 +168,31 @@ parse_cell_spectrum_args (int argc, char *argv[], struct CommandlineArguments *a
  * ************************************************************************** */
 
 static int
-parse_surface_args (int argc, char *argv[], struct CommandlineArguments *arguments)
+parse_args_for_mode_surface (int argc, char *argv[])
 {
-  char *check = NULL;
-  int num_args_processed = 1;
-
-  (void) argc;
-  (void) arguments;
+  char *ret;
+  int num_args_processed = 0;
 
   if (argc < 3)
   {
-    printf ("Invalid number of arguments for mode 'surface'\n");
+    printf ("Invalid arguments for mode 'surface'!\n");
     print_help ();
     exit (EXIT_FAILURE);
   }
 
-  TAU_DEPTH = strtod (argv[2], &check);
-  if (*check != '\0')
+  CONFIG.tau_depth = strtod (argv[2], &ret);
+  if (*ret != '\0')
   {
     printf ("Unable to convert '%s' into a number for mode 'surface'\n", argv[2]);
     exit (EXIT_FAILURE);
   }
+  if (CONFIG.tau_depth <= 0)
+  {
+    printf ("Invalid value for optical depth, must be positive and non-zero\n");
+    exit (EXIT_FAILURE);
+  }
+
+  num_args_processed += 1;
 
   return num_args_processed;
 }
@@ -157,114 +209,57 @@ parse_surface_args (int argc, char *argv[], struct CommandlineArguments *argumen
  * ************************************************************************** */
 
 static int
-parse_photoion_args (int argc, char *argv[], struct CommandlineArguments *arguments)
+parse_shared_args (int argc, char *argv[])
 {
+  char *ret;
   int num_args_processed = 0;
 
-  (void) argc;
-  (void) arguments;
-
-  if (!strcmp (argv[2], "--ion"))       //NOTE: extract column density for specific ion, rather than H
+  // Start from 2 to ignore program name and run mode choice
+  for (int i = 2; i < argc; ++i)
   {
-    char *check;
-    COLUMN_MODE = COLUMN_MODE_ION;
-    COLUMN_MODE_ION_NUMBER = (int) strtol (argv[3], &check, 10);
-    if (*check != '\0')
+    if (strcmp (argv[i], "-") == 0)
     {
-      printf ("Unable to convert argument provided for --ion into an integer\n");
-      exit (EXIT_FAILURE);
-    }
-    if (COLUMN_MODE_ION_NUMBER < 0)
-    {
-      printf ("Argument for --ion cannot be negative\n");
-      exit (EXIT_FAILURE);
-    }
-    num_args_processed = 2;
-  }
-
-  if (COLUMN_MODE == COLUMN_MODE_ION)
-  {
-    if (COLUMN_MODE_ION_NUMBER < 0 || COLUMN_MODE_ION_NUMBER > nions - 1)
-    {
-      printf ("The ion number %i is an invalid ion number: there are %i ions which have been loaded\n", COLUMN_MODE_ION_NUMBER, nions);
-      exit (EXIT_FAILURE);
-    }
-
-    printf ("Extracting column density for %s %i\n", ele[ion[COLUMN_MODE_ION_NUMBER].nelem].name, ion[COLUMN_MODE_ION_NUMBER].istate);
-  }
-
-  return num_args_processed;
-}
-
-/* ************************************************************************* */
-/**
- * @brief
- *
- * @param[in]  argc  The number of arguments provided
- * @param[in]  argv  The command line arguments
- *
- * @details
- *
- * ************************************************************************** */
-
-static int
-parse_global_args (int argc, char *argv[], struct CommandlineArguments *arguments)
-{
-  char *check = NULL;
-  int num_args_processed = 0;
-
-  for (int i = 2; i < argc; i++)
-  {
-    if (!strncmp (argv[i], "-", 1))
-    {
-      printf ("Unknown argument %s\n", argv[i]);
+      printf ("Invalid argument %s\n", argv[i]);
       print_help ();
       exit (EXIT_FAILURE);
     }
     else if (!strcmp (argv[i], "--smax"))
     {
-      SMAX_FRAC = strtod (argv[i + 1], &check);
-      if (*check != '\0')
+      SMAX_FRAC = strtod (argv[i + 1], &ret);
+      if (*ret != '\0')
       {
         printf ("Unable to convert argument for -smax into a double");
         exit (EXIT_FAILURE);
       }
-      num_args_processed = i++;
+      i += 1;                   // avoid trying to process the argument for this argument
+      num_args_processed += 2;
     }
-    else if (!strcmp (argv[i], "--domain"))     //NOTE: change the lanching domain for photons
+    else if (!strcmp (argv[i], "--freq-min"))   // NOTE: lower frequency boundary for optical depth spectrum
     {
-      N_DOMAIN = (int) strtol (argv[i + 1], &check, 10);
-      if (*check != '\0')
-      {
-        printf ("Unable to convert argument provided for --domain into an integer\n");
-        exit (EXIT_FAILURE);
-      }
-      num_args_processed = i++;
-    }
-    else if (!strcmp (argv[i], "--freq-min"))   //NOTE: lower frequency boundary for optical depth spectrum
-    {
-      arguments->freq_min = strtod (argv[i + 1], &check);
-      if (*check != '\0')
+      CONFIG.freq_min = strtod (argv[i + 1], &ret);
+      if (*ret != '\0')
       {
         printf ("Unable to convert argument provided for -freq_min to a double\n");
         exit (EXIT_FAILURE);
       }
-      num_args_processed = i++;
+      i += 1;
+      num_args_processed += 2;
     }
-    else if (!strcmp (argv[i], "--freq-max"))   //NOTE: upper frequency boundary for optical depth spectrum
+    else if (!strcmp (argv[i], "--freq-max"))   // NOTE: upper frequency boundary for optical depth spectrum
     {
-      arguments->freq_max = strtod (argv[i + 1], &check);
-      if (*check != '\0')
+      CONFIG.freq_max = strtod (argv[i + 1], &ret);
+      if (*ret != '\0')
       {
         printf ("Unable to convert argument provided for -freq_max to a double\n");
         exit (EXIT_FAILURE);
       }
-      num_args_processed = i++;
+      i += 1;
+      num_args_processed += 2;
     }
     else if (!strcmp (argv[i], "--no-es"))
     {
-      RUN_MODE = MODE_IGNORE_ELECTRON_SCATTERING;
-      num_args_processed = i++;
+      CONFIG.ignore_electron_scattering = true;
+      num_args_processed += 1;
     }
   }
 
@@ -286,20 +281,12 @@ parse_global_args (int argc, char *argv[], struct CommandlineArguments *argument
  *
  * ************************************************************************** */
 
-extern struct CommandlineArguments
-get_arguments (int argc, char *argv[])
+void
+parse_optd_arguments (int argc, char *argv[])
 {
-  struct CommandlineArguments arguments;
-  arguments.freq_min = arguments.freq_max = 0;
-  arguments.n_freq = NUM_FREQUENCY_BINS;
-  for (int i = 0; i < MAX_CUSTOM_ANGLES; ++i)
-  {
-    arguments.inclinations[i] = -1.0;
-  }
-
   if (argc < 3)
   {
-    printf ("Invalid number of arguments\n");
+    printf ("Invalid choice of arguments!\n\n");
     print_help ();
     exit (EXIT_FAILURE);
   }
@@ -315,53 +302,52 @@ get_arguments (int argc, char *argv[])
     printf ("Python version %s\n", VERSION);
     printf ("Built from git commit %s\n", GIT_COMMIT_HASH);
     if (GIT_DIFF_STATUS)
+    {
       printf ("This version was compiled with %d files with uncommited changes\n", GIT_DIFF_STATUS);
+    }
     exit (EXIT_SUCCESS);
   }
 
-  // deal with run mode and their arguments
+  // Parse the run mode of the program, and then deal with its arguments
   int num_args_processed = 0;
-  char mode_string[LINELENGTH];
-  strncpy (mode_string, argv[1], LINELENGTH);
 
-  if (strcmp (mode_string, "edges") == 0)
+  if (strcmp (argv[1], "pi") == 0)
   {
-    RUN_MODE = MODE_PHOTOION;
-    num_args_processed += parse_photoion_args (argc, argv, &arguments);
+    CONFIG.run_mode = MODE_PHOTOION;
+    num_args_processed += parse_args_for_mode_pi (argc, argv);
   }
-  else if (strcmp (mode_string, "wind") == 0)
+  else if (strcmp (argv[1], "wind") == 0)
   {
-    RUN_MODE = MODE_SPECTRUM;
-    num_args_processed += parse_spectrum_args (argc, argv, &arguments);
+    CONFIG.run_mode = MODE_SPECTRUM;
+    num_args_processed += parse_args_for_mode_wind (argc, argv);
   }
-  else if (strcmp (mode_string, "cell") == 0)
+  else if (strcmp (argv[1], "cell") == 0)
   {
-    RUN_MODE = MODE_CELL_SPECTRUM;
-    num_args += parse_cell_spectrum_args (argc, argv, &arguments);
+    CONFIG.run_mode = MODE_CELL_SPECTRUM;
+    num_args_processed += parse_args_for_mode_cell (argc, argv);
   }
-  else if (strcmp (mode_string, "surface") == 0)
+  else if (strcmp (argv[1], "surface") == 0)
   {
-    RUN_MODE = MODE_SURFACE;
-    num_args_processed += parse_surface_args (argc, argv, &arguments);
+    CONFIG.run_mode = MODE_SURFACE;
+    num_args_processed += parse_args_for_mode_surface (argc, argv);
   }
   else
   {
-    printf ("Unknown mode: %s\n", mode_string);
+    printf ("Unknown run mode: %s\n", argv[1]);
     print_help ();
     exit (EXIT_FAILURE);
   }
 
-  // deal with global arguments which have multiple uses
-  num_args_processed += parse_global_args (argc, argv, &arguments);
+  // Now we've gotten the run mode set up, we can parse arguments which are
+  // shared between modes
+  num_args_processed += parse_shared_args (argc, argv);
 
+  // assume the final argument is the root name of the simulation being
+  // post-processed
   if (num_args_processed + 2 == argc)
   {
     printf ("All command line arguments have been processed and did not find a root name\n");
     exit (EXIT_FAILURE);
   }
-
-  // assume the final argument is the root name of the simulation
   get_root (files.root, argv[argc - 1]);
-
-  return arguments;
 }

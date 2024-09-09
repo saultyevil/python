@@ -8,12 +8,4 @@
 
 #include "py_optd.h"
 
-
-int COLUMN_MODE;
-int COLUMN_MODE_ION_NUMBER;
-
-int N_DOMAIN;
-
-RunMode_t RUN_MODE;
-
-double TAU_DEPTH;
+struct Config CONFIG;

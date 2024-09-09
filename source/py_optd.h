@@ -1,110 +1,108 @@
 /** ************************************************************************* */
 /**
- * @file     py_optical_depth.h
+ * @file     py_optd.h
  * @author   Edward Parkinson
  * @date     February 2021
  *
  * @details
  *
  * This header file contains the main constants, macros and types used in
- * py_optical_depth.
+ * py_optd.
  *
  * ************************************************************************** */
 
-#define MAX_CUSTOM_ANGLES 10
+#ifndef PY_OPTD_H
+#define PY_OPTD_H
+
+#include <stdbool.h>
+
+#define MAX_CUSTOM_ANGLES 64
+#define MAX_ANGLES 128
 #define NUM_FREQUENCY_BINS 10000
 #define NAMELEN 32
 
 // Error message macro, adds the file name and line to the start of the error
 // message
 
-#define print_error(fmt, ...)                           \
-{                                                    \
-  fprintf(stderr, "(%s:%i): ", __FILE__, __LINE__);  \
-  fprintf(stderr, fmt, ##__VA_ARGS__);               \
-}
+#define print_error(fmt, ...)                         \
+  {                                                   \
+    fprintf(stderr, "(%s:%i): ", __FILE__, __LINE__); \
+    fprintf(stderr, fmt, ##__VA_ARGS__);              \
+  }
 
 /** Structure to hold the angles to extract the optical depth/column density from
-  */
+ */
 
-typedef struct SightLines_s
+typedef struct SightLines
 {
   char name[NAMELEN];
   double angle;
-  double lmn[3];
+  double direction_vector[3];
 } SightLines_t;
 
 /** Structure to hold the name and frequency of a photoionization edge to
-  *evaluate the optical depth at
-  */
+ *evaluate the optical depth at
+ */
 
-typedef struct Edges_s
+typedef struct PIEdge
 {
   char name[50];
   double freq;
-} Edges_t;
+} PIEdge_t;
 
 /** Structure to save the angle and position of the electron scattering
-  * photosphere surface
-  */
+ * photosphere surface
+ */
 
-typedef struct Positions_s
+typedef struct Pos
 {
   double angle;
   double x, y, z;
-} Positions_t;
+} Pos_t;
 
 /** Enumerator used to control the column density which is extracted, i.e. by
-  * default mass density/N_H is extracted by the density of an ion can also
-  * be extracted
-  */
+ * default mass density/N_H is extracted by the density of an ion can also
+ * be extracted
+ */
 
-enum COLUMN_DENSITY
+enum ColumnDensityEnum
 {
   COLUMN_MODE_RHO,
   COLUMN_MODE_ION,
 };
 
-extern int COLUMN_MODE;
-extern int COLUMN_MODE_ION_NUMBER;
-
-// Control which domain to initially send photons from
-
-extern int N_DOMAIN;
-
-// Control how the optical depth integration is done. This can be done in
-// integrated tau mode, which gets the integrated tau along the path. The other
-// mode aims to find the surface of the electron scattering photosphere
-
-typedef enum RunModeEnum
+enum RunModeEnum
 {
   MODE_PHOTOION,
   MODE_SPECTRUM,
   MODE_CELL_SPECTRUM,
   MODE_SURFACE,
-  MODE_IGNORE_ELECTRON_SCATTERING,
-} RunMode_t;
-
-extern RunMode_t RUN_MODE;
-
-extern double TAU_DEPTH;
-
-struct CommandlineArguments
-{
-  double freq_min;
-  double freq_max;
-  double n_freq;
-  double inclinations[MAX_CUSTOM_ANGLES];
 };
 
-// External functions from other files
+struct Config
+{
+  enum RunModeEnum run_mode;
+  enum ColumnDensityEnum column_density_mode;
+  bool ignore_electron_scattering;
+  int column_density_ion_number;
+  int domain;
+  double freq_min;
+  double freq_max;
+  int n_freq;
+  int n_inclinations;
+  double inclinations[MAX_ANGLES];
+  double tau_depth;
+} CONFIG;
 
-int create_photon (PhotPtr p_out, double freq, double *lmn);
-SightLines_t *initialize_inclination_angles (int *n_angles, double *input_inclinations);
-int integrate_tau_across_wind (PhotPtr photon, double *c_column_density, double *c_optical_depth);
-void print_optical_depths (SightLines_t * inclinations, int n_inclinations, Edges_t edges[], int n_edges, double *optical_depth,
-                           double *column_density);
-void write_optical_depth_spectrum (SightLines_t * inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq);
-void write_photosphere_location_to_file (Positions_t * positions, int n_angles);
-struct CommandlineArguments get_arguments (int argc, char *argv[]);
-int optical_depth_across_cell (PhotPtr photon_in, double *optical_depth_out);
+// Function prototypes
+
+void parse_optd_arguments(int argc, char *argv[]);
+int initialize_inclination_angles(struct SightLines *inclinations);
+int initialise_photon_packet(PhotPtr photon, double frequency, double *direction);
+int integrate_tau_across_wind(PhotPtr photon, double *c_column_density, double *c_optical_depth);
+void print_optical_depths(SightLines_t *inclinations, int n_inclinations, PIEdge_t edges[], int n_edges, double *optical_depth,
+                          double *column_density);
+void write_optical_depth_spectrum(SightLines_t *inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq);
+void write_photosphere_location_to_file(Pos_t *positions, int n_angles);
+
+#endif

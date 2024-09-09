@@ -9,6 +9,7 @@
  *
  * ************************************************************************** */
 
+#include <stdbool.h>
 #include <math.h>
 #include <float.h>
 #include <stdio.h>
@@ -62,13 +63,13 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
   n_plasma = wmain[photon->grid].nplasma;
   plasma_cell = &plasmamain[n_plasma];
 
-  if (COLUMN_MODE == COLUMN_MODE_RHO)
+  if (CONFIG.column_density_mode == COLUMN_MODE_RHO)
   {
     density = plasma_cell->rho;
   }
   else
   {
-    density = plasma_cell->density[COLUMN_MODE_ION_NUMBER];
+    density = plasma_cell->density[CONFIG.column_density_ion_number];
   }
 
   // We use SMAX_FRAC to prevent photons moving too far which can, in some
@@ -81,22 +82,18 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
     return EXIT_FAILURE;
   }
 
-  /*
-   * Transform the photon into the CMF and create a photon in the CMF at the
-   * end of the path of length smax
-   */
-
+  // Transform the photon into the CMF and create a photon in the CMF at the
+  // end of the path of length smax
   observer_to_local_frame (photon, &photon_start);
   stuff_phot (photon, &photon_stop);
   move_phot (&photon_stop, smax);
   observer_to_local_frame (&photon_stop, &photon_stop);
 
-  /* At this point p_start and p_stop are in the local frame
-   * at the and p_stop is at the maximum distance it can
-   * travel. We want to check that the frequency shift is
-   * not too great along the path that a linear approximation
-   * to the change in frequency is not reasonable
-   */
+  // At this point p_start and p_stop are in the local frame
+  // at the and p_stop is at the maximum distance it can
+  // travel. We want to check that the frequency shift is
+  // not too great along the path that a linear approximation
+  // to the change in frequency is not reasonable
 
   while (smax > DFUDGE)
   {
@@ -114,19 +111,17 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
   freq_outer = photon_stop.freq;
   mean_freq = 0.5 * (freq_inner + freq_outer);
 
-  /*
-   * Now we can finally calculate the opacity due to all the continuum
-   * processes. In macro-atom mode, we need to calculate the continuum opacity
-   * using kappa_bf and kappa_ff using the macro treatment. For simple mode, we
-   * can simply use radiation which **SHOULD** return the continuum opacity
-   * as well, plus something from induced Compton heating. In either cases,
-   * we still then need to add the optical depth from electron scattering at
-   * the end.
-   */
+  // Now we can finally calculate the opacity due to all the continuum
+  // processes. In macro-atom mode, we need to calculate the continuum opacity
+  // using kappa_bf and kappa_ff using the macro treatment. For simple mode, we
+  // can simply use radiation which **SHOULD** return the continuum opacity
+  // as well, plus something from induced Compton heating. In either cases,
+  // we still then need to add the optical depth from electron scattering at
+  // the end.
 
   kappa_total = 0;
 
-  if (RUN_MODE != MODE_SURFACE)
+  if (CONFIG.run_mode != MODE_SURFACE)
   {
     if (geo.rt_mode == RT_MODE_2LEVEL)
     {
@@ -141,7 +136,7 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
       }
     }
   }
-  if (RUN_MODE != MODE_IGNORE_ELECTRON_SCATTERING)
+  if (CONFIG.ignore_electron_scattering == false)
   {
     kappa_total += klein_nishina (mean_freq) * plasma_cell->ne * zdom[n_dom].fill;
   }
@@ -169,68 +164,38 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
  * ************************************************************************** */
 
 int
-optical_depth_across_cell (PhotPtr photon_in, double *optical_depth_out)
+integrate_tau_across_cell (PhotPtr photon, double *column_density_out, double *optical_depth_out)
 {
-  int error;
-  double _norm[3];              // unused, but required by walls
-
-  struct photon photon;
-  stuff_phot (photon_in, &photon);
-
-  enum istat_enum photon_status = P_INWIND;
-
   int ndom;
-  where_in_wind (photon.x, &ndom);
-  int grid_start = where_in_grid (ndom, photon.x);
 
-  double _column_density = 0;   // unused, but required by get_tau_across_cell
+  where_in_wind (photon->x, &ndom);
+  int grid_start = where_in_grid (ndom, photon->x);
+
+  double column_density = 0;
   double optical_depth = 0;
-  int num_times_in_space = 0;
 
-  while (photon.grid == grid_start)
+  while (photon->grid == grid_start)
   {
-    int wind_status = where_in_wind (photon.x, &ndom);
-    photon.grid = where_in_grid (ndom, photon.x);
-
-    if (photon.grid < 0 || photon.grid > zdom[ndom].ndim2 - 1)
+    if (photon->grid < 0 || photon->grid > zdom[ndom].ndim2 - 1)
     {
       print_error ("Photon is not in the grid, aborting this photon\n");
       return EXIT_FAILURE;
     }
-
-    if (wind_status < 0)        // this shouldn't happen, so we'll limit the number of times we translate in space
+    // move across cell and calculate quantities at the same time
+    int error = move_photon_across_cell (photon, &column_density, &optical_depth);
+    if (error)
     {
-      num_times_in_space += 1;
-      translate_in_space (&photon);
-      if (num_times_in_space > MAX_TRANSLATE_IN_SPACE)
-      {
-        print_error ("Photon has been outside the grid too many times, something is wrong");
-        return EXIT_FAILURE;
-      }
+      return EXIT_FAILURE;
     }
-    else
-    {
-      error = move_photon_across_cell (&photon, &_column_density, &optical_depth);
-      if (error)
-      {
-        return EXIT_FAILURE;
-      }
-    }
-
-    photon_status = walls (&photon, photon_in, _norm);
+    // check to see if it's still in the same cell
+    photon->grid = where_in_grid (ndom, photon->x);
   }
 
-  if (photon_status == P_HIT_STAR || photon_status == P_HIT_DISK)
-  {
-    print_error ("photon hit central source or disk incorrectly istat = %i\n", photon_status);
-    return EXIT_FAILURE;
-  }
-
+  *column_density_out = column_density;
   *optical_depth_out = optical_depth;
 
   return EXIT_SUCCESS;
 }
-
 
 /* ************************************************************************* */
 /**
@@ -254,78 +219,72 @@ optical_depth_across_cell (PhotPtr photon_in, double *optical_depth_out)
  * ************************************************************************** */
 
 int
-integrate_tau_across_wind (PhotPtr photon, double *c_column_density, double *c_optical_depth)
+integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *optical_depth)
 {
-  int err;
-  int n_dom, where;
-  enum istat_enum p_istat;
-  const int max_translate_in_space = 10;
-  int n_in_space;
-  double norm[3];
-  struct photon p_extract;
+  int ndom;
+  double _norm[3];
+  struct photon photon;
 
-  p_istat = P_INWIND;           // assume photon is in wind for initialisation reasons
-  stuff_phot (photon, &p_extract);
+  enum istat_enum photon_status = P_INWIND;
+  stuff_phot (photon_in, &photon);      // we need a copy of the original for walls
+  int num_times_in_space = 0;
 
-  n_in_space = 0;
-  while (p_istat == P_INWIND)
+  while (photon_status == P_INWIND)
   {
-    where = where_in_wind (p_extract.x, &n_dom);
+    int wind_status = where_in_wind (photon.x, &ndom);
 
-    if (where < 0)
+    if (wind_status < 0)        // this shouldn't happen, so we'll limit the number of times we translate in space
     {
-      translate_in_space (&p_extract);
-      if (++n_in_space > max_translate_in_space)
+      num_times_in_space += 1;
+      translate_in_space (&photon);
+      if (num_times_in_space > MAX_TRANSLATE_IN_SPACE)
       {
-        print_error ("something has gone wrong as this photon has translated in space %d times\n", n_in_space);
+        print_error ("Photon has been outside the grid too many times, something is wrong");
         return EXIT_FAILURE;
       }
-    }
-    else if ((p_extract.grid = where_in_grid (n_dom, p_extract.x)) >= 0)
-    {
-      err = move_photon_across_cell (&p_extract, c_column_density, c_optical_depth);
-      if (err)
-        return EXIT_FAILURE;
     }
     else
     {
-      print_error ("photon in unknown location grid stat %i\n", p_extract.grid);
-      return EXIT_FAILURE;
-    }
-
-    p_istat = walls (&p_extract, photon, norm);
-
-    if (RUN_MODE == MODE_SURFACE)
-    {
-      if (*c_optical_depth >= TAU_DEPTH)
+      int error = integrate_tau_across_cell (&photon, column_density, optical_depth);
+      if (error)
       {
-        p_istat = P_ABSORB;
+        return EXIT_FAILURE;
       }
     }
+
+    if (CONFIG.run_mode == MODE_SURFACE)
+    {
+      if (photon.tau > CONFIG.tau_depth)
+      {
+        photon_status = P_ABSORB;
+        break;
+      }
+    }
+
+    photon_status = walls (&photon, photon_in, _norm);
   }
 
-  /*
-   * If we are in MODE_SURFACE, then we shouldn't care about hitting the
-   * star or disc, since we are aiming for the origin of the system
-   */
-
-  if (RUN_MODE == MODE_SPECTRUM)
+  // If a photon hits the surface, something will have gone wrong. Throw that
+  // photon away and return an error
+  if (CONFIG.run_mode == MODE_SPECTRUM)
   {
-    if (p_istat == P_HIT_STAR || p_istat == P_HIT_DISK)
+    if (photon_status == P_HIT_STAR || photon_status == P_HIT_DISK)
     {
-      print_error ("photon hit central source or disk incorrectly istat = %i\n", p_istat);
+      print_error ("photon hit central source or disk surface, when it shouldn't be able to\n");
       return EXIT_FAILURE;
     }
   }
-  else
+  if (CONFIG.run_mode == MODE_SURFACE)
   {
-    stuff_phot (&p_extract, photon);
-    if (p_istat == P_HIT_DISK)
+    if (photon_status == P_HIT_DISK)
     {
-      print_error ("the photon hit the disk whilst in MODE_SURFACE when it should hit the central source\n");
+      print_error ("photon hit disk surface, when it should hit the central source\n");
       return EXIT_FAILURE;
     }
   }
+
+  // Some modes will re-use the photon to do some additional stuff
+  stuff_phot (&photon, photon_in);
 
   return EXIT_SUCCESS;
 }

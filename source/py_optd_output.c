@@ -29,7 +29,7 @@
  * ************************************************************************** */
 
 void
-write_generic_file_header (FILE * fp)
+write_generic_file_header (FILE *fp)
 {
   char time_string[LINELENGTH];
 
@@ -60,7 +60,7 @@ write_generic_file_header (FILE * fp)
  * ************************************************************************** */
 
 void
-print_optical_depths (SightLines_t * inclinations, int n_inclinations, Edges_t edges[], int n_edges, double *optical_depth,
+print_optical_depths (SightLines_t *inclinations, int n_inclinations, PIEdge_t edges[], int n_edges, double *optical_depth,
                       double *column_density)
 {
   int i, j;
@@ -68,19 +68,19 @@ print_optical_depths (SightLines_t * inclinations, int n_inclinations, Edges_t e
   char str[LINELENGTH];
   const int MAX_COL = 120;
 
-  printf ("\nOptical depths along the defined line of sights for domain %i:\n\n", N_DOMAIN);
+  printf ("\nOptical depths along the defined line of sights for domain %i:\n\n", CONFIG.domain);
 
   for (i = 0; i < n_inclinations; i++)
   {
-    if (COLUMN_MODE == COLUMN_MODE_RHO)
+    if (CONFIG.column_density_mode == COLUMN_MODE_RHO)
     {
       printf ("%-8s: Mass column density     : %3.2e cm^-2\n", inclinations[i].name, column_density[i]);
       printf ("%-8s: Hydrogen column density : %3.2e cm^-2\n", "", column_density[i] * rho2nh);
     }
     else
     {
-      printf ("%-8s: %s %i column density    : %3.2e cm^-2\n", inclinations[i].name, ele[ion[COLUMN_MODE_ION_NUMBER].nelem].name,
-              ion[COLUMN_MODE_ION_NUMBER].istate, column_density[i]);
+      printf ("%-8s: %s %i column density    : %3.2e cm^-2\n", inclinations[i].name,
+              ele[ion[CONFIG.column_density_ion_number].nelem].name, ion[CONFIG.column_density_ion_number].istate, column_density[i]);
     }
 
     c_linelen = 0;
@@ -126,7 +126,7 @@ print_optical_depths (SightLines_t * inclinations, int n_inclinations, Edges_t e
  * ************************************************************************** */
 
 void
-write_optical_depth_spectrum (SightLines_t * inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq)
+write_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq)
 {
   int i, j;
   double c_wavelength, c_frequency;
@@ -192,7 +192,7 @@ write_optical_depth_spectrum (SightLines_t * inclinations, int n_inclinations, d
  * ************************************************************************** */
 
 void
-write_photosphere_location_to_file (Positions_t * positions, int n_angles)
+write_photosphere_location_to_file (Pos_t *positions, int n_angles)
 {
   int i;
   double pos1d[3];
@@ -214,22 +214,23 @@ write_photosphere_location_to_file (Positions_t * positions, int n_angles)
   }
 
   write_generic_file_header (fp);
-  fprintf (fp, "# Electron scatter photosphere locations for tau_es = %f\n#\n", TAU_DEPTH);
+  fprintf (fp, "# Electron scatter photosphere locations for tau_es = %f\n#\n", CONFIG.tau_depth);
 
-  if (zdom[N_DOMAIN].coord_type != SPHERICAL)
+  if (zdom[CONFIG.domain].coord_type != SPHERICAL)
   {
-    fprintf (fp, "%-15s %-15s %-15s\n", "x", "y", "z");
+    fprintf (fp, "# %-15s %-15s %-15s $%-15s\n", "x", "y", "z", "rho");
   }
   else
   {
-    fprintf (fp, "%-15s\n", "r");
+    fprintf (fp, "# %-15s\n", "r");
   }
 
   for (i = 0; i < n_angles; i++)
   {
-    if (zdom[N_DOMAIN].coord_type != SPHERICAL)
+    if (zdom[CONFIG.domain].coord_type != SPHERICAL)
     {
-      fprintf (fp, "%-15e %-15e %-15e\n", positions[i].x, positions[i].y, positions[i].z);
+      double rho = sqrt (positions[i].x * positions[i].x + positions[i].y * positions[i].y);
+      fprintf (fp, "%-15e %-15e %-15e %-15e\n", positions[i].x, positions[i].y, positions[i].z, rho);
     }
     else
     {

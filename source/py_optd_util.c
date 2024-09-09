@@ -20,6 +20,43 @@
 
 /* ************************************************************************* */
 /**
+ * @brief  Initialize inclination angles for a spherical model
+ *
+ * @param[out]  SightLines_t *inclinations  The initialize inclinations structure
+ *
+ * @details
+ *
+ * Since this is for a 1D model, it does not matter which inclination angle
+ * we use. We have opted to used an angle of 45 degrees, as this is also the
+ * angle we use to define a 1D spherical grid. It should not matter either
+ * way.
+ *
+ * ************************************************************************** */
+
+static int
+initialise_1d_angles (SightLines_t *inclinations)
+{
+  int len;
+  const double phase = 1.0;
+  const double default_angle = 45;
+  CONFIG.n_inclinations = 1;
+
+  inclinations[0].direction_vector[0] = sin (default_angle / RADIAN) * cos (-phase * 360.0 / RADIAN);
+  inclinations[0].direction_vector[1] = sin (default_angle / RADIAN) * sin (-phase * 360.0 / RADIAN);
+  inclinations[0].direction_vector[2] = cos (default_angle / RADIAN);
+
+  len = snprintf (inclinations[0].name, NAMELEN, "A%02.0fP%04.2f", default_angle, phase);
+  if (len < 0)
+  {
+    print_error ("there was an error writing the name to the sight lines array\n");
+    exit (EXIT_FAILURE);
+  }
+
+  return EXIT_SUCCESS;
+}
+
+/* ************************************************************************* */
+/**
  * @brief  Initialize the inclination angles for a 2D outward run.
  *
  * @param[out]  int n_angles  The number of angles initialized
@@ -36,13 +73,13 @@
  *
  * ************************************************************************** */
 
-SightLines_t *
-outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
+static int
+_mode_normal (struct SightLines *inclinations)
 {
   int i;
   int len;
-  const double default_phase = 0.5;
-  const double default_angles[] = { 0.0, 10.0, 30.0, 45.0, 60.0, 75.0, 85.0, 90.0 };
+  const double phase = 1.0;
+  const double default_angles[] = { 1.0, 10.0, 30.0, 45.0, 60.0, 75.0, 89.0 };
   const int n_default_angles = sizeof default_angles / sizeof default_angles[0];
 
   /*
@@ -51,143 +88,71 @@ outward_initialize_2d_model_angles (int *n_angles, double *input_inclinations)
    * inclination angle.
    */
 
-  int n_input = 0;
+  int n_user_input = 0;
   for (i = 0; i < MAX_CUSTOM_ANGLES; ++i)
   {
-    if (input_inclinations[i] > -1)
+    if (CONFIG.inclinations[i] > -1)
     {
-      n_input++;
+      ++n_user_input;
     }
   }
 
-  /*
-   * Use the angles specified for by the user for spectrum generation, this
-   * requires for xxspec to be initialised. Otherwise use the pre-defined angles
-   * above.
-   */
-
-  SightLines_t *inclinations = NULL;
-
-  if (n_input > 0)
+  // First of all use the user input
+  if (n_user_input > 0)
   {
-    *n_angles = n_input;
-    inclinations = calloc (n_input, sizeof *inclinations);
-    if (inclinations == NULL)
-    {
-      print_error ("cannot allocate %lu bytes for observers array\n", n_input * sizeof *inclinations);
-      exit (EXIT_FAILURE);
-    }
+    CONFIG.n_inclinations = n_user_input;
 
-    for (i = 0; i < n_input; i++)
+    for (i = 0; i < n_user_input; i++)
     {
-      len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", input_inclinations[i], default_phase);
+      len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", CONFIG.inclinations[i], phase);
       if (len < 0)
       {
         print_error ("there was an error writing the name to the sight lines array\n");
         exit (EXIT_FAILURE);
       }
 
-      inclinations[i].lmn[0] = sin (input_inclinations[i] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-      inclinations[i].lmn[1] = sin (input_inclinations[i] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-      inclinations[i].lmn[2] = cos (input_inclinations[i] / RADIAN);
-      inclinations[i].angle = input_inclinations[i];
+      inclinations[i].direction_vector[0] = sin (CONFIG.inclinations[i] / RADIAN) * cos (-phase * 360.0 / RADIAN);
+      inclinations[i].direction_vector[1] = sin (CONFIG.inclinations[i] / RADIAN) * sin (-phase * 360.0 / RADIAN);
+      inclinations[i].direction_vector[2] = cos (CONFIG.inclinations[i] / RADIAN);
+      inclinations[i].angle = CONFIG.inclinations[i];
     }
   }
+  // Then use whatever is in the wind save and spec save
   else if (xxspec != NULL && geo.nangles > 0)
   {
-    *n_angles = geo.nangles;
-    inclinations = calloc (geo.nangles, sizeof *inclinations);
-    if (inclinations == NULL)
-    {
-      print_error ("cannot allocate %lu bytes for observers array\n", geo.nangles * sizeof *inclinations);
-      exit (EXIT_FAILURE);
-    }
+    CONFIG.n_inclinations = geo.nangles;
 
     for (i = MSPEC; i < MSPEC + geo.nangles; i++)
     {
       strcpy (inclinations[i - MSPEC].name, xxspec[i].name);
-      stuff_v (xxspec[i].lmn, inclinations[i - MSPEC].lmn);
+      stuff_v (xxspec[i].lmn, inclinations[i - MSPEC].direction_vector);
       inclinations[i].angle = -1;       // todo: implement way to get angle xxspec
     }
   }
+  // Otherwise, fall back to the default
   else
   {
     printf ("\nNo spec.save file has been found, using a default set of inclination angles\n\n");
 
-    *n_angles = n_default_angles;
-    inclinations = calloc (n_default_angles, sizeof *inclinations);
-    if (inclinations == NULL)
-    {
-      print_error ("cannot allocate %lu bytes for observers array\n", n_default_angles * sizeof *inclinations);
-      exit (EXIT_FAILURE);
-    }
+    CONFIG.n_inclinations = n_default_angles;
 
     for (i = 0; i < n_default_angles; i++)
     {
-      len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", default_angles[i], default_phase);
+      len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", default_angles[i], phase);
       if (len < 0)
       {
         print_error ("there was an error writing the name to the sight lines array\n");
         exit (EXIT_FAILURE);
       }
 
-      inclinations[i].lmn[0] = sin (default_angles[i] / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-      inclinations[i].lmn[1] = sin (default_angles[i] / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-      inclinations[i].lmn[2] = cos (default_angles[i] / RADIAN);
+      inclinations[i].direction_vector[0] = sin (default_angles[i] / RADIAN) * cos (-phase * 360.0 / RADIAN);
+      inclinations[i].direction_vector[1] = sin (default_angles[i] / RADIAN) * sin (-phase * 360.0 / RADIAN);
+      inclinations[i].direction_vector[2] = cos (default_angles[i] / RADIAN);
       inclinations[i].angle = default_angles[i];
     }
   }
 
-  return inclinations;
-}
-
-/* ************************************************************************* */
-/**
- * @brief  Initialize the inclination angles for a 1D outward run.
- *
- * @param[out]  int n_angles  The number of angles initialized
- *
- * @return  SightLines_t *inclinations  The initialize inclinations structure
- *
- * @details
- *
- * Since this is for a 1D model, it does not matter which inclination angle
- * we use. We have opted to used an angle of 45 degrees, as this is also the
- * angle we use to define a 1D spherical grid. It should not matter either
- * way.
- *
- * ************************************************************************** */
-
-SightLines_t *
-outward_initialize_1d_model_angles (int *n_angles)
-{
-  int len;
-  const int n_default_angles = 1;
-  const double default_angle = 45.0;
-  const double default_phase = 0.5;
-
-  *n_angles = n_default_angles;
-  SightLines_t *inclinations = calloc (n_default_angles, sizeof (SightLines_t));
-
-  if (inclinations == NULL)
-  {
-    print_error ("unable to allocate %ld bytes for observers array\n", sizeof *inclinations);
-    exit (EXIT_FAILURE);
-  }
-
-  len = snprintf (inclinations[0].name, NAMELEN, "A%02.0fP%04.2f", default_angle, default_phase);
-  if (len < 0)
-  {
-    print_error ("there was an error writing the name to the sight lines array\n");
-    exit (EXIT_FAILURE);
-  }
-
-  inclinations[0].lmn[1] = sin (default_angle / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-  inclinations[0].lmn[0] = sin (default_angle / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-  inclinations[0].lmn[2] = cos (default_angle / RADIAN);
-  inclinations[0].angle = default_angle;
-
-  return inclinations;
+  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */
@@ -212,79 +177,46 @@ outward_initialize_1d_model_angles (int *n_angles)
  *
  * ************************************************************************** */
 
-SightLines_t *
-photosphere_2d_initialize_angles (int *n_angles)
+static int
+_mode_surface (struct SightLines *inclinations)
 {
-  int i;
-  double default_angle;
-  const double default_phase = 1.0;
-  const int n_default_angles = 500;
-  const double d_theta = 90.0 / (double) n_default_angles;
+  const double phase = 1.0;
+  const double d_theta = 90.0 / (float) MAX_ANGLES;
 
-  *n_angles = n_default_angles;
-  SightLines_t *inclinations = calloc (n_default_angles, sizeof (SightLines_t));
+  CONFIG.n_inclinations = MAX_ANGLES;
 
-  if (inclinations == NULL)
+  for (int i = 0; i < MAX_ANGLES; i++)
   {
-    print_error ("unable to allocate memory for sight lines array\n");
-    exit (EXIT_FAILURE);
+    double angle = i * d_theta;
+    inclinations[i].direction_vector[0] = sin (angle / RADIAN) * cos (-phase * 360.0 / RADIAN);
+    inclinations[i].direction_vector[1] = sin (angle / RADIAN) * sin (-phase * 360.0 / RADIAN);
+    inclinations[i].direction_vector[2] = cos (angle / RADIAN);
+    inclinations[i].angle = angle;
   }
 
-  for (i = 0; i < n_default_angles; i++)
-  {
-    default_angle = i * d_theta;
-    inclinations[i].lmn[0] = sin (default_angle / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-    inclinations[i].lmn[1] = sin (default_angle / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-    inclinations[i].lmn[2] = cos (default_angle / RADIAN);
-    inclinations[i].angle = default_angle;
-  }
-
-  return inclinations;
+  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */
 /**
- * @brief  Initialize the inclination angles to find the photosphere.
- *
- * @param[out]  int n_angles  The number of angles initialized
- *
- * @return  SightLines_t *inclinations  The initialize inclinations structure
+ * @brief
  *
  * @details
  *
- * The same function is called for both 1D and 2D models. This creates extra
- * work for 1D model, but as the algorithm takes very little time to run, it
- * does not matter.
- *
- * 500 inclination angles are defined, to very finely resolve the photosphere
- * surface. This is fixed for now. I think 500 is probably far too many, but
- * it takes absolutely no time to run. The results from 500 angles probably
- * need smoothing if the grid is coarse.
- *
  * ************************************************************************** */
 
-SightLines_t *
-photosphere_1d_initialize_angles (int *n_angles)
+static void
+initialise_2d_angles (struct SightLines *inclinations)
 {
-  const double default_phase = 1.0;
-  const int n_default_angles = 1;
-  const double default_angle = 45;
-
-  *n_angles = n_default_angles;
-  SightLines_t *inclinations = calloc (n_default_angles, sizeof (SightLines_t));
-
-  if (inclinations == NULL)
+  switch (CONFIG.run_mode)
   {
-    print_error ("unable to allocate memory for sight lines array\n");
-    exit (EXIT_FAILURE);
+  case MODE_SURFACE:
+    _mode_surface (inclinations);
+    break;
+  default:
+    _mode_normal (inclinations);
+    break;
   }
-
-  inclinations[0].lmn[0] = sin (default_angle / RADIAN) * cos (-default_phase * 360.0 / RADIAN);
-  inclinations[0].lmn[1] = sin (default_angle / RADIAN) * sin (-default_phase * 360.0 / RADIAN);
-  inclinations[0].lmn[2] = cos (default_angle / RADIAN);
-  inclinations[0].angle = default_angle;
-
-  return inclinations;
 }
 
 /* ************************************************************************* */
@@ -298,35 +230,21 @@ photosphere_1d_initialize_angles (int *n_angles)
  *
  * ************************************************************************** */
 
-SightLines_t *
-initialize_inclination_angles (int *n_angles, double *input_inclinations)
+int
+initialize_inclination_angles (struct SightLines *inclinations)
 {
-  SightLines_t *inclinations;
+  // inclinations need to be malloc'd already, I think.
 
-  if (RUN_MODE == MODE_SURFACE)
+  if (zdom[CONFIG.domain].coord_type == SPHERICAL)
   {
-    if (zdom[N_DOMAIN].coord_type == SPHERICAL)
-    {
-      inclinations = photosphere_1d_initialize_angles (n_angles);
-    }
-    else
-    {
-      inclinations = photosphere_2d_initialize_angles (n_angles);
-    }
+    initialise_1d_angles (inclinations);
   }
   else
   {
-    if (zdom[N_DOMAIN].coord_type == SPHERICAL)
-    {
-      inclinations = outward_initialize_1d_model_angles (n_angles);
-    }
-    else
-    {
-      inclinations = outward_initialize_2d_model_angles (n_angles, input_inclinations);
-    }
+    initialise_2d_angles (inclinations);
   }
 
-  return inclinations;
+  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */
@@ -355,45 +273,45 @@ initialize_inclination_angles (int *n_angles, double *input_inclinations)
  * ************************************************************************** */
 
 int
-create_photon (PhotPtr photon, double freq, double *lmn)
+initialise_photon_packet (PhotPtr photon, double frequency, double *direction)
 {
-  int i;
+  static int np = 0;
 
-  if (freq < 0)
+  if (frequency < 0)
   {
     print_error ("photon can't be created with negative frequency\n");
-    return EXIT_FAILURE;
+    exit (EXIT_FAILURE);
   }
 
-  photon->freq = photon->freq_orig = freq;
-  photon->origin = photon->origin_orig = PTYPE_DISK;
+  photon->np = ++np;
+  photon->freq = photon->freq_orig = frequency;
+  photon->origin = photon->origin_orig = PTYPE_STAR;
   photon->istat = P_INWIND;
   photon->w = photon->w_orig = geo.f_tot;
   photon->tau = 0.0;
   photon->frame = F_OBSERVER;
   photon->x[0] = photon->x[1] = photon->x[2] = 0.0;
-  stuff_v (lmn, photon->lmn);
+  stuff_v (direction, photon->lmn);
 
-  switch (RUN_MODE)
+  switch (CONFIG.run_mode)
   {
-
-  case MODE_SURFACE:
-    move_phot (photon, zdom[N_DOMAIN].rmax - DFUDGE);
-    for (i = 0; i < 3; ++i)
+  case MODE_SURFACE:           // Move to edge of wind and point it inward
+    move_phot (photon, zdom[CONFIG.domain].rmax - DFUDGE);
+    for (int i = 0; i < 3; ++i)
     {
-      photon->lmn[i] *= -1.0;   // Make the photon point inwards
+      photon->lmn[i] *= -1.0;
     }
     break;
-  case MODE_CELL_SPECTRUM:     // TODO: not yet implemented
+  case MODE_CELL_SPECTRUM:     // Move to the bottom left of the cell
     photon->x[0] = 56000000000000;
     photon->x[2] = 11300000000000;
     break;
-  default:
+  default:                     // Move to the inner edge of the outflow
     move_phot (photon, geo.rstar + DFUDGE);
     break;
   }
 
-  photon->grid = where_in_grid (N_DOMAIN, photon->x);
+  photon->grid = where_in_grid (CONFIG.domain, photon->x);
 
   return EXIT_SUCCESS;
 }

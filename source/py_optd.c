@@ -8,6 +8,7 @@
  *
  * ************************************************************************** */
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,7 +20,7 @@
 #include "python.h"
 #include "py_optd.h"
 
-/* ************************************************************************* */
+/* ************************************************************************** */
 /**
  * @brief
  *
@@ -27,15 +28,14 @@
  *
  * ************************************************************************** */
 
-void
-initialize_wind_structures (void)
+void initialize_wind_structures(void)
 {
 
   char windsave_filename[LINELENGTH + LINELENGTH];
   char specsave_filename[LINELENGTH + LINELENGTH];
 
-  snprintf (windsave_filename, LINELENGTH + LINELENGTH, "%s.wind_save", files.root);
-  snprintf (specsave_filename, LINELENGTH + LINELENGTH, "%s.spec_save", files.root);
+  snprintf(windsave_filename, LINELENGTH + LINELENGTH, "%s.wind_save", files.root);
+  snprintf(specsave_filename, LINELENGTH + LINELENGTH, "%s.spec_save", files.root);
 
   /*
    * Read in the wind_save file and initialize the wind cones and DFUDGE which
@@ -43,38 +43,107 @@ initialize_wind_structures (void)
    * this point (which is also very important)
    */
 
-  zdom = calloc (MAX_DOM, sizeof (domain_dummy));
+  zdom = calloc(MAX_DOM, sizeof(domain_dummy));
   if (zdom == NULL)
   {
-    print_error ("Unable to allocate memory for domain\n");
-    exit (EXIT_FAILURE);
+    print_error("Unable to allocate memory for domain\n");
+    exit(EXIT_FAILURE);
   }
 
-  if (wind_read (windsave_filename) < 0)
+  if (wind_read(windsave_filename) < 0)
   {
-    print_error ("unable to open %s\n", windsave_filename);
-    exit (EXIT_FAILURE);
+    print_error("unable to open %s\n", windsave_filename);
+    exit(EXIT_FAILURE);
   }
 
-  DFUDGE = setup_dfudge ();
-  setup_windcone ();
+  DFUDGE = setup_dfudge();
+  setup_windcone();
 
   /*
    * If a spec_save exists, and there are spectral cycles (possibly a redundant
    * check), then read in the spec_save file.
    */
 
-  if (access (specsave_filename, F_OK) == 0)
+  if (access(specsave_filename, F_OK) == 0)
   {
     if (geo.pcycle > 0)
     {
-      if (spec_read (specsave_filename) < 0)
+      if (spec_read(specsave_filename) < 0)
       {
-        print_error ("Unable to open %s when spectrum cycles have been run\n", specsave_filename);
-        exit (EXIT_FAILURE);
+        print_error("Unable to open %s when spectrum cycles have been run\n", specsave_filename);
+        exit(EXIT_FAILURE);
       }
     }
   }
+}
+
+/* ************************************************************************** */
+/**
+ * @brief
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+void set_frequency_range(void)
+{
+  double freq_min = 0;
+  double freq_max = 0;
+  double cli_freq_min = CONFIG.freq_min;
+  double cli_freq_max = CONFIG.freq_max;
+
+  if (cli_freq_min > 0 || cli_freq_max > 0)
+  {
+    if (cli_freq_min > 0)
+    {
+      freq_min = cli_freq_min;
+    }
+    else
+    {
+      freq_min = VLIGHT / (10000 * ANGSTROM);
+    }
+
+    if (cli_freq_max > 0)
+    {
+      freq_max = cli_freq_max;
+    }
+    else
+    {
+      freq_max = VLIGHT / (100 * ANGSTROM);
+    }
+
+    if (freq_max < freq_min)
+    {
+      print_error("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
+      exit(EXIT_FAILURE);
+    }
+  }
+  else
+  {
+    if ((geo.nangles == 0 && xxspec == NULL) || (geo.swavemax == 0 && geo.swavemin == 0))
+    {
+      freq_min = VLIGHT / (10000 * ANGSTROM);
+      freq_max = VLIGHT / (100 * ANGSTROM);
+    }
+    else
+    {
+      freq_min = VLIGHT / (geo.swavemax * ANGSTROM);
+      freq_max = VLIGHT / (geo.swavemin * ANGSTROM);
+      if (sane_check(freq_min))
+      {
+        freq_min = VLIGHT / (10000 * ANGSTROM);
+        print_error("freq_min has an invalid value setting to %e\n", freq_min);
+      }
+      if (sane_check(freq_max))
+      {
+        freq_max = VLIGHT / (100 * ANGSTROM);
+        print_error("freq_min has an invalid value setting to %e\n", freq_max);
+      }
+    }
+  }
+
+  CONFIG.freq_min = freq_min;
+  CONFIG.freq_max = freq_max;
 }
 
 /* ************************************************************************* */
@@ -101,41 +170,43 @@ initialize_wind_structures (void)
  *
  * ************************************************************************** */
 
-void
-calculate_photoionization_optical_depths (double *input_inclinations)
+void calculate_photoionization_optical_depths(void)
 {
-  int i, j;
-  int err;
-  double c_frequency, c_optical_depth, c_column_density;
-  double *optical_depth_values = NULL, *column_density_values = NULL;
+  int error;
   struct photon photon;
-  enum RunModeEnum original_run_mode = RUN_MODE;
-  RUN_MODE = MODE_IGNORE_ELECTRON_SCATTERING;
+  struct SightLines inclinations[MAX_ANGLES]; // cba with mallocing this
+  CONFIG.ignore_electron_scattering = true;
 
-  Edges_t edges[] = {
-    {"HLymanEdge", 3.387485e+15},
-    {"HBalmerEdge", 8.293014e+14},
-    {"HeI24eVEdge", 5.9483e+15},
-    {"HeII54eVEdge", 1.394384e+16}
-  };
+  PIEdge_t pi_edges[] = {
+      {"H_Lyman", 3.387485e+15},
+      {"H_Balmer", 8.293014e+14},
+      {"HeI_24eV", 5.948300e+15},
+      {"HeII_54eV", 1.394384e+16}};
+  const int n_edges = sizeof pi_edges / sizeof pi_edges[0];
 
-  const int n_edges = sizeof edges / sizeof edges[0];
-
-  int n_inclinations;
-  SightLines_t *inclinations = initialize_inclination_angles (&n_inclinations, input_inclinations);
-
-  optical_depth_values = calloc (n_inclinations * n_edges, sizeof *optical_depth_values);
-  if (optical_depth_values == NULL)
+  if (CONFIG.column_density_ion_number > nions - 1)
   {
-    print_error ("cannot allocate %lu bytes for optical_depths\n", n_inclinations * n_edges * sizeof *optical_depth_values);
-    exit (EXIT_FAILURE);
+    printf("The ion number %i is an invalid ion number: there are %i ions available\n", CONFIG.column_density_ion_number, nions);
+    exit(EXIT_FAILURE);
+  }
+  if (CONFIG.column_density_mode == COLUMN_MODE_ION)
+  {
+    printf("Extracting column density for %s %i\n", ele[ion[CONFIG.column_density_ion_number].nelem].name,
+           ion[CONFIG.column_density_ion_number].istate);
   }
 
-  column_density_values = calloc (n_inclinations, sizeof *column_density_values);
-  if (column_density_values == NULL)
+  initialize_inclination_angles(inclinations);
+  double *optical_depths = calloc(CONFIG.n_inclinations * n_edges, sizeof *optical_depths);
+  if (optical_depths == NULL)
   {
-    print_error ("cannot allocate %lu bytes for column_densities\n", n_inclinations * sizeof *column_density_values);
-    exit (EXIT_FAILURE);
+    print_error("failed to allocate %lu bytes for optical depths\n", CONFIG.n_inclinations * n_edges * sizeof *optical_depths);
+    exit(EXIT_FAILURE);
+  }
+  double *column_densities = calloc(CONFIG.n_inclinations, sizeof *column_densities);
+  if (column_densities == NULL)
+  {
+    print_error("failed to allocate %lu bytes for column densities\n", CONFIG.n_inclinations * sizeof *column_densities);
+    exit(EXIT_FAILURE);
   }
 
   /*
@@ -143,35 +214,31 @@ calculate_photoionization_optical_depths (double *input_inclinations)
    * each PI edge for each inclination angle.
    */
 
-  for (i = 0; i < n_inclinations; i++)
+  for (int i = 0; i < CONFIG.n_inclinations; i++)
   {
-    for (j = 0; j < n_edges; j++)
+    for (int j = 0; j < n_edges; j++)
     {
-      c_optical_depth = 0.0;
-      c_column_density = 0.0;
-      c_frequency = edges[j].freq;
+      double optical_depth = 0.0;
+      double column_density = 0.0;
+      double frequency = pi_edges[j].freq;
 
-      err = create_photon (&photon, c_frequency, inclinations[i].lmn);
-      if (err == EXIT_FAILURE)
+      initialise_photon_packet(&photon, frequency, inclinations[i].direction_vector);
+
+      error = integrate_tau_across_wind(&photon, &column_density, &optical_depth);
+      if (error == EXIT_FAILURE)
       {
-        print_error ("skipping photon of frequency %e\n", c_frequency);
-        continue;
+        continue; // do not throw extra warning when one is already thrown in integrate_tau_across_wind
       }
 
-      err = integrate_tau_across_wind (&photon, &c_column_density, &c_optical_depth);
-      if (err == EXIT_FAILURE)
-        continue;               // do not throw extra warning when one is already thrown in integrate_tau_across_wind
-
-      optical_depth_values[i * n_edges + j] = c_optical_depth;
-      column_density_values[i] = c_column_density;
+      optical_depths[i * n_edges + j] = optical_depth;
+      column_densities[i] = column_density;
     }
   }
 
-  print_optical_depths (inclinations, n_inclinations, edges, n_edges, optical_depth_values, column_density_values);
-  free (inclinations);
-  free (optical_depth_values);
-  free (column_density_values);
-  RUN_MODE = original_run_mode;
+  print_optical_depths(inclinations, CONFIG.n_inclinations, pi_edges, n_edges, optical_depths, column_densities);
+
+  free(optical_depths);
+  free(column_densities);
 }
 
 /* ************************************************************************* */
@@ -197,26 +264,23 @@ calculate_photoionization_optical_depths (double *input_inclinations)
  *
  * ************************************************************************** */
 
-void
-create_optical_depth_spectrum (double u_freq_min, double u_freq_max, double *input_inclinations)
+void create_optical_depth_spectrum(void)
 {
   int i, j;
   int err;
-  double *tau_spectrum;
-  double c_optical_depth, c_column_density;
-  double c_frequency, freq_min, freq_max, d_freq;
+  double *spectrum;
+  double freq_min, freq_max;
   struct photon photon;
 
-  int n_inclinations;
-  SightLines_t *inclinations = initialize_inclination_angles (&n_inclinations, input_inclinations);
+  SightLines_t inclinations[MAX_ANGLES];
 
-  printf ("Creating optical depth spectra:\n");
-
-  tau_spectrum = calloc (n_inclinations * NUM_FREQUENCY_BINS, sizeof *tau_spectrum);
-  if (tau_spectrum == NULL)
+  initialize_inclination_angles(inclinations);
+  int n_inclinations = CONFIG.n_inclinations;
+  spectrum = calloc(n_inclinations * NUM_FREQUENCY_BINS, sizeof *spectrum);
+  if (spectrum == NULL)
   {
-    print_error ("cannot allocate %lu bytes for tau_spectrum\n", n_inclinations * NUM_FREQUENCY_BINS * sizeof *tau_spectrum);
-    exit (EXIT_FAILURE);
+    print_error("cannot allocate %lu bytes for tau_spectrum\n", n_inclinations * NUM_FREQUENCY_BINS * sizeof *spectrum);
+    exit(EXIT_FAILURE);
   }
 
   /*
@@ -227,6 +291,9 @@ create_optical_depth_spectrum (double u_freq_min, double u_freq_max, double *inp
    * used, however if xxpsec is NULL (no observer spectrum exists), then the
    * frequency range will be over a default 100 - 10,000 Angstrom band.
    */
+
+  double u_freq_min = CONFIG.freq_min;
+  double u_freq_max = CONFIG.freq_max;
 
   if (u_freq_min > 0 || u_freq_max > 0)
   {
@@ -250,8 +317,8 @@ create_optical_depth_spectrum (double u_freq_min, double u_freq_max, double *inp
 
     if (freq_max < freq_min)
     {
-      print_error ("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
-      exit (EXIT_FAILURE);
+      print_error("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
+      exit(EXIT_FAILURE);
     }
   }
   else
@@ -265,183 +332,191 @@ create_optical_depth_spectrum (double u_freq_min, double u_freq_max, double *inp
     {
       freq_min = VLIGHT / (geo.swavemax * ANGSTROM);
       freq_max = VLIGHT / (geo.swavemin * ANGSTROM);
-      if (sane_check (freq_min))
+      if (sane_check(freq_min))
       {
         freq_min = VLIGHT / (10000 * ANGSTROM);
-        print_error ("freq_min has an invalid value setting to %e\n", freq_min);
+        print_error("freq_min has an invalid value setting to %e\n", freq_min);
       }
-      if (sane_check (freq_max))
+      if (sane_check(freq_max))
       {
         freq_max = VLIGHT / (100 * ANGSTROM);
-        print_error ("freq_min has an invalid value setting to %e\n", freq_max);
+        print_error("freq_min has an invalid value setting to %e\n", freq_max);
       }
     }
   }
 
-  d_freq = (log10 (freq_max) - log10 (freq_min)) / NUM_FREQUENCY_BINS;
-  kbf_need (freq_min, freq_max);
+  printf("Creating optical depth spectra between %e Hz - %e Hz for %d observer angles\n", freq_min, freq_max, n_inclinations);
 
-  /*
-   * Now create the optical depth spectra for each inclination
-   */
+  const int output_freq = NUM_FREQUENCY_BINS / 10;
+  const double d_freq = (log10(freq_max) - log10(freq_min)) / NUM_FREQUENCY_BINS;
 
+  // This is an optimisation to reduce the number of opacities we need to check
+  kbf_need(freq_min, freq_max);
+
+  // Calculate optical depth spectrum for each inclination
   for (i = 0; i < n_inclinations; i++)
   {
-    printf ("  - Creating spectrum: %s\n", inclinations[i].name);
-    c_frequency = log10 (freq_min);
-
+    printf(" -- %s ", inclinations[i].name);
+    double frequency = log10(freq_min);
     for (j = 0; j < NUM_FREQUENCY_BINS; j++)
     {
-      c_optical_depth = 0.0;
-      c_column_density = 0.0;
+      if (j % output_freq == 0)
+      {
+        printf(".");
+        fflush(stdout);
+      }
+      double optical_depth = 0.0;
+      double column_density = 0.0;
 
-      err = create_photon (&photon, pow (10, c_frequency), inclinations[i].lmn);
+      err = initialise_photon_packet(&photon, pow(10, frequency), inclinations[i].direction_vector);
       if (err == EXIT_FAILURE)
       {
-        print_error ("skipping photon of frequency %e\n", pow (10, c_frequency));
+        print_error("Issue for photon for frequency bin %e Hz\n", pow(10, frequency));
         continue;
       }
 
-      err = integrate_tau_across_wind (&photon, &c_column_density, &c_optical_depth);
+      err = integrate_tau_across_wind(&photon, &column_density, &optical_depth);
       if (err == EXIT_FAILURE)
+      {
         continue;
+      }
 
-      tau_spectrum[i * NUM_FREQUENCY_BINS + j] = c_optical_depth;
-      c_frequency += d_freq;
+      spectrum[i * NUM_FREQUENCY_BINS + j] = optical_depth;
+      frequency += d_freq;
     }
+    printf("\n");
   }
 
-  write_optical_depth_spectrum (inclinations, n_inclinations, tau_spectrum, freq_min, d_freq);
-  free (tau_spectrum);
-  free (inclinations);
+  write_optical_depth_spectrum(inclinations, n_inclinations, spectrum, freq_min, d_freq);
+  free(spectrum);
 }
 
-/* ************************************************************************* */
-/**
- * @brief
- *
- * @details
- *
- * ************************************************************************** */
+// /* ************************************************************************* */
+// /**
+//  * @brief
+//  *
+//  * @details
+//  *
+//  * ************************************************************************** */
 
-void
-calculate_cell_optical_depth_spectrum (double u_freq_min, double u_freq_max, double *input_inclinations)
-{
-  int i, j;
-  int err;
-  double *tau_spectrum;
-  double c_optical_depth, c_column_density;
-  double c_frequency, freq_min, freq_max, d_freq;
-  struct photon photon;
+// void calculate_cell_optical_depth_spectrum(double u_freq_min, double u_freq_max, double *input_inclinations)
+// {
+//   int i, j;
+//   int err;
+//   double *tau_spectrum;
+//   double c_optical_depth, c_column_density;
+//   double c_frequency, freq_min, freq_max, d_freq;
+//   struct photon photon;
 
-  int n_inclinations;
-  SightLines_t *inclinations = initialize_inclination_angles (&n_inclinations, input_inclinations);
+//   SightLines_t inclinations[MAX_ANGLES];
 
-  printf ("Creating optical depth spectra:\n");
+//   initialize_inclination_angles(inclinations);
+//   int n_inclinations = CONFIGURATION.n_inclinations;
 
-  tau_spectrum = calloc (n_inclinations * NUM_FREQUENCY_BINS, sizeof *tau_spectrum);
-  if (tau_spectrum == NULL)
-  {
-    print_error ("cannot allocate %lu bytes for tau_spectrum\n", n_inclinations * NUM_FREQUENCY_BINS * sizeof *tau_spectrum);
-    exit (EXIT_FAILURE);
-  }
+//   printf("Creating optical depth spectra:\n");
 
-  /*
-   * We have a complicated if statement first, though. If a freq_min
-   * or a freq_max was provided, then we need to get this first and set
-   * the frequency limits appropriately. If neither are defined, then we will
-   * use some hardwired limits. The frequency range of the extracted will be
-   * used, however if xxpsec is NULL (no observer spectrum exists), then the
-   * frequency range will be over a default 100 - 10,000 Angstrom band.
-   */
+//   tau_spectrum = calloc(n_inclinations * NUM_FREQUENCY_BINS, sizeof *tau_spectrum);
+//   if (tau_spectrum == NULL)
+//   {
+//     print_error("cannot allocate %lu bytes for tau_spectrum\n", n_inclinations * NUM_FREQUENCY_BINS * sizeof *tau_spectrum);
+//     exit(EXIT_FAILURE);
+//   }
 
-  if (u_freq_min > 0 || u_freq_max > 0)
-  {
-    if (u_freq_min > 0)
-    {
-      freq_min = u_freq_min;
-    }
-    else
-    {
-      freq_min = VLIGHT / (10000 * ANGSTROM);
-    }
+//   /*
+//    * We have a complicated if statement first, though. If a freq_min
+//    * or a freq_max was provided, then we need to get this first and set
+//    * the frequency limits appropriately. If neither are defined, then we will
+//    * use some hardwired limits. The frequency range of the extracted will be
+//    * used, however if xxpsec is NULL (no observer spectrum exists), then the
+//    * frequency range will be over a default 100 - 10,000 Angstrom band.
+//    */
 
-    if (u_freq_max > 0)
-    {
-      freq_max = u_freq_max;
-    }
-    else
-    {
-      freq_max = VLIGHT / (100 * ANGSTROM);
-    }
+//   if (u_freq_min > 0 || u_freq_max > 0)
+//   {
+//     if (u_freq_min > 0)
+//     {
+//       freq_min = u_freq_min;
+//     }
+//     else
+//     {
+//       freq_min = VLIGHT / (10000 * ANGSTROM);
+//     }
 
-    if (freq_max < freq_min)
-    {
-      print_error ("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
-      exit (EXIT_FAILURE);
-    }
-  }
-  else
-  {
-    if ((geo.nangles == 0 && xxspec == NULL) || (geo.swavemax == 0 && geo.swavemin == 0))
-    {
-      freq_min = VLIGHT / (10000 * ANGSTROM);
-      freq_max = VLIGHT / (100 * ANGSTROM);
-    }
-    else
-    {
-      freq_min = VLIGHT / (geo.swavemax * ANGSTROM);
-      freq_max = VLIGHT / (geo.swavemin * ANGSTROM);
-      if (sane_check (freq_min))
-      {
-        freq_min = VLIGHT / (10000 * ANGSTROM);
-        print_error ("freq_min has an invalid value setting to %e\n", freq_min);
-      }
-      if (sane_check (freq_max))
-      {
-        freq_max = VLIGHT / (100 * ANGSTROM);
-        print_error ("freq_min has an invalid value setting to %e\n", freq_max);
-      }
-    }
-  }
+//     if (u_freq_max > 0)
+//     {
+//       freq_max = u_freq_max;
+//     }
+//     else
+//     {
+//       freq_max = VLIGHT / (100 * ANGSTROM);
+//     }
 
-  d_freq = (log10 (freq_max) - log10 (freq_min)) / NUM_FREQUENCY_BINS;
-  kbf_need (freq_min, freq_max);
+//     if (freq_max < freq_min)
+//     {
+//       print_error("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
+//       exit(EXIT_FAILURE);
+//     }
+//   }
+//   else
+//   {
+//     if ((geo.nangles == 0 && xxspec == NULL) || (geo.swavemax == 0 && geo.swavemin == 0))
+//     {
+//       freq_min = VLIGHT / (10000 * ANGSTROM);
+//       freq_max = VLIGHT / (100 * ANGSTROM);
+//     }
+//     else
+//     {
+//       freq_min = VLIGHT / (geo.swavemax * ANGSTROM);
+//       freq_max = VLIGHT / (geo.swavemin * ANGSTROM);
+//       if (sane_check(freq_min))
+//       {
+//         freq_min = VLIGHT / (10000 * ANGSTROM);
+//         print_error("freq_min has an invalid value setting to %e\n", freq_min);
+//       }
+//       if (sane_check(freq_max))
+//       {
+//         freq_max = VLIGHT / (100 * ANGSTROM);
+//         print_error("freq_min has an invalid value setting to %e\n", freq_max);
+//       }
+//     }
+//   }
 
-  /*
-   * Now create the optical depth spectra for each inclination
-   */
+//   d_freq = (log10(freq_max) - log10(freq_min)) / NUM_FREQUENCY_BINS;
+//   kbf_need(freq_min, freq_max);
 
-  for (i = 0; i < n_inclinations; i++)
-  {
-    printf ("  - Creating spectrum: %s\n", inclinations[i].name);
-    c_frequency = log10 (freq_min);
+//   /*
+//    * Now create the optical depth spectra for each inclination
+//    */
 
-    for (j = 0; j < NUM_FREQUENCY_BINS; j++)
-    {
-      c_optical_depth = 0.0;
+//   for (i = 0; i < n_inclinations; i++)
+//   {
+//     printf("  - Creating spectrum: %s\n", inclinations[i].name);
+//     c_frequency = log10(freq_min);
 
-      err = create_photon (&photon, pow (10, c_frequency), inclinations[i].lmn);
-      if (err == EXIT_FAILURE)
-      {
-        print_error ("skipping photon of frequency %e\n", pow (10, c_frequency));
-        continue;
-      }
+//     for (j = 0; j < NUM_FREQUENCY_BINS; j++)
+//     {
+//       c_optical_depth = 0.0;
 
-      err = optical_depth_across_cell (&photon, &c_optical_depth);
-      if (err == EXIT_FAILURE)
-        continue;
+//       err = initialise_photon_packet(&photon, pow(10, c_frequency), inclinations[i].direction_vector);
+//       if (err == EXIT_FAILURE)
+//       {
+//         print_error("skipping photon of frequency %e\n", pow(10, c_frequency));
+//         continue;
+//       }
 
-      tau_spectrum[i * NUM_FREQUENCY_BINS + j] = c_optical_depth;
-      c_frequency += d_freq;
-    }
-  }
+//       err = move_photon_across_cell(&photon, &c_optical_depth);
+//       if (err == EXIT_FAILURE)
+//         continue;
 
-  printf ("huh???\n");
-  write_optical_depth_spectrum (inclinations, n_inclinations, tau_spectrum, freq_min, d_freq);
-  free (tau_spectrum);
-  free (inclinations);
-}
+//       tau_spectrum[i * NUM_FREQUENCY_BINS + j] = c_optical_depth;
+//       c_frequency += d_freq;
+//     }
+//   }
+
+//   write_optical_depth_spectrum(inclinations, n_inclinations, tau_spectrum, freq_min, d_freq);
+//   free(tau_spectrum);
+//   free(inclinations);
+// }
 
 /* ************************************************************************* */
 /**
@@ -455,47 +530,36 @@ calculate_cell_optical_depth_spectrum (double u_freq_min, double u_freq_max, dou
  *
  * ************************************************************************** */
 
-void
-calculate_optical_depth_surfaces (void)
+void calculate_optical_depth_surfaces(void)
 {
-  int i, error;
-  double optical_depth, column_density;
   struct photon photon;
-  SightLines_t *inclinations;
-  double input_inclinations[MAX_CUSTOM_ANGLES];
+  struct SightLines inclinations[MAX_ANGLES];
+  const double TEST_FREQUENCY = 8e14; // todo: this probably need to be a possible input
 
-  for (i = 0; i < MAX_CUSTOM_ANGLES; ++i)       // required for initialize_inclination_angles, even though unused
-    input_inclinations[i] = -1.0;
+  SMAX_FRAC = 0.05; // takes longer, but higher accuracy
+  initialize_inclination_angles(inclinations);
 
-  int n_inclinations;
-  inclinations = initialize_inclination_angles (&n_inclinations, input_inclinations);
-
-  Positions_t *positions = calloc (n_inclinations, sizeof (Positions_t));
+  Pos_t *positions = calloc(CONFIG.n_inclinations, sizeof(Pos_t));
   if (positions == NULL)
   {
-    print_error ("unable to allocate memory for the positions array\n");
-    exit (EXIT_FAILURE);
+    print_error("unable to allocate memory for the positions array\n");
+    exit(EXIT_FAILURE);
   }
 
-  const double test_freq = 8e14;        // todo: this probably need to be a possible input
+  printf("Locating electron scattering surface of constant optical depth (to escape) for tau_es = %f\n", CONFIG.tau_depth);
 
-  printf ("Locating electron scattering photosphere surface for tau_es = %f\n", TAU_DEPTH);
-
-  for (i = 0; i < n_inclinations; i++)
+  for (int i = 0; i < CONFIG.n_inclinations; i++)
   {
-    error = create_photon (&photon, test_freq, inclinations[i].lmn);
+    initialise_photon_packet(&photon, TEST_FREQUENCY, inclinations[i].direction_vector);
+    double optical_depth = 0;
+    double column_density = 0;
+
+    int error = integrate_tau_across_wind(&photon, &column_density, &optical_depth);
     if (error)
     {
-      positions[i].x = positions[i].y = positions[i].z = -1.0;
-      continue;
-    }
-
-    optical_depth = column_density = 0;
-
-    error = integrate_tau_across_wind (&photon, &column_density, &optical_depth);
-    if (error)
-    {
-      positions[i].x = positions[i].y = positions[i].z = -1.0;
+      positions[i].x = -1.0;
+      positions[i].y = -1.0;
+      positions[i].z = -1.0;
       continue;
     }
 
@@ -504,9 +568,44 @@ calculate_optical_depth_surfaces (void)
     positions[i].z = photon.x[2];
   }
 
-  write_photosphere_location_to_file (positions, n_inclinations);
-  free (inclinations);
-  free (positions);
+  write_photosphere_location_to_file(positions, CONFIG.n_inclinations);
+  free(positions);
+}
+
+/* ************************************************************************* */
+/**
+ * @brief
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+void set_default_configuration(void)
+{
+  Log_set_verbosity(1); // may need to be changed via CLI
+  Log_print_max(10);
+  Log_quit_after_n_errors((int)1e8);
+  init_rand((int)time(NULL));
+
+  rel_mode = REL_MODE_FULL;
+  SMAX_FRAC = 1.0;
+  DENSITY_PHOT_MIN = 1.e-10;
+
+  CONFIG.run_mode = MODE_SPECTRUM;
+  CONFIG.column_density_mode = COLUMN_MODE_RHO;
+  CONFIG.column_density_ion_number = 0;
+  CONFIG.domain = 0;
+  CONFIG.freq_min = -1.0;
+  CONFIG.freq_max = -1.0;
+  CONFIG.n_freq = NUM_FREQUENCY_BINS;
+  CONFIG.n_inclinations = 0;
+  CONFIG.tau_depth = 0.0;
+  CONFIG.ignore_electron_scattering = false;
+
+  for (int i = 0; i < MAX_ANGLES; i++)
+  {
+    CONFIG.inclinations[i] = -1.0;
+  }
 }
 
 /* ************************************************************************* */
@@ -522,52 +621,33 @@ calculate_optical_depth_surfaces (void)
  *
  * ************************************************************************** */
 
-int
-main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
-  timer ();
-  Log_set_verbosity (2);
-  Log_print_max (10);
-  Log_quit_after_n_errors ((int) 1e8);
-  init_rand ((int) time (NULL));
+  timer();
+  set_default_configuration();
+  parse_optd_arguments(argc, argv);
+  printf("%-20s Optical depth diagnostics beginning\n", "TAU");
+  initialize_wind_structures();
 
-  rel_mode = REL_MODE_FULL;
-  SMAX_FRAC = 1.0;
-  DENSITY_PHOT_MIN = 1.e-10;
-  COLUMN_MODE = COLUMN_MODE_RHO;
-  RUN_MODE = MODE_SPECTRUM;
-  N_DOMAIN = 0;
-
-  struct CommandlineArguments arguments;
-  arguments = get_arguments (argc, argv);
-
-
-  printf ("%-20s Optical depth diagnostics beginning\n", "TAU");
-  initialize_wind_structures ();
-
-  switch (RUN_MODE)
+  switch (CONFIG.run_mode)
   {
   case MODE_PHOTOION:
-    calculate_photoionization_optical_depths (arguments.inclinations);
+    calculate_photoionization_optical_depths();
     break;
   case MODE_SPECTRUM:
-    create_optical_depth_spectrum (arguments.freq_min, arguments.freq_max, arguments.inclinations);
+    create_optical_depth_spectrum();
     break;
   case MODE_CELL_SPECTRUM:
-    calculate_cell_optical_depth_spectrum (arguments.freq_min, arguments.freq_max, arguments.inclinations);
+    // calculate_cell_optical_depth_spectrum();
     break;
   case MODE_SURFACE:
-    SMAX_FRAC = 0.1;            // takes longer, but higher accuracy
-    calculate_optical_depth_surfaces ();
-    break;
-  default:
-    print_error ("Mode %d is an unknown run mode, not sure how you got here so exiting the program\n", RUN_MODE);
+    calculate_optical_depth_surfaces();
     break;
   }
 
-  printf ("\n%-20s Optical depth diagnostics completed\n", "TAU");
-  printf ("Completed optical depth diagnostics. The elapsed TIME was %f\n", timer ());
-  error_summary ("end of program");
+  printf("%-20s Optical depth diagnostics completed\n", "TAU");
+  printf("Completed optical depth diagnostics. The elapsed TIME was %f\n", timer());
+  error_summary("end of program");
 
   return EXIT_SUCCESS;
 }
