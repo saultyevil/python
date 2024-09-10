@@ -59,23 +59,21 @@ write_generic_file_header (FILE *fp)
  *
  * ************************************************************************** */
 
-void
+int
 print_optical_depths (SightLines_t *inclinations, int n_inclinations, PIEdge_t edges[], int n_edges, double *optical_depth,
                       double *column_density)
 {
-  int i, j;
-  int len, c_linelen;
-  char str[LINELENGTH];
+  char line[LINELENGTH];
   const int MAX_COL = 120;
 
   printf ("\nOptical depths along the defined line of sights for domain %i:\n\n", CONFIG.domain);
 
-  for (i = 0; i < n_inclinations; i++)
+  for (int i = 0; i < n_inclinations; i++)
   {
-    if (CONFIG.column_density_mode == COLUMN_MODE_RHO)
+    if (CONFIG.column_density == COLUMN_MODE_RHO)
     {
-      printf ("%-8s: Mass column density     : %3.2e cm^-2\n", inclinations[i].name, column_density[i]);
-      printf ("%-8s: Hydrogen column density : %3.2e cm^-2\n", "", column_density[i] * rho2nh);
+      printf ("%-8s: Mass column density             : %3.2e cm^-2\n", inclinations[i].name, column_density[i]);
+      printf ("%-8s: Approx. Hydrogen column density : %3.2e cm^-2\n", "", column_density[i] * rho2nh);
     }
     else
     {
@@ -83,27 +81,29 @@ print_optical_depths (SightLines_t *inclinations, int n_inclinations, PIEdge_t e
               ele[ion[CONFIG.column_density_ion_number].nelem].name, ion[CONFIG.column_density_ion_number].istate, column_density[i]);
     }
 
-    c_linelen = 0;
-    for (j = 0; j < n_edges; j++)
+    int line_len = 0;
+    for (int j = 0; j < n_edges; j++)
     {
-      len = snprintf (str, LINELENGTH, "tau_%-9s: %3.2e  ", edges[j].name, optical_depth[i * n_edges + j]);
+      int len = snprintf (line, LINELENGTH, "tau_%-9s: %3.2e  ", edges[j].name, optical_depth[i * n_edges + j]);
       if (len < 0)
       {
-        print_error ("error when trying to write to string for output\n");
-        exit (EXIT_FAILURE);
+        print_error ("There has been an issue when printing results to the screen\n");
+        return EXIT_FAILURE;
       }
 
-      c_linelen += len;
-      if (c_linelen > MAX_COL)
+      line_len += len;
+      if (line_len > MAX_COL)
       {
-        c_linelen = 0;
+        line_len = 0;
         printf ("\n");
       }
 
-      printf ("%s", str);
+      printf ("%s", line);
     }
     printf ("\n\n");
   }
+
+  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */
@@ -125,55 +125,56 @@ print_optical_depths (SightLines_t *inclinations, int n_inclinations, PIEdge_t e
  *
  * ************************************************************************** */
 
-void
-write_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq)
+int
+save_optical_depth_spectrum (SightLines_t *inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq)
 {
-  int i, j;
-  double c_wavelength, c_frequency;
-  char filename[LINELENGTH];
   FILE *fp;
+  char filename[LINELENGTH];
 
   int len = snprintf (filename, LINELENGTH, "%s.spec_tau", files.root);
   if (len < 0)
   {
     print_error ("error when creating filename string\n");
-    exit (EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
   fp = fopen (filename, "w");
   if (fp == NULL)
   {
     print_error ("unable to open %s in write mode\n", filename);
-    exit (EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
   write_generic_file_header (fp);
   fprintf (fp, "%-15s %-15s ", "Freq.", "Lambda");
-  for (i = 0; i < n_inclinations; i++)
+  for (int i = 0; i < n_inclinations; i++)
   {
     fprintf (fp, "%-15s ", inclinations[i].name);
   }
   fprintf (fp, "\n");
 
-  c_frequency = log10 (freq_min);
-  for (i = 0; i < NUM_FREQUENCY_BINS; i++)
+  double frequency = log10 (freq_min);
+  for (int i = 0; i < NUM_FREQUENCY_BINS; i++)
   {
-    c_wavelength = VLIGHT / pow (10, c_frequency) / ANGSTROM;
-    fprintf (fp, "%-15e %-15e ", pow (10, c_frequency), c_wavelength);
+    double wavelength = VLIGHT / pow (10, frequency) / ANGSTROM;
+    fprintf (fp, "%-15e %-15e ", pow (10, frequency), wavelength);
 
-    for (j = 0; j < n_inclinations; j++)
+    for (int j = 0; j < n_inclinations; j++)
     {
       fprintf (fp, "%-15e ", tau_spectrum[j * NUM_FREQUENCY_BINS + i]);
     }
 
     fprintf (fp, "\n");
-    c_frequency += d_freq;
+    frequency += d_freq;
   }
 
   if (fclose (fp))
   {
     print_error ("unable to close %s, output may be unfinished!\n", filename);
+    return EXIT_FAILURE;
   }
+
+  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */
@@ -214,7 +215,7 @@ write_photosphere_location_to_file (Pos_t *positions, int n_angles)
   }
 
   write_generic_file_header (fp);
-  fprintf (fp, "# Electron scatter photosphere locations for tau_es = %f\n#\n", CONFIG.tau_depth);
+  fprintf (fp, "# Electron scatter photosphere locations for tau_es = %f\n#\n", CONFIG.arg_tau_surface);
 
   if (zdom[CONFIG.domain].coord_type != SPHERICAL)
   {

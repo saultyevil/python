@@ -61,7 +61,7 @@ parse_args_for_mode_pi (int argc, char *argv[])
       print_help ();
       exit (EXIT_FAILURE);
     }
-    CONFIG.column_density_mode = COLUMN_MODE_ION;
+    CONFIG.column_density = COLUMN_MODE_ION;
     CONFIG.column_density_ion_number = (int) strtol (argv[3], &ret, 10);
     if (*ret != '\0')
     {
@@ -103,7 +103,7 @@ parse_args_for_mode_wind (int argc, char *argv[])
     {
       char *end_ptr;
 
-      CONFIG.n_inclinations = 0;
+      CONFIG.arg_num_inc = 0;
       for (int j = 1; j < MAX_CUSTOM_ANGLES + 1; ++j)
       {
         float inclination = (float) strtod (argv[i + j], &end_ptr);
@@ -116,17 +116,17 @@ parse_args_for_mode_wind (int argc, char *argv[])
         {
           break;
         }
-        CONFIG.inclinations[j - 1] = inclination;
-        CONFIG.n_inclinations += 1;
+        CONFIG.arg_inclinations[j - 1] = inclination;
+        CONFIG.arg_num_inc += 1;
       }
 
-      if (CONFIG.n_inclinations == 0)
+      if (CONFIG.arg_num_inc == 0)
       {
         printf ("Invalid input: no inclination were provided for --i option\n");
         exit (EXIT_FAILURE);
       }
 
-      num_args_processed += 1 + CONFIG.n_inclinations;
+      num_args_processed += 1 + CONFIG.arg_num_inc;
       i += num_args_processed;  // avoid trying to reprocess the inclination angles
     }
   }
@@ -180,13 +180,13 @@ parse_args_for_mode_surface (int argc, char *argv[])
     exit (EXIT_FAILURE);
   }
 
-  CONFIG.tau_depth = strtod (argv[2], &ret);
+  CONFIG.arg_tau_surface = strtod (argv[2], &ret);
   if (*ret != '\0')
   {
     printf ("Unable to convert '%s' into a number for mode 'surface'\n", argv[2]);
     exit (EXIT_FAILURE);
   }
-  if (CONFIG.tau_depth <= 0)
+  if (CONFIG.arg_tau_surface <= 0)
   {
     printf ("Invalid value for optical depth, must be positive and non-zero\n");
     exit (EXIT_FAILURE);
@@ -236,7 +236,7 @@ parse_shared_args (int argc, char *argv[])
     }
     else if (!strcmp (argv[i], "--freq-min"))   // NOTE: lower frequency boundary for optical depth spectrum
     {
-      CONFIG.freq_min = strtod (argv[i + 1], &ret);
+      CONFIG.arg_freq_min = strtod (argv[i + 1], &ret);
       if (*ret != '\0')
       {
         printf ("Unable to convert argument provided for -freq_min to a double\n");
@@ -247,7 +247,7 @@ parse_shared_args (int argc, char *argv[])
     }
     else if (!strcmp (argv[i], "--freq-max"))   // NOTE: upper frequency boundary for optical depth spectrum
     {
-      CONFIG.freq_max = strtod (argv[i + 1], &ret);
+      CONFIG.arg_freq_max = strtod (argv[i + 1], &ret);
       if (*ret != '\0')
       {
         printf ("Unable to convert argument provided for -freq_max to a double\n");
@@ -313,22 +313,22 @@ parse_optd_arguments (int argc, char *argv[])
 
   if (strcmp (argv[1], "pi") == 0)
   {
-    CONFIG.run_mode = MODE_PHOTOION;
+    CONFIG.mode = MODE_PHOTOION;
     num_args_processed += parse_args_for_mode_pi (argc, argv);
   }
   else if (strcmp (argv[1], "wind") == 0)
   {
-    CONFIG.run_mode = MODE_SPECTRUM;
+    CONFIG.mode = MODE_SPECTRUM;
     num_args_processed += parse_args_for_mode_wind (argc, argv);
   }
   else if (strcmp (argv[1], "cell") == 0)
   {
-    CONFIG.run_mode = MODE_CELL_SPECTRUM;
+    CONFIG.mode = MODE_CELL_SPECTRUM;
     num_args_processed += parse_args_for_mode_cell (argc, argv);
   }
   else if (strcmp (argv[1], "surface") == 0)
   {
-    CONFIG.run_mode = MODE_SURFACE;
+    CONFIG.mode = MODE_SURFACE;
     num_args_processed += parse_args_for_mode_surface (argc, argv);
   }
   else

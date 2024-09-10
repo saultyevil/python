@@ -256,7 +256,8 @@ table_objects = windsave2table.o $(python_objects) # windsave2table_sub.o is alr
 rhf_objects = rad_hydro_files.o $(python_objects)
 modify_wind_objects = modify_wind.o $(python_objects)
 inspect_wind_objects = inspect_wind.o $(python_objects)
-py_optd_obj = py_optd.o py_optd_output.o py_optd_trans.o py_optd_util.o py_optd_extern_init.o py_optd_parse.o $(python_objects)
+py_optd_obj = py_optd.o py_optd_output.o py_optd_trans.o py_optd_util.o py_optd_extern_init.o py_optd_parse.o \
+	py_optd_mode.o $(python_objects)
 
 run_indent:
 	../py_progs/run_indent.py -all_no_headers

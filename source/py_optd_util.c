@@ -13,10 +13,144 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "atomic.h"
 #include "python.h"
 #include "py_optd.h"
+
+/* ************************************************************************** */
+/**
+ * @brief Initialize a Sirocco/Python wind structure and other associated data.
+ *
+ * @details
+ *
+ * Data is read in from the wind_save and spec_save files. This function uses
+ * some of Sirocco's global variables and functions to read in the data. This is
+ * why there are no arguments to this function, as Sirocco handles all of this
+ * with global state.
+ *
+ * ************************************************************************** */
+
+int
+initialize_wind_structures (void)
+{
+  char windsave_filename[LINELENGTH + LINELENGTH];
+  char specsave_filename[LINELENGTH + LINELENGTH];
+  snprintf (windsave_filename, LINELENGTH + LINELENGTH, "%s.wind_save", files.root);
+  snprintf (specsave_filename, LINELENGTH + LINELENGTH, "%s.spec_save", files.root);
+
+  /*
+   * Read in the wind_save file and initialize the wind cones and DFUDGE which
+   * are important for photon transport. The atomic data is also read in at
+   * this point (which is also very important)
+   */
+
+  zdom = calloc (MAX_DOM, sizeof (domain_dummy));
+  if (zdom == NULL)
+  {
+    print_error ("Failed to allocate memory for wind domain(s)\n");
+    return EXIT_FAILURE;
+  }
+
+  if (wind_read (windsave_filename) < 0)
+  {
+    print_error ("Failed to read in wind save file from %s\n", windsave_filename);
+    return EXIT_FAILURE;
+  }
+
+  DFUDGE = setup_dfudge ();
+  setup_windcone ();
+
+  /*
+   * If a spec_save exists, and there are spectral cycles (possibly a redundant
+   * check), then read in the spec_save file.
+   */
+
+  if (access (specsave_filename, F_OK) == 0)
+  {
+    if (geo.pcycle > 0)
+    {
+      if (spec_read (specsave_filename) < 0)
+      {
+        print_error ("Failed to open %s, when it should exist for this simulation\n", specsave_filename);
+        return EXIT_FAILURE;
+      }
+    }
+  }
+
+  return EXIT_SUCCESS;
+}
+
+/* ************************************************************************** */
+/**
+ * @brief
+ *
+ * @details
+ *
+ * ************************************************************************** */
+
+void
+set_frequency_range (void)
+{
+  double freq_min = 0;
+  double freq_max = 0;
+  double cli_freq_min = CONFIG.arg_freq_min;
+  double cli_freq_max = CONFIG.arg_freq_max;
+
+  if (cli_freq_min > 0 || cli_freq_max > 0)
+  {
+    if (cli_freq_min > 0)
+    {
+      freq_min = cli_freq_min;
+    }
+    else
+    {
+      freq_min = VLIGHT / (10000 * ANGSTROM);
+    }
+
+    if (cli_freq_max > 0)
+    {
+      freq_max = cli_freq_max;
+    }
+    else
+    {
+      freq_max = VLIGHT / (100 * ANGSTROM);
+    }
+
+    if (freq_max < freq_min)
+    {
+      print_error ("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
+      exit (EXIT_FAILURE);
+    }
+  }
+  else
+  {
+    if ((geo.nangles == 0 && xxspec == NULL) || (geo.swavemax == 0 && geo.swavemin == 0))
+    {
+      freq_min = VLIGHT / (10000 * ANGSTROM);
+      freq_max = VLIGHT / (100 * ANGSTROM);
+    }
+    else
+    {
+      freq_min = VLIGHT / (geo.swavemax * ANGSTROM);
+      freq_max = VLIGHT / (geo.swavemin * ANGSTROM);
+      if (sane_check (freq_min))
+      {
+        freq_min = VLIGHT / (10000 * ANGSTROM);
+        print_error ("freq_min has an invalid value setting to %e\n", freq_min);
+      }
+      if (sane_check (freq_max))
+      {
+        freq_max = VLIGHT / (100 * ANGSTROM);
+        print_error ("freq_min has an invalid value setting to %e\n", freq_max);
+      }
+    }
+  }
+
+  CONFIG.arg_freq_min = freq_min;
+  CONFIG.arg_freq_max = freq_max;
+}
 
 /* ************************************************************************* */
 /**
@@ -39,7 +173,7 @@ initialise_1d_angles (SightLines_t *inclinations)
   int len;
   const double phase = 1.0;
   const double default_angle = 45;
-  CONFIG.n_inclinations = 1;
+  CONFIG.arg_num_inc = 1;
 
   inclinations[0].direction_vector[0] = sin (default_angle / RADIAN) * cos (-phase * 360.0 / RADIAN);
   inclinations[0].direction_vector[1] = sin (default_angle / RADIAN) * sin (-phase * 360.0 / RADIAN);
@@ -74,7 +208,7 @@ initialise_1d_angles (SightLines_t *inclinations)
  * ************************************************************************** */
 
 static int
-_mode_normal (struct SightLines *inclinations)
+initialise_2d_normal (struct SightLines *inclinations)
 {
   int i;
   int len;
@@ -91,7 +225,7 @@ _mode_normal (struct SightLines *inclinations)
   int n_user_input = 0;
   for (i = 0; i < MAX_CUSTOM_ANGLES; ++i)
   {
-    if (CONFIG.inclinations[i] > -1)
+    if (CONFIG.arg_inclinations[i] > -1)
     {
       ++n_user_input;
     }
@@ -100,27 +234,27 @@ _mode_normal (struct SightLines *inclinations)
   // First of all use the user input
   if (n_user_input > 0)
   {
-    CONFIG.n_inclinations = n_user_input;
+    CONFIG.arg_num_inc = n_user_input;
 
     for (i = 0; i < n_user_input; i++)
     {
-      len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", CONFIG.inclinations[i], phase);
+      len = snprintf (inclinations[i].name, NAMELEN, "A%02.0fP%04.2f", CONFIG.arg_inclinations[i], phase);
       if (len < 0)
       {
         print_error ("there was an error writing the name to the sight lines array\n");
         exit (EXIT_FAILURE);
       }
 
-      inclinations[i].direction_vector[0] = sin (CONFIG.inclinations[i] / RADIAN) * cos (-phase * 360.0 / RADIAN);
-      inclinations[i].direction_vector[1] = sin (CONFIG.inclinations[i] / RADIAN) * sin (-phase * 360.0 / RADIAN);
-      inclinations[i].direction_vector[2] = cos (CONFIG.inclinations[i] / RADIAN);
-      inclinations[i].angle = CONFIG.inclinations[i];
+      inclinations[i].direction_vector[0] = sin (CONFIG.arg_inclinations[i] / RADIAN) * cos (-phase * 360.0 / RADIAN);
+      inclinations[i].direction_vector[1] = sin (CONFIG.arg_inclinations[i] / RADIAN) * sin (-phase * 360.0 / RADIAN);
+      inclinations[i].direction_vector[2] = cos (CONFIG.arg_inclinations[i] / RADIAN);
+      inclinations[i].angle = CONFIG.arg_inclinations[i];
     }
   }
   // Then use whatever is in the wind save and spec save
   else if (xxspec != NULL && geo.nangles > 0)
   {
-    CONFIG.n_inclinations = geo.nangles;
+    CONFIG.arg_num_inc = geo.nangles;
 
     for (i = MSPEC; i < MSPEC + geo.nangles; i++)
     {
@@ -134,7 +268,7 @@ _mode_normal (struct SightLines *inclinations)
   {
     printf ("\nNo spec.save file has been found, using a default set of inclination angles\n\n");
 
-    CONFIG.n_inclinations = n_default_angles;
+    CONFIG.arg_num_inc = n_default_angles;
 
     for (i = 0; i < n_default_angles; i++)
     {
@@ -178,12 +312,12 @@ _mode_normal (struct SightLines *inclinations)
  * ************************************************************************** */
 
 static int
-_mode_surface (struct SightLines *inclinations)
+initialise_2d_surface (struct SightLines *inclinations)
 {
   const double phase = 1.0;
   const double d_theta = 90.0 / (float) MAX_ANGLES;
 
-  CONFIG.n_inclinations = MAX_ANGLES;
+  CONFIG.arg_num_inc = MAX_ANGLES;
 
   for (int i = 0; i < MAX_ANGLES; i++)
   {
@@ -208,13 +342,13 @@ _mode_surface (struct SightLines *inclinations)
 static void
 initialise_2d_angles (struct SightLines *inclinations)
 {
-  switch (CONFIG.run_mode)
+  switch (CONFIG.mode)
   {
   case MODE_SURFACE:
-    _mode_surface (inclinations);
+    initialise_2d_surface (inclinations);
     break;
   default:
-    _mode_normal (inclinations);
+    initialise_2d_normal (inclinations);
     break;
   }
 }
@@ -293,7 +427,7 @@ initialise_photon_packet (PhotPtr photon, double frequency, double *direction)
   photon->x[0] = photon->x[1] = photon->x[2] = 0.0;
   stuff_v (direction, photon->lmn);
 
-  switch (CONFIG.run_mode)
+  switch (CONFIG.mode)
   {
   case MODE_SURFACE:           // Move to edge of wind and point it inward
     move_phot (photon, zdom[CONFIG.domain].rmax - DFUDGE);

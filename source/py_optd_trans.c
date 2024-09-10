@@ -63,7 +63,7 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
   n_plasma = wmain[photon->grid].nplasma;
   plasma_cell = &plasmamain[n_plasma];
 
-  if (CONFIG.column_density_mode == COLUMN_MODE_RHO)
+  if (CONFIG.column_density == COLUMN_MODE_RHO)
   {
     density = plasma_cell->rho;
   }
@@ -121,7 +121,7 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
 
   kappa_total = 0;
 
-  if (CONFIG.run_mode != MODE_SURFACE)
+  if (CONFIG.mode != MODE_SURFACE)
   {
     if (geo.rt_mode == RT_MODE_2LEVEL)
     {
@@ -252,9 +252,9 @@ integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *op
       }
     }
 
-    if (CONFIG.run_mode == MODE_SURFACE)
+    if (CONFIG.mode == MODE_SURFACE)
     {
-      if (photon.tau > CONFIG.tau_depth)
+      if (photon.tau > CONFIG.arg_tau_surface)
       {
         photon_status = P_ABSORB;
         break;
@@ -266,7 +266,7 @@ integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *op
 
   // If a photon hits the surface, something will have gone wrong. Throw that
   // photon away and return an error
-  if (CONFIG.run_mode == MODE_SPECTRUM)
+  if (CONFIG.mode == MODE_SPECTRUM)
   {
     if (photon_status == P_HIT_STAR || photon_status == P_HIT_DISK)
     {
@@ -274,7 +274,7 @@ integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *op
       return EXIT_FAILURE;
     }
   }
-  if (CONFIG.run_mode == MODE_SURFACE)
+  if (CONFIG.mode == MODE_SURFACE)
   {
     if (photon_status == P_HIT_DISK)
     {
