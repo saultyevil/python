@@ -73,10 +73,10 @@ enum ColumnDensityEnum
 
 enum RunModeEnum
 {
-  MODE_PHOTOION,
-  MODE_SPECTRUM,
+  MODE_PHOTOION_EDGES,
+  MODE_WIND_SPECTRUM,
   MODE_CELL_SPECTRUM,
-  MODE_SURFACE,
+  MODE_FIND_SURFACE,
 };
 
 struct Config
@@ -91,6 +91,9 @@ struct Config
   int arg_num_inc;
   double arg_inclinations[MAX_ANGLES];
   double arg_tau_surface;
+  int arg_wind_elem;
+  int arg_wind_i;
+  int arg_wind_j;
 } CONFIG;
 
 // Function prototypes
@@ -99,17 +102,15 @@ void parse_optd_arguments(int argc, char *argv[]);
 int initialize_inclination_angles(struct SightLines *inclinations);
 int initialise_photon_packet(PhotPtr photon, double frequency, double *direction);
 int integrate_tau_across_wind(PhotPtr photon, double *c_column_density, double *c_optical_depth);
+int integrate_tau_across_cell(PhotPtr photon, double *column_density_out, double *optical_depth_out);
 int print_optical_depths(SightLines_t *inclinations, int n_inclinations, PIEdge_t edges[], int n_edges, double *optical_depth,
                          double *column_density);
 int save_optical_depth_spectrum(SightLines_t *inclinations, int n_inclinations, double *tau_spectrum, double freq_min, double d_freq);
 void write_photosphere_location_to_file(Pos_t *positions, int n_angles);
-
 int initialize_wind_structures(void);
 void set_frequency_range(void);
-
 int calculate_photoionization_optical_depths(void);
 int create_optical_depth_spectrum(void);
-int create_cell_optical_depth_spectrum(void);
 int find_optical_depth_surface(void);
 
 #endif

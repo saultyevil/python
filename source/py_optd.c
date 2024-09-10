@@ -42,13 +42,14 @@ set_default_configuration (void)
   DENSITY_PHOT_MIN = 1.e-10;
 
   // Initialise basic controlling parameters
-  CONFIG.mode = MODE_SPECTRUM;
+  CONFIG.mode = MODE_WIND_SPECTRUM;
   CONFIG.column_density = COLUMN_MODE_RHO;
   CONFIG.column_density_ion_number = 0;
   CONFIG.domain = 0;
   CONFIG.ignore_electron_scattering = false;
 
   // Initialise values for CLI arguments
+  CONFIG.arg_wind_elem = -1;
   CONFIG.arg_freq_min = -1.0;
   CONFIG.arg_freq_max = -1.0;
   CONFIG.arg_num_inc = 0;
@@ -89,16 +90,14 @@ main (int argc, char *argv[])
   {
     switch (CONFIG.mode)
     {
-    case MODE_PHOTOION:
+    case MODE_PHOTOION_EDGES:
       error = calculate_photoionization_optical_depths ();
       break;
-    case MODE_SPECTRUM:
+    case MODE_WIND_SPECTRUM:
+    case MODE_CELL_SPECTRUM:
       error = create_optical_depth_spectrum ();
       break;
-    case MODE_CELL_SPECTRUM:
-      error = create_cell_optical_depth_spectrum ();
-      break;
-    case MODE_SURFACE:
+    case MODE_FIND_SURFACE:
       error = find_optical_depth_surface ();
       break;
     }

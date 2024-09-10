@@ -344,7 +344,7 @@ initialise_2d_angles (struct SightLines *inclinations)
 {
   switch (CONFIG.mode)
   {
-  case MODE_SURFACE:
+  case MODE_FIND_SURFACE:
     initialise_2d_surface (inclinations);
     break;
   default:
@@ -429,22 +429,28 @@ initialise_photon_packet (PhotPtr photon, double frequency, double *direction)
 
   switch (CONFIG.mode)
   {
-  case MODE_SURFACE:           // Move to edge of wind and point it inward
+  case MODE_FIND_SURFACE:      // Move to edge of wind and point it inward
     move_phot (photon, zdom[CONFIG.domain].rmax - DFUDGE);
     for (int i = 0; i < 3; ++i)
     {
       photon->lmn[i] *= -1.0;
     }
     break;
-  case MODE_CELL_SPECTRUM:     // Move to the bottom left of the cell
-    photon->x[0] = 56000000000000;
-    photon->x[2] = 11300000000000;
+  case MODE_CELL_SPECTRUM:     // Move to the bottom left of the cell -- this is not great, passing data with global state!
+    photon->x[0] = wmain[CONFIG.arg_wind_elem].x[0];
+    photon->x[1] = wmain[CONFIG.arg_wind_elem].x[1];
+    photon->x[2] = wmain[CONFIG.arg_wind_elem].x[2];
     break;
   default:                     // Move to the inner edge of the outflow
     move_phot (photon, geo.rstar + DFUDGE);
     break;
   }
 
+  int wind_status = where_in_wind (photon->x, &CONFIG.domain);
+  if (wind_status < 0)
+  {
+    return EXIT_FAILURE;
+  }
   photon->grid = where_in_grid (CONFIG.domain, photon->x);
 
   return EXIT_SUCCESS;

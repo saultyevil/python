@@ -148,10 +148,35 @@ parse_args_for_mode_wind (int argc, char *argv[])
 static int
 parse_args_for_mode_cell (int argc, char *argv[])
 {
+  char *ret;
   int num_args_processed = 0;
 
-  (void) argc;
-  (void) argv;
+  if (argc < 4)
+  {
+    printf ("Invalid arguments for mode 'cell'!\n");
+    print_help ();
+    exit (EXIT_FAILURE);
+  }
+
+  // Get i and j coordinates for cell in question
+  int i = (int) strtol (argv[2], &ret, 10);
+  if (*ret != '\0')
+  {
+    printf ("Unable to convert argument for i-th coordinate into an integer\n");
+    exit (EXIT_FAILURE);
+  }
+  int j = (int) strtol (argv[3], &ret, 10);
+  if (*ret != '\0')
+  {
+    printf ("Unable to convert argument for j-th coordinate into an integer\n");
+    exit (EXIT_FAILURE);
+  }
+  num_args_processed += 2;
+
+  // We can't do anything with this yet, as we don't know the number of elements
+  // in the wind
+  CONFIG.arg_wind_i = i;
+  CONFIG.arg_wind_j = j;
 
   return num_args_processed;
 }
@@ -313,12 +338,12 @@ parse_optd_arguments (int argc, char *argv[])
 
   if (strcmp (argv[1], "pi") == 0)
   {
-    CONFIG.mode = MODE_PHOTOION;
+    CONFIG.mode = MODE_PHOTOION_EDGES;
     num_args_processed += parse_args_for_mode_pi (argc, argv);
   }
   else if (strcmp (argv[1], "wind") == 0)
   {
-    CONFIG.mode = MODE_SPECTRUM;
+    CONFIG.mode = MODE_WIND_SPECTRUM;
     num_args_processed += parse_args_for_mode_wind (argc, argv);
   }
   else if (strcmp (argv[1], "cell") == 0)
@@ -328,7 +353,7 @@ parse_optd_arguments (int argc, char *argv[])
   }
   else if (strcmp (argv[1], "surface") == 0)
   {
-    CONFIG.mode = MODE_SURFACE;
+    CONFIG.mode = MODE_FIND_SURFACE;
     num_args_processed += parse_args_for_mode_surface (argc, argv);
   }
   else

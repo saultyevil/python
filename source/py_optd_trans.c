@@ -44,7 +44,7 @@
  *
  * ************************************************************************** */
 
-int
+static int
 move_photon_across_cell (PhotPtr photon, double *column_density_out, double *optical_depth_out)
 {
   int photon_status;
@@ -121,7 +121,7 @@ move_photon_across_cell (PhotPtr photon, double *column_density_out, double *opt
 
   kappa_total = 0;
 
-  if (CONFIG.mode != MODE_SURFACE)
+  if (CONFIG.mode != MODE_FIND_SURFACE)
   {
     if (geo.rt_mode == RT_MODE_2LEVEL)
     {
@@ -169,10 +169,15 @@ integrate_tau_across_cell (PhotPtr photon, double *column_density_out, double *o
   int ndom;
 
   where_in_wind (photon->x, &ndom);
-  int grid_start = where_in_grid (ndom, photon->x);
+  if (ndom < 0)
+  {
+    print_error ("Photon is somehow not inside a domain\n");
+    return EXIT_FAILURE;
+  }
 
   double column_density = 0;
   double optical_depth = 0;
+  int grid_start = where_in_grid (ndom, photon->x);
 
   while (photon->grid == grid_start)
   {
@@ -252,7 +257,7 @@ integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *op
       }
     }
 
-    if (CONFIG.mode == MODE_SURFACE)
+    if (CONFIG.mode == MODE_FIND_SURFACE)
     {
       if (photon.tau > CONFIG.arg_tau_surface)
       {
@@ -266,7 +271,7 @@ integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *op
 
   // If a photon hits the surface, something will have gone wrong. Throw that
   // photon away and return an error
-  if (CONFIG.mode == MODE_SPECTRUM)
+  if (CONFIG.mode == MODE_WIND_SPECTRUM)
   {
     if (photon_status == P_HIT_STAR || photon_status == P_HIT_DISK)
     {
@@ -274,7 +279,7 @@ integrate_tau_across_wind (PhotPtr photon_in, double *column_density, double *op
       return EXIT_FAILURE;
     }
   }
-  if (CONFIG.mode == MODE_SURFACE)
+  if (CONFIG.mode == MODE_FIND_SURFACE)
   {
     if (photon_status == P_HIT_DISK)
     {

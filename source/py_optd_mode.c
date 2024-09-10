@@ -4,7 +4,7 @@
  * @author  Edward Parkinson
  * @date  September 2024
  *
- * @brief
+ * @brief Functions for controlling the logic of each run mode.
  *
  * ************************************************************************** */
 
@@ -144,8 +144,23 @@ create_optical_depth_spectrum (void)
 {
   int error;
   struct photon photon;
-
   SightLines_t inclinations[MAX_ANGLES];
+
+  if (CONFIG.mode == MODE_CELL_SPECTRUM)
+  {
+    error = wind_ij_to_n (CONFIG.domain, CONFIG.arg_wind_i, CONFIG.arg_wind_j, &CONFIG.arg_wind_elem);
+    if (error)
+    {
+      printf ("Provided cell indices [%d, %d] are not valid!\n", CONFIG.arg_wind_i, CONFIG.arg_wind_j);
+      return EXIT_FAILURE;
+    }
+    int wind_status = where_in_wind (wmain[CONFIG.arg_wind_elem].x, &CONFIG.domain);
+    if (wind_status < 0)
+    {
+      printf ("Provided cell indices [%d, %d] are not in the wind!\n", CONFIG.arg_wind_i, CONFIG.arg_wind_j);
+      return EXIT_FAILURE;
+    }
+  }
 
   initialize_inclination_angles (inclinations);
   int n_inclinations = CONFIG.arg_num_inc;      // TODO: this is nasty!
@@ -153,7 +168,7 @@ create_optical_depth_spectrum (void)
   if (spectrum == NULL)
   {
     print_error ("Unable to allocate %lu bytes for spectrum\n", n_inclinations * NUM_FREQUENCY_BINS * sizeof (double));
-    exit (EXIT_FAILURE);
+    return EXIT_FAILURE;
   }
 
   // Deal with frequency range
@@ -167,7 +182,16 @@ create_optical_depth_spectrum (void)
   kbf_need (freq_min, freq_max);
 
   // Calculate optical depth spectrum for each inclination
-  printf ("Creating optical depth spectra between %e Hz - %e Hz for %d observer angles\n", freq_min, freq_max, n_inclinations);
+  printf ("Creating optical depth spectra between %e Hz - %e Hz for %d observer angles", freq_min, freq_max, n_inclinations);
+  switch (CONFIG.mode)
+  {
+  case MODE_CELL_SPECTRUM:
+    printf (" for cell %d/[%d, %d]", CONFIG.arg_wind_elem, CONFIG.arg_wind_i, CONFIG.arg_wind_j);
+  default:
+    printf ("\n");
+    break;
+  }
+
   for (int i = 0; i < n_inclinations; i++)
   {
     printf (" -- %s ", inclinations[i].name);
@@ -190,7 +214,20 @@ create_optical_depth_spectrum (void)
         continue;
       }
 
-      error = integrate_tau_across_wind (&photon, &column_density, &optical_depth);
+      // Transport the test photon either through the entire wind, or across only the cell
+      switch (CONFIG.mode)
+      {
+      case MODE_WIND_SPECTRUM:
+        error = integrate_tau_across_wind (&photon, &column_density, &optical_depth);
+        break;
+      case MODE_CELL_SPECTRUM:
+        error = integrate_tau_across_cell (&photon, &column_density, &optical_depth);
+        break;
+      default:
+        print_error ("An invalid run mode is being used in this function!\n");
+        return EXIT_FAILURE;
+      }
+
       if (error == EXIT_FAILURE)
       {
         continue;
@@ -210,136 +247,6 @@ create_optical_depth_spectrum (void)
   free (spectrum);
 
   return error ? EXIT_FAILURE : EXIT_SUCCESS;
-}
-
-/* ************************************************************************* */
-/**
- * @brief
- *
- * @details
- *
- * ************************************************************************** */
-
-int
-create_cell_optical_depth_spectrum (void)
-{
-  // int i, j;
-  // int err;
-  // double *tau_spectrum;
-  // double c_optical_depth, c_column_density;
-  // double c_frequency, freq_min, freq_max, d_freq;
-  // struct photon photon;
-
-  // SightLines_t inclinations[MAX_ANGLES];
-
-  // initialize_inclination_angles(inclinations);
-  // int n_inclinations = CONFIGURATION.n_inclinations;
-
-  // printf("Creating optical depth spectra:\n");
-
-  // tau_spectrum = calloc(n_inclinations * NUM_FREQUENCY_BINS, sizeof *tau_spectrum);
-  // if (tau_spectrum == NULL)
-  // {
-  //     print_error("cannot allocate %lu bytes for tau_spectrum\n", n_inclinations * NUM_FREQUENCY_BINS * sizeof *tau_spectrum);
-  //     exit(EXIT_FAILURE);
-  // }
-
-  // /*
-  //  * We have a complicated if statement first, though. If a freq_min
-  //  * or a freq_max was provided, then we need to get this first and set
-  //  * the frequency limits appropriately. If neither are defined, then we will
-  //  * use some hardwired limits. The frequency range of the extracted will be
-  //  * used, however if xxpsec is NULL (no observer spectrum exists), then the
-  //  * frequency range will be over a default 100 - 10,000 Angstrom band.
-  //  */
-
-  // if (u_freq_min > 0 || u_freq_max > 0)
-  // {
-  //     if (u_freq_min > 0)
-  //     {
-  //         freq_min = u_freq_min;
-  //     }
-  //     else
-  //     {
-  //         freq_min = VLIGHT / (10000 * ANGSTROM);
-  //     }
-
-  //     if (u_freq_max > 0)
-  //     {
-  //         freq_max = u_freq_max;
-  //     }
-  //     else
-  //     {
-  //         freq_max = VLIGHT / (100 * ANGSTROM);
-  //     }
-
-  //     if (freq_max < freq_min)
-  //     {
-  //         print_error("frequency range given has set freq_max (%e) < freq_min (%e) \n", freq_max, freq_min);
-  //         exit(EXIT_FAILURE);
-  //     }
-  // }
-  // else
-  // {
-  //     if ((geo.nangles == 0 && xxspec == NULL) || (geo.swavemax == 0 && geo.swavemin == 0))
-  //     {
-  //         freq_min = VLIGHT / (10000 * ANGSTROM);
-  //         freq_max = VLIGHT / (100 * ANGSTROM);
-  //     }
-  //     else
-  //     {
-  //         freq_min = VLIGHT / (geo.swavemax * ANGSTROM);
-  //         freq_max = VLIGHT / (geo.swavemin * ANGSTROM);
-  //         if (sane_check(freq_min))
-  //         {
-  //             freq_min = VLIGHT / (10000 * ANGSTROM);
-  //             print_error("freq_min has an invalid value setting to %e\n", freq_min);
-  //         }
-  //         if (sane_check(freq_max))
-  //         {
-  //             freq_max = VLIGHT / (100 * ANGSTROM);
-  //             print_error("freq_min has an invalid value setting to %e\n", freq_max);
-  //         }
-  //     }
-  // }
-
-  // d_freq = (log10(freq_max) - log10(freq_min)) / NUM_FREQUENCY_BINS;
-  // kbf_need(freq_min, freq_max);
-
-  // /*
-  //  * Now create the optical depth spectra for each inclination
-  //  */
-
-  // for (i = 0; i < n_inclinations; i++)
-  // {
-  //     printf("  - Creating spectrum: %s\n", inclinations[i].name);
-  //     c_frequency = log10(freq_min);
-
-  //     for (j = 0; j < NUM_FREQUENCY_BINS; j++)
-  //     {
-  //         c_optical_depth = 0.0;
-
-  //         err = initialise_photon_packet(&photon, pow(10, c_frequency), inclinations[i].direction_vector);
-  //         if (err == EXIT_FAILURE)
-  //         {
-  //             print_error("skipping photon of frequency %e\n", pow(10, c_frequency));
-  //             continue;
-  //         }
-
-  //         err = move_photon_across_cell(&photon, &c_optical_depth);
-  //         if (err == EXIT_FAILURE)
-  //             continue;
-
-  //         tau_spectrum[i * NUM_FREQUENCY_BINS + j] = c_optical_depth;
-  //         c_frequency += d_freq;
-  //     }
-  // }
-
-  // write_optical_depth_spectrum(inclinations, n_inclinations, tau_spectrum, freq_min, d_freq);
-  // free(tau_spectrum);
-  // free(inclinations);
-
-  return EXIT_SUCCESS;
 }
 
 /* ************************************************************************* */

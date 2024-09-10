@@ -63,44 +63,24 @@ int
 print_optical_depths (SightLines_t *inclinations, int n_inclinations, PIEdge_t edges[], int n_edges, double *optical_depth,
                       double *column_density)
 {
-  char line[LINELENGTH];
-  const int MAX_COL = 120;
-
-  printf ("\nOptical depths along the defined line of sights for domain %i:\n\n", CONFIG.domain);
-
+  printf ("Optical depths along the defined line of sights for domain %i:\n", CONFIG.domain);
   for (int i = 0; i < n_inclinations; i++)
   {
+    printf ("%-8s:\n", inclinations[i].name);
     if (CONFIG.column_density == COLUMN_MODE_RHO)
     {
-      printf ("%-8s: Mass column density             : %3.2e cm^-2\n", inclinations[i].name, column_density[i]);
-      printf ("%-8s: Approx. Hydrogen column density : %3.2e cm^-2\n", "", column_density[i] * rho2nh);
+      printf (" -- Mass column density             : %3.2e cm^-2\n", column_density[i]);
+      printf (" -- Approx. Hydrogen column density : %3.2e cm^-2\n", column_density[i] * rho2nh);
     }
     else
     {
-      printf ("%-8s: %s %i column density    : %3.2e cm^-2\n", inclinations[i].name,
-              ele[ion[CONFIG.column_density_ion_number].nelem].name, ion[CONFIG.column_density_ion_number].istate, column_density[i]);
+      printf (" -- %s %i column density %-11s : %3.2e cm^-2\n", ele[ion[CONFIG.column_density_ion_number].nelem].name,
+              ion[CONFIG.column_density_ion_number].istate, "", column_density[i]);
     }
-
-    int line_len = 0;
     for (int j = 0; j < n_edges; j++)
     {
-      int len = snprintf (line, LINELENGTH, "tau_%-9s: %3.2e  ", edges[j].name, optical_depth[i * n_edges + j]);
-      if (len < 0)
-      {
-        print_error ("There has been an issue when printing results to the screen\n");
-        return EXIT_FAILURE;
-      }
-
-      line_len += len;
-      if (line_len > MAX_COL)
-      {
-        line_len = 0;
-        printf ("\n");
-      }
-
-      printf ("%s", line);
+      printf (" -- %-31s : %3.2e\n", edges[j].name, optical_depth[i * n_edges + j]);
     }
-    printf ("\n\n");
   }
 
   return EXIT_SUCCESS;
